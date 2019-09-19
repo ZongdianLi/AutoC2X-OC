@@ -18,3 +18,5 @@
 .directory
 *.db
 documentation/html
+
+.vscode/
