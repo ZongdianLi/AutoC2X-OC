@@ -123,6 +123,7 @@ ptree load_config_tree(){
 	lookup_config(&pt, config_name, "denm");
 	lookup_config(&pt, config_name, "httpServer");
 	lookup_config(&pt, config_name, "obd2");
+	lookup_config(&pt, config_name, "autoware");
 	lookup_config(&pt, config_name, "gps");
 	lookup_config(&pt, config_name, "ldm");
 	

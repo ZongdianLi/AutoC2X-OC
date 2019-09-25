@@ -1,0 +1,76 @@
+#include "AutowareService.h"
+#include <unistd.h>
+#include <signal.h>
+#include <sys/ioctl.h>
+#include <iostream>
+#include <cstdlib>
+#include <chrono>
+#include <cmath>
+#include <string>
+#include <common/utility/Utils.h>
+#include <boost/algorithm/string.hpp>
+
+using namespace std;
+
+INITIALIZE_EASYLOGGINGPP
+
+AutowareService::AutowareService(AutowareConfig &config, string globalConfig, string loggingConf, string statisticConf){
+    try{
+        mGlobalConfig.loadConfigXML(globalConfig);
+    }
+    catch(std::exception &e){
+        cerr << "Error while loading config.xml: " << e.what() << endl;
+    }
+    mConfig = config;
+    mSender = new CommunicationSender("AutowareService", "2500" , mGlobalConfig.mExpNo, loggingConf, statisticConf);
+	
+	mLogger = new LoggingUtility("AutowareService", mGlobalConfig.mExpNo, loggingConf, statisticConf);
+	mLogger->logStats("speed (m/sec)");
+}
+
+AutowareService::~AutowareService(){
+    delete mSender;
+    delete mLogger;
+}
+
+void AutowareService::receiveData(const boost::system::error_code &ec){
+    double speed = 10.0;
+    int rpm = 5;
+    int time = 1000;
+
+}
+
+void AutowareService::sendToServices(autowarePackage::AUTOWARE autoware){   
+    string serializedAutoware;
+    autoware.SerializeToString(&serializedAutoware);
+    mSender->sendData("AUTOWARE", serializedAutoware);
+    mLogger->logStats("autoware");   
+}
+
+void AutowareService::init() {
+    if(!mConfig.mSimulateData){
+
+    }
+    else{
+
+    }
+}
+
+int main(int argc, const char *argv[]){
+    if(argc != 5) {
+		fprintf(stderr, "missing arguments: %s <globalConfig.xml> <autowareConfig.xml> <logging.conf> <statistics.conf> \n", argv[0]);
+		exit(1);
+	}
+	AutowareConfig config;
+	try {
+		config.loadConfigXML(argv[2]);
+	}
+	catch (std::exception &e) {
+		cerr << "Error while loading config.xml: " << e.what() << endl << flush;
+		return EXIT_FAILURE;
+	}
+	AutowareService autoware(config, argv[1], argv[3], argv[4]);
+    autoware.init();
+
+    return 0;
+}

@@ -1,0 +1,57 @@
+#ifndef AUTOWARESERVICE_H_
+#define AUTOWARESERVICE_H_
+
+#include <common/utility/CommunicationSender.h>
+#include <common/utility/LoggingUtility.h>
+#include <common/buffers/build/autoware.pb.h>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/xml_parser.hpp>
+#include <boost/asio.hpp>
+#include <common/config/config.h>
+#include <fstream>
+
+struct AutowareConfig {
+
+    bool mSimulateData;
+
+    std::string mGpsDataFile;
+
+    int mMode;
+
+    void loadConfigXML(const std::string &filename) {
+		boost::property_tree::ptree pt;
+		read_xml(filename, pt);
+
+		mSimulateData = pt.get("autoware.SimulateData", true);
+		mGpsDataFile = pt.get("autoware.DataFile", "");
+		mMode = pt.get("autoware.SimulationMode", 0);
+	}
+};
+
+typedef struct std::pair<double, double> position;
+
+class AutowareService{
+public:
+    AutowareService(AutowareConfig &config, std::string globalConfig, std::string loggingConf, std::string statisticConf);
+    ~AutowareService();
+
+    void receiveData(const boost::system::error_code &ec);
+
+    void sendToServices(autowarePackage::AUTOWARE autoware);
+
+    void init();
+
+private:
+    AutowareConfig mConfig;
+    GlobalConfig mGlobalConfig;
+
+    CommunicationSender* mSender;
+    LoggingUtility* mLogger;
+
+    boost::asio::io_service mIoService;
+	boost::asio::deadline_timer* mTimer;
+};
+
+#endif
+
+

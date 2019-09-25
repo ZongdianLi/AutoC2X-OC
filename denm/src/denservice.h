@@ -38,6 +38,7 @@
 #include <common/buffers/denm.pb.h>
 #include <common/buffers/gps.pb.h>
 #include <common/buffers/obd2.pb.h>
+#include <common/buffers/autoware.pb.h>
 #include <common/buffers/trigger.pb.h>
 #include <common/asn1/DENM.h>
 #include <common/messages/MessageUtils.h>
@@ -93,6 +94,7 @@ public:
 	 * Receives new OBD2 data from the OBD2 module.
 	 */
 	void receiveObd2Data();
+	void receiveAutowareData();
 
 private:
 	GlobalConfig mGlobalConfig;
@@ -104,10 +106,12 @@ private:
 
 	CommunicationReceiver* mReceiverGps;
 	CommunicationReceiver* mReceiverObd2;
+	CommunicationReceiver* mReceiverAutoware;
 
 	boost::thread* mThreadReceive;
 	boost::thread* mThreadGpsDataReceive;
 	boost::thread* mThreadObd2DataReceive;
+	boost::thread* mThreadAutowareDataReceive;
 	boost::thread* mThreadAppTrigger;
 
 	LoggingUtility* mLogger;
@@ -123,6 +127,9 @@ private:
 
 	obd2Package::OBD2 mLatestObd2;
 	std::mutex mMutexLatestObd2;
+
+	autowarePackage::AUTOWARE mLatestAutoware;
+	std::mutex mMutexLatestAutoware;
 };
 
 /** @} */ //end group

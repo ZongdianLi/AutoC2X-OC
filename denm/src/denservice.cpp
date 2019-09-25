@@ -51,6 +51,7 @@ DenService::DenService() {
 
 	mReceiverFromApp = new CommunicationReceiver("1111", "TRIGGER", *mLogger);
 	mReceiverFromDcc = new CommunicationReceiver("5555", "DENM", *mLogger);
+	mReceiverAutoware = new CommunicationReceiver("25000", "AUTOWARE", *mLogger);
 	mSenderToDcc = new CommunicationSender("7777", *mLogger);
 	mSenderToLdm = new CommunicationSender("9999", *mLogger);
 
@@ -67,10 +68,12 @@ DenService::~DenService() {
 	mThreadReceive->join();
 	mThreadGpsDataReceive->join();
 	mThreadObd2DataReceive->join();
+	mThreadAutowareDataReceive->join();
 	mThreadAppTrigger->join();
 	delete mThreadReceive;
 	delete mThreadGpsDataReceive;
 	delete mThreadObd2DataReceive;
+	delete mThreadAutowareDataReceive;
 	delete mThreadAppTrigger;
 
 	delete mReceiverFromApp;
@@ -80,6 +83,7 @@ DenService::~DenService() {
 
 	delete mReceiverGps;
 	delete mReceiverObd2;
+	delete mReceiverAutoware;
 
 	delete mMsgUtils;
 	delete mLogger;
@@ -89,6 +93,7 @@ void DenService::init() {
 	mThreadReceive = new boost::thread(&DenService::receive, this);
 	mThreadGpsDataReceive = new boost::thread(&DenService::receiveGpsData, this);
 	mThreadObd2DataReceive = new boost::thread(&DenService::receiveObd2Data, this);
+	mThreadAutowareDataReceive = new boost::thread(&DenService::receiveAutowareData, this);
 	mThreadAppTrigger = new boost::thread(&DenService::triggerAppDenm, this);
 }
 
@@ -143,6 +148,20 @@ void DenService::receiveObd2Data() {
 		mMutexLatestObd2.lock();
 		mLatestObd2 = newObd2;
 		mMutexLatestObd2.unlock();
+	}
+}
+
+void DenService::receiveAutowareData() {
+	string serializedAutoware;
+	autowarePackage::AUTOWARE newAutoware;
+
+	while (1) {
+		serializedAutoware = mReceiverAutoware->receiveData();
+		newAutoware.ParseFromString(serializedAutoware);
+		mLogger->logDebug("Received AUTOWARE with speed (m/s): " + to_string(newAutoware.speed()));
+		mMutexLatestAutoware.lock();
+		mLatestAutoware = newAutoware;
+		mMutexLatestAutoware.unlock();
 	}
 }
 

@@ -59,6 +59,8 @@ static const std::string DENM_CONFIG_NAME = "denm";
 static const std::string GPS_CONFIG_NAME = "gps";
 /** config name for OBD2 **/
 static const std::string OBD2_CONFIG_NAME = "obd2";
+/** config name for AUTOWARE**/
+static const std::string AUTOWARE_CONFIG_NAME = "autoware";
 /** config name for ldm **/
 static const std::string LDM_CONFIG_NAME = "ldm";
 /** config name for http server **/
@@ -85,6 +87,9 @@ static const std::string GPS_MODULE_NAME = "GPS";
 
 /** module name for OBD2 **/
 static const std::string OBD2_MODULE_NAME = "Obd2Service";
+
+/** module name for Autoware **/
+static const std::string AUTOWARE_MODULE_NAME = "AutowareService";
 
 /** module name for LDM **/
 static const std::string LDM_MODULE_NAME = "Ldm";

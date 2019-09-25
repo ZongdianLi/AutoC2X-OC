@@ -46,6 +46,7 @@
 #include <mutex>
 #include <common/asn1/CAM.h>
 #include <common/messages/MessageUtils.h>
+#include <common/buffers/autoware.pb.h>
 
 /** Struct that hold the configuration for CaService.
  * The configuration is defined in /etc/config/openc2x_cam</a>
@@ -165,6 +166,11 @@ private:
 	 */
 	void receiveObd2Data();
 
+	/** Receives new AUTOAWRE data from the AUTOWARE module.
+	 *
+	 */
+	void receiveAutowareData();
+
 	/** Checks if heading has changed more than 4 degrees.
 	 * @return True if CAM needs to be triggered, false otherwise
 	 */
@@ -179,6 +185,11 @@ private:
 	 * @return True if CAM needs to be triggered, false otherwise
 	 */
 	bool isSpeedChanged();
+
+	/** Checks if speed has changed more than 1 m/sec.
+	 * @return True if CAM needs to be triggered, false otherwise
+	 */
+	bool isAutowareSpeedChanged();
 
 	/** Checks if time more than 1 second has past since last CAM.
 	 * @return True if CAM needs to be triggered, false otherwise
@@ -204,10 +215,12 @@ private:
 	CommunicationReceiver* mReceiverFromDcc;
 	CommunicationReceiver* mReceiverGps;
 	CommunicationReceiver* mReceiverObd2;
+	CommunicationReceiver* mReceiverAutoware;
 
 	boost::thread* mThreadReceive;
 	boost::thread* mThreadGpsDataReceive;
 	boost::thread* mThreadObd2DataReceive;
+	boost::thread* mThreadAutowareDataReceive;
 
 	MessageUtils* mMsgUtils;
 	LoggingUtility* mLogger;
@@ -232,11 +245,17 @@ private:
 	bool mObd2Valid;
 	std::mutex mMutexLatestObd2;
 
+	autowarePackage::AUTOWARE mLatestAutoware;
+	bool mAutowareValid;
+	std::mutex mMutexLatestAutoware;
+
 	struct LastSentCamInfo {
 		bool hasGPS = false;
 		gpsPackage::GPS lastGps;
 		bool hasOBD2 = false;
 		obd2Package::OBD2 lastObd2;
+		bool hasAUTOWARE = false;
+		autowarePackage::AUTOWARE lastAutoware;
 		double lastHeading;
 		int64_t timestamp = 0;
 	};

@@ -1,0 +1,8 @@
+prefix=/home/oi/Downloads/OpenC2X/autoware/src/ros_ws/devel
+
+Name: comp_tutorial
+Description: Description of comp_tutorial
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/oi/Downloads/OpenC2X/autoware/src/ros_ws/devel/lib 
+Requires: 

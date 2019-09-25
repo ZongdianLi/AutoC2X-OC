@@ -8,6 +8,7 @@ message LdmData {
 		OBD2 = 4;
 		dccInfo = 5;
 		camInfo = 6;
+		AUTOWARE = 7;
 	}
 	required Type type = 1;
 	repeated bytes data = 2;
