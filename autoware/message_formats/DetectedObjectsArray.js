@@ -1,4 +1,38 @@
+/*
+DetectedObjectsArray
+- header
+- objects (vector<DetectedObject>)
 
+DetectedObject
+- header
+- id
+- label
+- score
+- color
+- valid(false)
+- space_frame
+- pose
+- dimensions
+- variance
+- velocity
+- acceleration
+- pointcloud
+- convex_hull
+- candidate_trajectories
+- pose_reliable(false)
+- velocity_reliable(false)
+- acceleration_reliable(false)
+- image_frame
+- x(0)
+- y(0)
+- width(0)
+- heigh(0)
+- angle(0.0)
+- roi_image
+- indicator_state(0)
+- behavior_state(0)
+- user_defined_info
+*/
 
 
 

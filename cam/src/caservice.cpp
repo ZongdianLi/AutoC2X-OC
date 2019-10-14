@@ -420,7 +420,8 @@ CAM_t* CaService::generateCam() {
 	// generation delta time
 	int64_t currTime = Utils::currentTime();
 	if (mLastSentCamInfo.timestamp) {
-		cam->cam.generationDeltaTime = (currTime - mLastSentCamInfo.timestamp) / (1000000);
+		// cam->cam.generationDeltaTime = (currTime - mLastSentCamInfo.timestamp) / (1000000);
+		cam->cam.generationDeltaTime = (currTime/1000000 - 10728504000) % 65536;
 	} else {
 		cam->cam.generationDeltaTime = 0;
 	}
