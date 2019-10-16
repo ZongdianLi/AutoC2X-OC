@@ -56,7 +56,7 @@ struct PingConfig{
     void loadConfig(ptree& pt) {
         mIsRSU = pt.get("cam.isRSU", false);
 	}
-}
+};
 
 class PingApp {
 public:
