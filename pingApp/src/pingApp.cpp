@@ -83,6 +83,10 @@ CAM_t* PingApp::generateCam() {
 	cam->header.messageID = messageID_cam;
 	cam->header.protocolVersion = protocolVersion_currentVersion;
 
+    int num_a = 1;
+    int num_b = 1;
+    int num_c = 1;
+
 	// generation delta time
 	int64_t currTime = Utils::currentTime();
 	if (mLastSentCamInfo.timestamp) {
@@ -96,25 +100,14 @@ CAM_t* PingApp::generateCam() {
 	// Basic container
 	cam->cam.camParameters.basicContainer.stationType = mConfig.mIsRSU ? StationType_roadSideUnit : StationType_passengerCar;
 
-	mMutexLatestGps.lock();
-	if (mGpsValid) {
-		cam->cam.camParameters.basicContainer.referencePosition.latitude = mLatestGps.latitude() * 10000000; // in one-tenth of microdegrees
-		cam->cam.camParameters.basicContainer.referencePosition.longitude = mLatestGps.longitude() * 10000000; // in one-tenth of microdegrees
-		cam->cam.camParameters.basicContainer.referencePosition.altitude.altitudeValue = mLatestGps.altitude();
-		double currentHeading = getHeading(mLastSentCamInfo.lastGps.latitude(), mLastSentCamInfo.lastGps.longitude(), mLatestGps.latitude(), mLatestGps.longitude());
-
-		mLastSentCamInfo.hasGPS = true;
-		mLastSentCamInfo.lastGps = gpsPackage::GPS(mLatestGps);		//data needs to be copied to a new buffer because new gps data can be received before sending
-		mLastSentCamInfo.lastHeading = currentHeading;
-	} else {
-		mLastSentCamInfo.hasGPS = false;
-		cam->cam.camParameters.basicContainer.referencePosition.latitude = Latitude_unavailable;
-		cam->cam.camParameters.basicContainer.referencePosition.longitude = Longitude_unavailable;
-		cam->cam.camParameters.basicContainer.referencePosition.altitude.altitudeValue = AltitudeValue_unavailable;
-	}
+    cam->cam.camParameters.basicContainer.referencePosition.latitude = num_a; // in one-tenth of microdegrees
+    cam->cam.camParameters.basicContainer.referencePosition.longitude = num_b; // in one-tenth of microdegrees
+    cam->cam.camParameters.basicContainer.referencePosition.altitude.altitudeValue = num_c;
+    cam->cam.camParameters.basicContainer.referencePosition.latitude = Latitude_unavailable;
+    cam->cam.camParameters.basicContainer.referencePosition.longitude = Longitude_unavailable;
+    cam->cam.camParameters.basicContainer.referencePosition.altitude.altitudeValue = AltitudeValue_unavailable;
 	cam->cam.camParameters.basicContainer.referencePosition.altitude.altitudeConfidence = AltitudeConfidence_unavailable;
-	mMutexLatestGps.unlock();
-
+    
 	cam->cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorConfidence = 0;
 	cam->cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorOrientation = 0;
 	cam->cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMinorConfidence = 0;
@@ -139,19 +132,6 @@ CAM_t* PingApp::generateCam() {
 
 		cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationValue = LongitudinalAccelerationValue_unavailable;
 		cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationConfidence = AccelerationConfidence_unavailable;
-
-
-		mMutexLatestObd2.lock();
-		if (mObd2Valid) {
-			cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue = mLatestObd2.speed();
-			mLastSentCamInfo.hasOBD2 = true;
-			mLastSentCamInfo.lastObd2 = obd2Package::OBD2(mLatestObd2); //data needs to be copied to a new buffer because new obd2 data can be received before sending
-		} else {
-			mLastSentCamInfo.hasOBD2 = false;
-			cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue = SpeedValue_unavailable;
-		}
-		cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedConfidence = SpeedConfidence_unavailable;
-		mMutexLatestObd2.unlock();
 
 
 		cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleLength.vehicleLengthValue = VehicleLengthValue_unavailable;
