@@ -53,6 +53,8 @@ static const int PRIORITY_BK =1;
 static const std::string DCC_CONFIG_NAME = "dcc";
 /** config name for CAM **/
 static const std::string CAM_CONFIG_NAME = "cam";
+/** config name for PING **/
+static const std::string PING_CONFIG_NAME = "ping";
 /** config name for DENM **/
 static const std::string DENM_CONFIG_NAME = "denm";
 /** config name for GPS **/
@@ -63,6 +65,7 @@ static const std::string OBD2_CONFIG_NAME = "obd2";
 static const std::string LDM_CONFIG_NAME = "ldm";
 /** config name for http server **/
 static const std::string HTTP_SERVER_CONFIG_NAME = "httpServer";
+
 
 /** module name for DCC **/
 static const std::string DCC_MODULE_NAME = "Dcc";
@@ -76,6 +79,9 @@ static const std::string CAM_MODULE_NAME = "CaService";
 
 /** module name for DENM **/
 static const std::string DENM_MODULE_NAME = "DenService";
+
+/** module name for PING App **/
+static const std::string PING_MODULE_NAME = "PingApp";
 
 /** module name for DENM App **/
 static const std::string DENM_APP_MODULE_NAME = "DenmApp";

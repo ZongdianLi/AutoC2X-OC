@@ -137,8 +137,10 @@ DCC::~DCC() {
 	//stop and delete threads
 	mThreadReceiveFromCa->join();
 	mThreadReceiveFromDen->join();
+	mThreadReceiveFromPing->join();
 	mThreadReceiveFromHw->join();
 	delete mThreadReceiveFromCa;
+	delete mThreadReceiveFromPing;
 	delete mThreadReceiveFromDen;
 	delete mThreadReceiveFromHw;
 
@@ -186,6 +188,7 @@ void DCC::init() {
 	mThreadReceiveFromCa = new boost::thread(&DCC::receiveFromCa2, this);
 	mThreadReceiveFromDen = new boost::thread(&DCC::receiveFromDen, this);
 	mThreadReceiveFromHw = new boost::thread(&DCC::receiveFromHw2, this);
+	mThreadReceiveFromPing = new boost::thread(&DCC::receiveFromPing, this)
 
 	//start timers
 	mTimerMeasureChannel->async_wait(mStrand.wrap(boost::bind(&DCC::measureChannel, this, boost::asio::placeholders::error)));
@@ -305,6 +308,36 @@ void DCC::receiveFromDen() {
 	}
 }
 
+void DCC::receiveFromPing() {
+	string encodedData;					//serialized DATA
+	dataPackage::DATA* data;			//deserialized DATA
+
+	while (1) {
+		pair<string, string> received = mReceiverFromPing->receive();
+		encodedData = received.second;
+
+		data = new dataPackage::DATA();
+		data->ParseFromString(encodedData);		//deserialize DATA
+
+		string encodedCam = data->content();
+
+		Channels::t_access_category ac = (Channels::t_access_category) data->priority();
+		int64_t nowTime = Utils::currentTime();
+		mBucket[ac]->flushQueue(nowTime);
+
+		mLogger->logInfo("");						//for readability
+		bool enqueued = mBucket[ac]->enqueue(data, data->validuntil());
+		if (enqueued) {
+			mLogger->logInfo("AC "+ to_string(ac) + ": received and enqueued CAM " + to_string(data->id()) + ", queue length: " + to_string(mBucket[ac]->getQueuedPackets()));
+			sendQueuedPackets(ac);
+		}
+		else {
+			mLogger->logInfo("AC "+ to_string(ac) + ": received and dropped CAM " + to_string(data->id()) + ", queue full -> length: " + to_string(mBucket[ac]->getQueuedPackets()));
+		}
+	}
+}
+
+
 void DCC::receiveFromHw() {
 	pair<string,string> receivedData;		//MAC Sender, serialized DATA
 	string* senderMac = &receivedData.first;
@@ -327,6 +360,7 @@ void DCC::receiveFromHw() {
 		switch(data.type()) {								//send serialized DATA to corresponding module
 			case dataPackage::DATA_Type_CAM: 		mSenderToServices->send("CAM", *serializedData);	break;
 			case dataPackage::DATA_Type_DENM:		mSenderToServices->send("DENM", *serializedData);	break;
+			case dataPackage::DATA_Type_PING:		mSenderToServices->send("PING", *serializedData);	break;
 			default:	break;
 		}
 	}
@@ -356,6 +390,10 @@ void DCC::receiveFromHw2() {
 			case dataPackage::DATA_Type_DENM:
 				mSenderToServices->send("DENM", *serializedData);
 				mLogger->logInfo("forward received DENM from source "+ pktInfo->mSenderMac +" to services");
+				break;
+			case dataPackage::DATA_Type_PING:
+				mSenderToServices->send("DEPINGNM", *serializedData);
+				mLogger->logInfo("forward received PING from source "+ pktInfo->mSenderMac +" to services");
 				break;
 			default:
 				break;

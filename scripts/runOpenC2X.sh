@@ -38,9 +38,11 @@ tmux split-window -v
 tmux send-keys "dcc" C-m
 tmux split-window -v
 
-tmux send-keys "obd2" C-m
+# tmux send-keys "obd2" C-m
+tmux send-keys "cd $BUILD_DIR/pingApp/src"
+tmux send-keys "./pingApp"
 tmux split-window -v
 
-tmux send-keys "gpsService" C-m
+# tmux send-keys "gpsService" C-m
 
 tmux -2 attach-session -t $SESSION
