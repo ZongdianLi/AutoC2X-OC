@@ -188,7 +188,7 @@ void DCC::init() {
 	mThreadReceiveFromCa = new boost::thread(&DCC::receiveFromCa2, this);
 	mThreadReceiveFromDen = new boost::thread(&DCC::receiveFromDen, this);
 	mThreadReceiveFromHw = new boost::thread(&DCC::receiveFromHw2, this);
-	mThreadReceiveFromPing = new boost::thread(&DCC::receiveFromPing, this)
+	mThreadReceiveFromPing = new boost::thread(&DCC::receiveFromPing, this);
 
 	//start timers
 	mTimerMeasureChannel->async_wait(mStrand.wrap(boost::bind(&DCC::measureChannel, this, boost::asio::placeholders::error)));
