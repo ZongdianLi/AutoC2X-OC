@@ -298,10 +298,16 @@ int main(int argc, const char* argv[]){
         cerr << "Error while loading /etc/config/openc2x_ping:" << e.what() << endl << flush;
         return EXIT_FAILURE;
     }
+
+    std::cout << "main" << endl;
+
     PingApp ping(pingConfig, configTree);
 
+    std::cout << "second" << endl;  
     while(1){
         sleep(1);
+        mLogger->logDebug("Generating CAM as per UPER");
+        std::cout << "slept" << endl;
         ping->send();
     }
 
