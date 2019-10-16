@@ -328,11 +328,11 @@ void DCC::receiveFromPing() {
 		mLogger->logInfo("");						//for readability
 		bool enqueued = mBucket[ac]->enqueue(data, data->validuntil());
 		if (enqueued) {
-			mLogger->logInfo("AC "+ to_string(ac) + ": received and enqueued CAM " + to_string(data->id()) + ", queue length: " + to_string(mBucket[ac]->getQueuedPackets()));
+			mLogger->logInfo("AC "+ to_string(ac) + ": received and enqueued PING " + to_string(data->id()) + ", queue length: " + to_string(mBucket[ac]->getQueuedPackets()));
 			sendQueuedPackets(ac);
 		}
 		else {
-			mLogger->logInfo("AC "+ to_string(ac) + ": received and dropped CAM " + to_string(data->id()) + ", queue full -> length: " + to_string(mBucket[ac]->getQueuedPackets()));
+			mLogger->logInfo("AC "+ to_string(ac) + ": received and dropped PING " + to_string(data->id()) + ", queue full -> length: " + to_string(mBucket[ac]->getQueuedPackets()));
 		}
 	}
 }

@@ -300,5 +300,10 @@ int main(int argc, const char* argv[]){
     }
     PingApp ping(pingConfig, configTree);
 
+    while(1){
+        sleep(1);
+        ping->send();
+    }
+
     return EXIT_SUCCESS;
 }
