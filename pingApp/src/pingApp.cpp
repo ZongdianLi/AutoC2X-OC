@@ -16,7 +16,7 @@ using namespace std;
 
 INITIALIZE_EASYLOGGINGPP
 
-PingApp::PingApp(PingAppConfig &config, ptree& configTree){
+PingApp::PingApp(PingConfig &config, ptree& configTree){
 
     try {
 		mGlobalConfig.loadConfig(PING_CONFIG_NAME);
