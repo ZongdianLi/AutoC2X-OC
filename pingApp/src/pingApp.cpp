@@ -306,7 +306,6 @@ int main(int argc, const char* argv[]){
     std::cout << "second" << endl;  
     while(1){
         sleep(1);
-        mLogger->logDebug("Generating CAM as per UPER");
         std::cout << "slept" << endl;
         ping->send();
     }
