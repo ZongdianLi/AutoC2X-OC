@@ -92,13 +92,7 @@ CAM_t* PingApp::generateCam() {
 
 	// generation delta time
 	int64_t currTime = Utils::currentTime();
-	if (mLastSentCamInfo.timestamp) {
-		// cam->cam.generationDeltaTime = (currTime - mLastSentCamInfo.timestamp) / (100000260);
-		cam->cam.generationDeltaTime = (currTime/1000000 - 10728504000) % 65536;
-	} else {
-		cam->cam.generationDeltaTime = 0;
-	}
-	mLastSentCamInfo.timestamp = currTime;
+    cam->cam.generationDeltaTime = (currTime/1000000 - 10728504000) % 65536;
 
 	// Basic container
 	cam->cam.camParameters.basicContainer.stationType = mConfig.mIsRSU ? StationType_roadSideUnit : StationType_passengerCar;
