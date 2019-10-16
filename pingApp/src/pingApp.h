@@ -33,6 +33,7 @@
 #include <common/utility/CommunicationReceiver.h>
 #include <common/utility/CommunicationSender.h>
 #include <common/utility/Constants.h>
+#include <common/buffers/cam.pb.h>
 #include <common/buffers/data.pb.h>
 #include <common/buffers/ItsPduHeader.pb.h>
 #include <boost/asio.hpp>

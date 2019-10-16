@@ -3,6 +3,8 @@
 
 #include "pingApp.h"
 #include <google/protobuf/text_format.h>
+#include <common/buffers/camInfo.pb.h>
+#include <common/buffers/CoopAwareness.pb.h>
 #include <unistd.h>
 #include <iostream>
 #include <ctime>
@@ -10,6 +12,7 @@
 #include <cmath>
 #include <string>
 #include <common/utility/Utils.h>
+#include <common/asn1/CAM.h>
 #include <common/asn1/per_encoder.h>
 
 using namespace std;
@@ -107,7 +110,7 @@ CAM_t* PingApp::generateCam() {
     cam->cam.camParameters.basicContainer.referencePosition.longitude = Longitude_unavailable;
     cam->cam.camParameters.basicContainer.referencePosition.altitude.altitudeValue = AltitudeValue_unavailable;
 	cam->cam.camParameters.basicContainer.referencePosition.altitude.altitudeConfidence = AltitudeConfidence_unavailable;
-    
+
 	cam->cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorConfidence = 0;
 	cam->cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorOrientation = 0;
 	cam->cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMinorConfidence = 0;
