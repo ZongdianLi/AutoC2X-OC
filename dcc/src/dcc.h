@@ -216,6 +216,7 @@ private:
 
 	CommunicationReceiver* mReceiverFromCa;
 	CommunicationReceiver* mReceiverFromDen;
+	CommunicationReceiver* mReceiverFromPing;
 	CommunicationSender* mSenderToServices;
 	CommunicationSender* mSenderToLdm;
 
