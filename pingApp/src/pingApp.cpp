@@ -61,7 +61,7 @@ void PingApp::send(){
 
 	int64_t currTime = Utils::currentTime();
 	data.set_createtime(currTime);
-	data.set_validuntil(currTime + mConfig.mExpirationTime*1000*1000*1000);
+	data.set_validuntil(currTime + 1*1000*1000*1000);
 	data.set_content(strCam);
 
 	data.SerializeToString(&serializedData);
