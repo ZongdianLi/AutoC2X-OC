@@ -69,6 +69,13 @@ public:
     **/
     void send();
 
+    /*std::vector<uint8_t>*/CAM_t* generateCam();
+
+	/** Converts ASN1 CAM structure into CAM protocol buffer.
+	 * @return The newly generated CAM protocol buffer.
+	 */
+	camPackage::CAM convertAsn1toProtoBuf(CAM_t* cam);
+
     /**
      receive from dcc 
      **/
