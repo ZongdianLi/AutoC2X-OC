@@ -62,7 +62,7 @@ struct PingConfig{
 class PingApp {
 public:
 
-	PingApp();
+	PingApp(PingConfig &config, ptree& configTree);
 	virtual ~PingApp();
 
     /**
