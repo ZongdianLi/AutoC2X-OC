@@ -307,7 +307,7 @@ int main(int argc, const char* argv[]){
     while(1){
         sleep(1);
         std::cout << "slept" << endl;
-        ping->send();
+        ping.send();
     }
 
     return EXIT_SUCCESS;
