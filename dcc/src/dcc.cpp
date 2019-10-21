@@ -384,6 +384,7 @@ void DCC::receiveFromHw2() {
 
 		switch(pktInfo->mType) {								//send serialized DATA to corresponding module
 			case dataPackage::DATA_Type_CAM:
+				std::cout << "CAM catched" << std::endl;
 				mSenderToServices->send("CAM", *serializedData);
 				mLogger->logInfo("forward received CAM from source "+ pktInfo->mSenderMac +" to services");
 				break;
