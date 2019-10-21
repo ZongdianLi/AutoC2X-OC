@@ -39,8 +39,8 @@ tmux send-keys "dcc" C-m
 tmux split-window -v
 
 # tmux send-keys "obd2" C-m
-tmux send-keys "cd $BUILD_DIR/pingApp/src"
-tmux send-keys "./pingApp"
+tmux send-keys "cd $BUILD_DIR/pingApp/src" C-m
+tmux send-keys "./pingApp" C-m
 tmux split-window -v
 
 # tmux send-keys "gpsService" C-m
