@@ -392,7 +392,7 @@ void DCC::receiveFromHw2() {
 				mLogger->logInfo("forward received DENM from source "+ pktInfo->mSenderMac +" to services");
 				break;
 			case dataPackage::DATA_Type_PING:
-				mSenderToServices->send("DEPINGNM", *serializedData);
+				mSenderToServices->send("PING", *serializedData);
 				mLogger->logInfo("forward received PING from source "+ pktInfo->mSenderMac +" to services");
 				break;
 			default:

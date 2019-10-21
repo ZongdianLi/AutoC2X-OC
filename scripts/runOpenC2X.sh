@@ -35,7 +35,9 @@ tmux select-pane -t 3
 tmux send-keys "denm" C-m
 tmux split-window -v
 
-tmux send-keys "dcc" C-m
+# tmux send-keys "dcc" C-m
+tmux send-keys "cd $BUILD_DIR/dcc/src" C-m
+tmux send-keys "./dcc" C-m
 tmux split-window -v
 
 # tmux send-keys "obd2" C-m
