@@ -141,6 +141,10 @@ CAM_t* PingApp::generateCam() {
 
 	}
 
+	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue = 10;
+	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedConfidence = SpeedConfidence_unavailable;
+
+
 
 	// Optional
 	//	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.accelerationControl->
@@ -298,15 +302,10 @@ int main(int argc, const char* argv[]){
         cerr << "Error while loading /etc/config/openc2x_ping:" << e.what() << endl << flush;
         return EXIT_FAILURE;
     }
-
-    std::cout << "main" << endl;
-
     PingApp ping(pingConfig, configTree);
 
-    std::cout << "second" << endl;  
     while(1){
         sleep(1);
-        std::cout << "slept" << endl;
         ping.send();
     }
 
