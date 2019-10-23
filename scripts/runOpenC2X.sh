@@ -18,7 +18,9 @@ tmux split-window -h
 tmux select-pane -t 0
 
 
-tmux send-keys "cam" C-m
+#tmux send-keys "cam" C-m
+tmux send-keys "cd $BUILD_DIR/cam/src" C-m
+tmux send-keys "./cam" C-m
 tmux split-window -v
 
 tmux send-keys "httpServer" C-m
