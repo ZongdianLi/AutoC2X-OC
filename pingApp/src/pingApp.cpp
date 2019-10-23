@@ -34,6 +34,7 @@ using namespace std;
 
 INITIALIZE_EASYLOGGINGPP
 
+
 pingApp::pingApp() {
 	GlobalConfig config;
 	try {
@@ -49,21 +50,80 @@ pingApp::pingApp() {
 	string moduleName = "pingApp";
 	mReceiverFromCa = new CommunicationReceiver("23456", "CAM", *mLogger);
 	
+    mSender = new CommunicationSender("34567", *mLogger);
+
+    mTimer = new boost::asio::deadline_timer(mIoService, boost::posix_time::millisec(100));
+    mTimer->async_wait(boost::bind(&pingApp::alarm, this, boost::asio::placeholders::error));
+    mIoService.run();
 }
 
 pingApp::~pingApp() {
 	mThreadReceiveFromCa->join();
 	// mThreadServer->join();
 	delete mThreadReceiveFromCa;
-
 	delete mReceiverFromCa;
-
+    delete mSender;
 }
 
 void pingApp::init() {
 	mThreadReceiveFromCa = new boost::thread(&pingApp::receiveFromCa, this);
 	// mThreadServer = new boost::thread(&LDM::receiveRequest, this);
 }
+
+
+void pingApp::receiveFromCa() {
+	string serializedCam;	//serialized CAM
+	camPackage::CAM cam;
+
+	while (1) {
+        std::cout << "receive from ca" << std::endl;
+
+		pair<string, string> received = mReceiverFromCa->receive();	//receive
+		serializedCam = received.second;
+		cam.ParseFromString(serializedCam);
+
+		//printCam(cam);
+		//ASSUMPTION: received cam is the newer than all cams that were received before.
+		//TODO: OPTIMIZATION: use pointers instead of copying cams.
+		camCache[to_string(cam.header().stationid())]=cam;
+
+	}
+}
+
+void pingApp::sendToCaService(pingAppPackage::PINGAPP pingApp){
+    //send buffer to services
+	string serializedPingApp;
+    std::cout << "send to caservice " << pingApp.time() << std::endl;
+	pingApp.SerializeToString(&serializedPingApp);
+	mSender->sendData("PINGAPP", serializedPingApp);
+	//log position
+	// string csvPosition = to_string(gps.latitude()) + "\t" + to_string(gps.longitude()) + "\t" + to_string(gps.altitude());
+	// mLogger->logStats(csvPosition);
+}
+
+void pingApp::alarm(const boost::system::error_code &ec){
+    pingAppPackage::PINGAPP pingApp;
+    int64_t currTime = Utils::currentTime();
+    pingApp.set_time((currTime/1000000 - 10728504000) % 65536);
+    sendToCaService(pingApp);
+    scheduleNextAlarm();
+}
+
+void pingApp::scheduleNextAlarm(){
+    mTimer->expires_from_now(boost::posix_time::millisec(1000));
+	mTimer->async_wait(boost::bind(&pingApp::alarm, this, boost::asio::placeholders::error));
+}
+
+
+int main(int argc, const char* argv[]) {
+
+	pingApp pingApp;
+	pingApp.init();
+
+	return EXIT_SUCCESS;
+}
+
+
 
 
 // void LDM::receiveRequest() {
@@ -85,31 +145,3 @@ void pingApp::init() {
 // 		mServer->sendReply(reply);
 // 	}
 // }
-
-void pingApp::receiveFromCa() {
-	string serializedCam;	//serialized CAM
-	camPackage::CAM cam;
-
-	while (1) {
-        std::cout << "receive from ca" << std::endl;
-
-		pair<string, string> received = mReceiverFromCa->receive();	//receive
-		serializedCam = received.second;
-		cam.ParseFromString(serializedCam);
-
-		//printCam(cam);
-		//ASSUMPTION: received cam is the newer than all cams that were received before.
-		//TODO: OPTIMIZATION: use pointers instead of copying cams.
-		camCache[to_string(cam.header().stationid())]=cam;
-
-	}
-}
-
-
-int main(int argc, const char* argv[]) {
-
-	pingApp pingApp;
-	pingApp.init();
-
-	return EXIT_SUCCESS;
-}

@@ -1,0 +1,5 @@
+package pingAppPackage;
+
+message PINGAPP {
+	optional double time = 1;
+}
