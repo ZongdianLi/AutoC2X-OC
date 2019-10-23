@@ -200,14 +200,17 @@ private:
 
 	CommunicationSender* mSenderToDcc;
 	CommunicationSender* mSenderToLdm;
+	CommunicationSender* mSenderToPingApp;
 
 	CommunicationReceiver* mReceiverFromDcc;
 	CommunicationReceiver* mReceiverGps;
 	CommunicationReceiver* mReceiverObd2;
+	CommunicationReceiver* mReceiverFromPingApp;
 
 	boost::thread* mThreadReceive;
 	boost::thread* mThreadGpsDataReceive;
 	boost::thread* mThreadObd2DataReceive;
+	boost::thread* mThreadPingAppDataReceive;
 
 	MessageUtils* mMsgUtils;
 	LoggingUtility* mLogger;

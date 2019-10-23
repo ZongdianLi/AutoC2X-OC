@@ -56,6 +56,7 @@ CaService::CaService(CaServiceConfig &config, ptree& configTree) {
 	mReceiverFromDcc = new CommunicationReceiver("5555", "CAM", *mLogger);
 	mSenderToDcc = new CommunicationSender("6666", *mLogger);
 	mSenderToLdm = new CommunicationSender("8888", *mLogger);
+	mSenderToPingApp = new CommunicationSender("23456", *mLogger);
 
 	mReceiverGps = new CommunicationReceiver( "3333", "GPS", *mLogger);
 	mReceiverObd2 = new CommunicationReceiver("2222", "OBD2", *mLogger);
@@ -91,6 +92,7 @@ CaService::~CaService() {
 	delete mReceiverFromDcc;
 	delete mSenderToDcc;
 	delete mSenderToLdm;
+	delete mSenderToPingApp;
 
 	delete mReceiverGps;
 	delete mReceiverObd2;
