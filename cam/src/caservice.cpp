@@ -59,18 +59,15 @@ CaService::CaService(CaServiceConfig &config, ptree& configTree) {
 
 	mReceiverGps = new CommunicationReceiver( "3333", "GPS", *mLogger);
 	mReceiverObd2 = new CommunicationReceiver("2222", "OBD2", *mLogger);
-	mReceiverAutoware = new CommunicationReceiver("25000", "AUTOWARE",*mLogger);
 
 	mThreadReceive = new boost::thread(&CaService::receive, this);
 	mThreadGpsDataReceive = new boost::thread(&CaService::receiveGpsData, this);
 	mThreadObd2DataReceive = new boost::thread(&CaService::receiveObd2Data, this);
-	mThreadAutowareDataReceive = new boost::thread(&CaService::receiveAutowareData, this);
 
 	mIdCounter = 0;
 
 	mGpsValid = false;	//initially no data is available => not valid
 	mObd2Valid = false;
-	mAutowareValid = false;
 
 	if (mConfig.mGenerateMsgs) {
 		mTimer = new boost::asio::deadline_timer(mIoService, boost::posix_time::millisec(100));
@@ -86,12 +83,10 @@ CaService::~CaService() {
 	mThreadReceive->join();
 	mThreadGpsDataReceive->join();
 	mThreadObd2DataReceive->join();
-	mThreadAutowareDataReceive->join();
 
 	delete mThreadReceive;
 	delete mThreadGpsDataReceive;
 	delete mThreadObd2DataReceive;
-	delete mThreadAutowareDataReceive;
 
 	delete mReceiverFromDcc;
 	delete mSenderToDcc;
@@ -99,7 +94,6 @@ CaService::~CaService() {
 
 	delete mReceiverGps;
 	delete mReceiverObd2;
-	delete mReceiverAutoware;
 
 	delete mLogger;
 
@@ -163,19 +157,6 @@ void CaService::receiveObd2Data() {
 	}
 }
 
-void CaService::receiveAutowareData() {
-	string serializedAutoware;
-	autowarePackage::AUTOWARE newAutoware;
-
-	while (1) {
-		serializedAutoware = mReceiverAutoware->receiveData();
-		newAutoware.ParseFromString(serializedAutoware);
-		mLogger->logDebug("Received AUTOWARE with speed (m/s): " + to_string(10));
-		mMutexLatestAutoware.lock();
-		mLatestAutoware = newAutoware;
-		mMutexLatestAutoware.unlock();
-	}
-}
 
 //sends info about triggering to LDM
 void CaService::sendCamInfo(string triggerReason, double delta) {
@@ -250,11 +231,6 @@ void CaService::alarm(const boost::system::error_code &ec) {
 		return;
 	}
 
-	if(isAutowareSpeedChanged()) {
-		trigger();
-		return;
-	}
-
 	//max. time interval 1s
 	if(isTimeToTriggerCAM()) {
 		trigger();
@@ -299,26 +275,6 @@ bool CaService::isHeadingChanged() {
 		}
 	}
 	mMutexLatestGps.unlock();
-	return false;
-}
-
-bool CaService::isAutowareSpeedChanged() {
-	mMutexLatestAutoware.lock();
-	int64_t currentTime = Utils::currentTime();
-	if (currentTime - mLatestAutoware.time() > (int64_t)mConfig.mMaxObd2Age * 1000*1000*1000) {	//AUTOWARE data too old
-		mMutexLatestAutoware.unlock();
-		mAutowareValid = false;
-		return false;
-	}
-	mAutowareValid = true;
-	double deltaSpeed = abs(mLatestAutoware.speed() - mLastSentCamInfo.lastAutoware.speed());
-	if(deltaSpeed > 1.0) {
-		sendCamInfo("speed", deltaSpeed);
-		mLogger->logInfo("autowaredeltaSpeed: " + to_string(deltaSpeed));
-		mMutexLatestAutoware.unlock();
-		return true;
-	}
-	mMutexLatestAutoware.unlock();
 	return false;
 }
 
@@ -486,20 +442,6 @@ CAM_t* CaService::generateCam() {
 		}
 		cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedConfidence = SpeedConfidence_unavailable;
 		mMutexLatestObd2.unlock();
-
-		mMutexLatestAutoware.lock();
-		if (mAutowareValid) {
-			cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue = mLatestAutoware.speed();
-			cam->cam.camParameters.basicContainer.referencePosition.longitude = mLatestAutoware.longitude();
-			cam->cam.camParameters.basicContainer.referencePosition.latitude = mLatestAutoware.latitude();
-			mLastSentCamInfo.hasAUTOWARE = true;
-			mLastSentCamInfo.lastAutoware = autowarePackage::AUTOWARE(mLatestAutoware); //data needs to be copied to a new buffer because new autoware data can be received before sending
-		} else {
-			mLastSentCamInfo.hasAUTOWARE = false;
-			cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue = SpeedValue_unavailable;
-		}
-		cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedConfidence = SpeedConfidence_unavailable;
-		mMutexLatestAutoware.unlock();
 
 		cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleLength.vehicleLengthValue = VehicleLengthValue_unavailable;
 		cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleLength.vehicleLengthConfidenceIndication = VehicleLengthConfidenceIndication_unavailable;
