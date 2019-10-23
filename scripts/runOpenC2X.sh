@@ -31,8 +31,14 @@ tmux split-window -v
 tmux send-keys "ldm" C-m
 tmux split-window -v
 
+
 tmux kill-pane
 tmux select-pane -t 3
+
+
+tmux send-keys "cd $BUILD_DIR/pingApp/src" C-m
+tmux send-keys "./pingApp" C-m
+tmux split-window -v
 
 tmux send-keys "denm" C-m
 tmux split-window -v
@@ -43,6 +49,6 @@ tmux split-window -v
 tmux send-keys "obd2" C-m
 tmux split-window -v
 
-tmux send-keys "gpsService" C-m
+# tmux send-keys "gpsService" C-m
 
 tmux -2 attach-session -t $SESSION

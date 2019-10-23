@@ -128,6 +128,8 @@ void CaService::receive() {
 
 		mLogger->logInfo("Forward incoming CAM " + to_string(cam->header.stationID) + " to LDM");
 		mSenderToLdm->send(envelope, serializedProtoCam);	//send serialized CAM to LDM
+
+		mSenderToPingApp->send(envelope, serializedProtoCam);
 	}
 }
 
@@ -360,7 +362,11 @@ void CaService::send() {
 	string serializedProtoCam;
 	camProto.SerializeToString(&serializedProtoCam);
 	mSenderToLdm->send("CAM", serializedProtoCam); //send serialized CAM to LDM
+
+	mSenderToPingApp->send("CAM", serializedProtoCam);
+
     asn_DEF_CAM.free_struct(&asn_DEF_CAM, cam, 0);
+
 }
 
 //generate new CAM with latest gps and obd2 data
