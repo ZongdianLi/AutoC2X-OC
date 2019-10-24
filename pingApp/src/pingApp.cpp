@@ -85,7 +85,7 @@ void pingApp::receiveFromCa() {
 		//printCam(cam);
 		//ASSUMPTION: received cam is the newer than all cams that were received before.
 		//TODO: OPTIMIZATION: use pointers instead of copying cams.
-		camCache[to_string(cam.header().stationid())]=cam;
+		// camCache[to_string(cam.header().stationid())]=cam;
 
 	}
 }
