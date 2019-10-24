@@ -74,9 +74,12 @@ void pingApp::sendInit(){
 	while(true){
 		int64_t currTime = Utils::currentTime();
 		pingApp.set_time((currTime/1000000 - 10728504000) % 65536);
-		pingApp.set_latitude(rnd() % 600000);
+		int r = rnd() % 600000;
+		pingApp.set_latitude(r);
 		pingApp.set_stationid(99991);
+		camCache[r] = (currTime/1000000 - 10728504000) % 65536;
 		sendToCaService(pingApp);
+		std::cout << "send lat:" << r  << " timestamp:" << (currTime/1000000 - 10728504000) % 65536 << std::endl;
 		sleep(1);
 	}
 }
@@ -91,10 +94,10 @@ void pingApp::receiveFromCa() {
 	string serializedCam;	//serialized CAM
 	camPackage::CAM cam;
 	while (1) {
-        std::cout << "receive from ca" << std::endl;
 		pair<string, string> received = mReceiverFromCa->receive();	//receive
 		serializedCam = received.second;
 		cam.ParseFromString(serializedCam);
+        // std::cout << "receive from ca id:" << cam.header().stationid() << std::endl;
 
 
 		if(cam.header().stationid() == 99991){ //return ping
@@ -103,6 +106,12 @@ void pingApp::receiveFromCa() {
 			pingApp.set_latitude(cam.coop().camparameters().basiccontainer().latitude());
 			pingApp.set_stationid(99992);
 			sendToCaService(pingApp);
+		}
+
+		if(cam.header().stationid() == 99992){ //return ping
+			int64_t currTime = Utils::currentTime();
+			// std::cout << "receive lat:" << cam.coop().camparameters().basiccontainer().latitude() << " nowTime:" <<  (currTime/1000000 - 10728504000) % 65536 << std::endl;
+			// std::cout << "delay:" << (currTime/1000000 - 10728504000) % 65536 - camCache[cam.coop().camparameters().basiccontainer().latitude()] << std::endl;
 		}
 
 		// std::cout << "stationID:" << cam.header().stationid() << std::endl;

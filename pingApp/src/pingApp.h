@@ -96,6 +96,11 @@ private:
 	boost::asio::deadline_timer* mTimer;
 
     std::random_device rnd;
+
+    /**
+	 * Cache for storing the latest CAM for each stationId
+	 */
+	std::map<int,int> camCache;
 };
 
 /** @} */ //end group

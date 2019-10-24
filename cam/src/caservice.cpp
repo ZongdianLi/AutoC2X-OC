@@ -405,7 +405,7 @@ CAM_t* CaService::generateCam(bool isPingApp) {
 
 	// generation delta time
 	int64_t currTime = Utils::currentTime();
-	if (isPingApp){
+	if (false){
 		cam->cam.generationDeltaTime = mLatestPingApp.time();
 	} else {
 		if (mLastSentCamInfo.timestamp) {
