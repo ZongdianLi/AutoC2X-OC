@@ -382,7 +382,7 @@ void CaService::send(bool isPingApp) {
 	camProto.SerializeToString(&serializedProtoCam);
 	mSenderToLdm->send("CAM", serializedProtoCam); //send serialized CAM to LDM
 
-	mSenderToPingApp->send("CAM", serializedProtoCam); //本来ここではpingAppに送信しなくて良い（自身の車両情報なので)
+	// mSenderToPingApp->send("CAM", serializedProtoCam); //本来ここではpingAppに送信しなくて良い（自身の車両情報なので)
 
     asn_DEF_CAM.free_struct(&asn_DEF_CAM, cam, 0);
 }
