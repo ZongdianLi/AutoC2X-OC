@@ -33,6 +33,7 @@
 #include <string>
 #include <common/utility/Utils.h>
 #include <common/asn1/per_encoder.h>
+#include <random>
 
 using namespace std;
 
@@ -394,7 +395,7 @@ CAM_t* CaService::generateCam(bool isPingApp) {
 	}
 	// ITS pdu header
 	if (isPingApp){
-		cam->header.stationID = 9999;
+		cam->header.stationID = 99990 + mGlobalConfig.mStationID;
 	} else {
 		cam->header.stationID = mGlobalConfig.mStationID;// mIdCounter; //
 	}
@@ -436,6 +437,11 @@ CAM_t* CaService::generateCam(bool isPingApp) {
 	}
 	cam->cam.camParameters.basicContainer.referencePosition.altitude.altitudeConfidence = AltitudeConfidence_unavailable;
 	mMutexLatestGps.unlock();
+
+	if(isPingApp){
+		std::cout << rnd() % 600000 << std::endl;
+		cam->cam.camParameters.basicContainer.referencePosition.latitude = rnd() % 600000;
+	}
 
 	cam->cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorConfidence = 0;
 	cam->cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorOrientation = 0;

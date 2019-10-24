@@ -251,6 +251,8 @@ private:
 		int64_t timestamp = 0;
 	};
 	LastSentCamInfo mLastSentCamInfo;
+
+	std::random_device rnd;
 };
 
 /** @} */ //end group
