@@ -132,6 +132,7 @@ void CaService::receive() {
 		mLogger->logInfo("Forward incoming CAM " + to_string(cam->header.stationID) + " to LDM");
 		mSenderToLdm->send(envelope, serializedProtoCam);	//send serialized CAM to LDM
 
+		std::cout << "***************sending to pingApp****************" << std::endl;
 		mSenderToPingApp->send(envelope, serializedProtoCam);
 	}
 }
@@ -395,7 +396,7 @@ CAM_t* CaService::generateCam(bool isPingApp) {
 	}
 	// ITS pdu header
 	if (isPingApp){
-		cam->header.stationID = 99990 + mGlobalConfig.mStationID;
+		cam->header.stationID = mLatestPingApp.stationid();
 	} else {
 		cam->header.stationID = mGlobalConfig.mStationID;// mIdCounter; //
 	}
@@ -439,8 +440,7 @@ CAM_t* CaService::generateCam(bool isPingApp) {
 	mMutexLatestGps.unlock();
 
 	if(isPingApp){
-		std::cout << rnd() % 600000 << std::endl;
-		cam->cam.camParameters.basicContainer.referencePosition.latitude = rnd() % 600000;
+		cam->cam.camParameters.basicContainer.referencePosition.latitude = mLatestPingApp.latitude();
 	}
 
 	cam->cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorConfidence = 0;

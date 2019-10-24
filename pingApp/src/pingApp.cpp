@@ -38,49 +38,75 @@ INITIALIZE_EASYLOGGINGPP
 pingApp::pingApp() {
 	GlobalConfig config;
 	try {
-		config.loadConfig(LDM_CONFIG_NAME);
+		config.loadConfig(CAM_CONFIG_NAME);
 	}
 	catch (std::exception &e) {
 		cerr << "Error while loading /etc/config/openc2x_common: " << e.what() << endl;
 	}
 	ptree pt = load_config_tree();
 
-	mLogger = new LoggingUtility(LDM_CONFIG_NAME, LDM_MODULE_NAME, config.mLogBasePath, config.mExpName, config.mExpNo, pt);
+	mLogger = new LoggingUtility(CAM_CONFIG_NAME, CAM_CONFIG_NAME, config.mLogBasePath, config.mExpName, config.mExpNo, pt);
 
 	string moduleName = "pingApp";
 	mReceiverFromCa = new CommunicationReceiver("23456", "CAM", *mLogger);
 	
     mSender = new CommunicationSender("34567", *mLogger);
 
-    mTimer = new boost::asio::deadline_timer(mIoService, boost::posix_time::millisec(100));
-    mTimer->async_wait(boost::bind(&pingApp::alarm, this, boost::asio::placeholders::error));
-    mIoService.run();
+	if(config.mStationID == 1){
+		mThreadSender = new boost::thread(&pingApp::sendInit, this);
+	}
+	// mTimer = new boost::asio::deadline_timer(mIoService, boost::posix_time::millisec(100));
+    // mTimer->async_wait(boost::bind(&pingApp::alarm, this, boost::asio::placeholders::error));
+    // mIoService.run();
+
 }
 
 pingApp::~pingApp() {
 	mThreadReceiveFromCa->join();
-	// mThreadServer->join();
 	delete mThreadReceiveFromCa;
 	delete mReceiverFromCa;
+	delete mThreadSender;
     delete mSender;
 }
 
+void pingApp::sendInit(){
+	pingAppPackage::PINGAPP pingApp;
+	while(true){
+		int64_t currTime = Utils::currentTime();
+		pingApp.set_time((currTime/1000000 - 10728504000) % 65536);
+		pingApp.set_latitude(rnd() % 600000);
+		pingApp.set_stationid(99991);
+		sendToCaService(pingApp);
+		sleep(1);
+	}
+}
+
 void pingApp::init() {
+	std::cout << "init*****" << std::endl;
 	mThreadReceiveFromCa = new boost::thread(&pingApp::receiveFromCa, this);
-	// mThreadServer = new boost::thread(&LDM::receiveRequest, this);
 }
 
 
 void pingApp::receiveFromCa() {
 	string serializedCam;	//serialized CAM
 	camPackage::CAM cam;
-
 	while (1) {
         std::cout << "receive from ca" << std::endl;
-
 		pair<string, string> received = mReceiverFromCa->receive();	//receive
 		serializedCam = received.second;
 		cam.ParseFromString(serializedCam);
+
+
+		if(cam.header().stationid() == 99991){ //return ping
+			pingAppPackage::PINGAPP pingApp;
+			pingApp.set_time(cam.coop().gendeltatime());
+			pingApp.set_latitude(cam.coop().camparameters().basiccontainer().latitude());
+			pingApp.set_stationid(99992);
+			sendToCaService(pingApp);
+		}
+
+		// std::cout << "stationID:" << cam.header().stationid() << std::endl;
+		// std::cout << "gendeltatime:" << cam.coop().gendeltatime() << std::endl;
 
 		//printCam(cam);
 		//ASSUMPTION: received cam is the newer than all cams that were received before.

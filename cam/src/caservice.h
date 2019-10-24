@@ -252,7 +252,6 @@ private:
 	};
 	LastSentCamInfo mLastSentCamInfo;
 
-	std::random_device rnd;
 };
 
 /** @} */ //end group

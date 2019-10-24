@@ -79,6 +79,7 @@ public:
 
     void scheduleNextAlarm();
 
+    void sendInit();
 
 
 
@@ -87,11 +88,14 @@ private:
 	boost::thread* mThreadReceiveFromCa;
 
     CommunicationSender* mSender;
+    boost::thread* mThreadSender;
 
 	LoggingUtility* mLogger;
 
     boost::asio::io_service mIoService;
 	boost::asio::deadline_timer* mTimer;
+
+    std::random_device rnd;
 };
 
 /** @} */ //end group
