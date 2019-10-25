@@ -33,6 +33,7 @@
 #include <string>
 #include <common/utility/Utils.h>
 #include <common/asn1/per_encoder.h>
+#include <random>
 
 using namespace std;
 
@@ -56,13 +57,16 @@ CaService::CaService(CaServiceConfig &config, ptree& configTree) {
 	mReceiverFromDcc = new CommunicationReceiver("5555", "CAM", *mLogger);
 	mSenderToDcc = new CommunicationSender("6666", *mLogger);
 	mSenderToLdm = new CommunicationSender("8888", *mLogger);
+	mSenderToPingApp = new CommunicationSender("23456", *mLogger);
 
 	mReceiverGps = new CommunicationReceiver( "3333", "GPS", *mLogger);
 	mReceiverObd2 = new CommunicationReceiver("2222", "OBD2", *mLogger);
+	mReceiverPingApp = new CommunicationReceiver("34567", "PINGAPP", *mLogger);
 
 	mThreadReceive = new boost::thread(&CaService::receive, this);
 	mThreadGpsDataReceive = new boost::thread(&CaService::receiveGpsData, this);
 	mThreadObd2DataReceive = new boost::thread(&CaService::receiveObd2Data, this);
+	mThreadPingAppDataReceive = new boost::thread(&CaService::receivePingAppData, this);
 
 	mIdCounter = 0;
 
@@ -91,6 +95,7 @@ CaService::~CaService() {
 	delete mReceiverFromDcc;
 	delete mSenderToDcc;
 	delete mSenderToLdm;
+	delete mSenderToPingApp;
 
 	delete mReceiverGps;
 	delete mReceiverObd2;
@@ -126,6 +131,8 @@ void CaService::receive() {
 
 		mLogger->logInfo("Forward incoming CAM " + to_string(cam->header.stationID) + " to LDM");
 		mSenderToLdm->send(envelope, serializedProtoCam);	//send serialized CAM to LDM
+
+		mSenderToPingApp->send(envelope, serializedProtoCam);
 	}
 }
 
@@ -154,6 +161,21 @@ void CaService::receiveObd2Data() {
 		mMutexLatestObd2.lock();
 		mLatestObd2 = newObd2;
 		mMutexLatestObd2.unlock();
+	}
+}
+
+void CaService::receivePingAppData() {
+	string serializedPingApp;
+	pingAppPackage::PINGAPP newPingApp;
+
+	while (1) {
+		serializedPingApp = mReceiverPingApp->receiveData();
+		send(true);
+		newPingApp.ParseFromString(serializedPingApp);
+		// mLogger->logDebug("Received OBD2 with speed (m/s): " + to_string(newObd.speed()));
+		mMutexLatestPingApp.lock();
+		mLatestPingApp = newPingApp;
+		mMutexLatestPingApp.unlock();
 	}
 }
 
@@ -330,12 +352,12 @@ void CaService::scheduleNextAlarm() {
 }
 
 //generate CAM and send to LDM and DCC
-void CaService::send() {
+void CaService::send(bool isPingApp) {
 	string serializedData;
 	dataPackage::DATA data;
 
 	// Standard compliant CAM
-	CAM_t* cam = generateCam();
+	CAM_t* cam = generateCam(isPingApp);
 	vector<uint8_t> encodedCam = mMsgUtils->encodeMessage(&asn_DEF_CAM, cam);
 	string strCam(encodedCam.begin(), encodedCam.end());
 	mLogger->logDebug("Encoded CAM size: " + to_string(strCam.length()));
@@ -358,28 +380,39 @@ void CaService::send() {
 	string serializedProtoCam;
 	camProto.SerializeToString(&serializedProtoCam);
 	mSenderToLdm->send("CAM", serializedProtoCam); //send serialized CAM to LDM
+
+	// mSenderToPingApp->send("CAM", serializedProtoCam); //本来ここではpingAppに送信しなくて良い（自身の車両情報なので)
+
     asn_DEF_CAM.free_struct(&asn_DEF_CAM, cam, 0);
 }
 
 //generate new CAM with latest gps and obd2 data
-CAM_t* CaService::generateCam() {
+CAM_t* CaService::generateCam(bool isPingApp) {
 	mLogger->logDebug("Generating CAM as per UPER");
 	CAM_t* cam = static_cast<CAM_t*>(calloc(1, sizeof(CAM_t)));
 	if (!cam) {
 		throw runtime_error("could not allocate CAM_t");
 	}
 	// ITS pdu header
-	cam->header.stationID = mGlobalConfig.mStationID;// mIdCounter; //
+	if (isPingApp){
+		cam->header.stationID = mLatestPingApp.stationid();
+	} else {
+		cam->header.stationID = mGlobalConfig.mStationID;// mIdCounter; //
+	}
 	cam->header.messageID = messageID_cam;
 	cam->header.protocolVersion = protocolVersion_currentVersion;
 
 	// generation delta time
 	int64_t currTime = Utils::currentTime();
-	if (mLastSentCamInfo.timestamp) {
-		// cam->cam.generationDeltaTime = (currTime - mLastSentCamInfo.timestamp) / (100000260);
-		cam->cam.generationDeltaTime = (currTime/1000000 - 10728504000) % 65536;
+	if (false){
+		cam->cam.generationDeltaTime = mLatestPingApp.time();
 	} else {
-		cam->cam.generationDeltaTime = 0;
+		if (mLastSentCamInfo.timestamp) {
+			// cam->cam.generationDeltaTime = (currTime - mLastSentCamInfo.timestamp) / (100000260);
+			cam->cam.generationDeltaTime = (currTime/1000000 - 10728504000) % 65536;
+		} else {
+			cam->cam.generationDeltaTime = 0;
+		}
 	}
 	mLastSentCamInfo.timestamp = currTime;
 
@@ -404,6 +437,10 @@ CAM_t* CaService::generateCam() {
 	}
 	cam->cam.camParameters.basicContainer.referencePosition.altitude.altitudeConfidence = AltitudeConfidence_unavailable;
 	mMutexLatestGps.unlock();
+
+	if(isPingApp){
+		cam->cam.camParameters.basicContainer.referencePosition.latitude = mLatestPingApp.latitude();
+	}
 
 	cam->cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorConfidence = 0;
 	cam->cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorOrientation = 0;

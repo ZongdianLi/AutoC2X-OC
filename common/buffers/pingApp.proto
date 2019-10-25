@@ -1,0 +1,7 @@
+package pingAppPackage;
+
+message PINGAPP {
+	optional double time = 1;
+	optional int64 latitude = 2;
+	optional int64 stationid = 3;
+}

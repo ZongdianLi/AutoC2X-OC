@@ -1,7 +1,0 @@
-{
-    "files.associations": {
-        "__mutex_base": "cpp",
-        "iosfwd": "cpp",
-        "filesystem": "cpp"
-    }
-}

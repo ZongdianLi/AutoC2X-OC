@@ -1,0 +1,1 @@
+sudo rm -r /var/log/openc2x/default/*
