@@ -17,6 +17,7 @@ tmux new-window -t $SESSION:1 -n 'App'
 tmux split-window -h
 tmux select-pane -t 0
 
+tmux send-keys "mkdir -p $OPENC2X/pingApp/output/delay" C-m
 
 #tmux send-keys "cam" C-m
 tmux send-keys "cd $BUILD_DIR/cam/src" C-m
