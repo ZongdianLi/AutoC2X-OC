@@ -50,7 +50,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <mutex>
-
+#include <chrono>
 /**
  * The Local Dynamic Map (LDM) is responsible for maintaining data that is part of ITS.
  *
@@ -101,6 +101,8 @@ private:
 	 * Cache for storing the latest CAM for each stationId
 	 */
 	std::map<int,int> camCache;
+	std::chrono::system_clock::time_point latestPingTime;
+
 };
 
 /** @} */ //end group

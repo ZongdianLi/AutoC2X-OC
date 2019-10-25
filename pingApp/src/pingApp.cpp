@@ -78,8 +78,9 @@ void pingApp::sendInit(){
 		pingApp.set_latitude(r);
 		pingApp.set_stationid(99991);
 		camCache[r] = (currTime/1000000 - 10728504000) % 65536;
+		latestPingTime = std::chrono::system_clock::now();
 		sendToCaService(pingApp);
-		std::cout << "send lat:" << r  << " timestamp:" << (currTime/1000000 - 10728504000) % 65536 << std::endl;
+		// std::cout << "send lat:" << r  << " timestamp:" << (currTime/1000000 - 10728504000) % 65536 << std::endl;
 		sleep(1);
 	}
 }
@@ -97,21 +98,23 @@ void pingApp::receiveFromCa() {
 		pair<string, string> received = mReceiverFromCa->receive();	//receive
 		serializedCam = received.second;
 		cam.ParseFromString(serializedCam);
-        // std::cout << "receive from ca id:" << cam.header().stationid() << std::endl;
 
 
 		if(cam.header().stationid() == 99991){ //return ping
+			std::cout << "return lat:" << cam.coop().camparameters().basiccontainer().latitude() << std::endl;
 			pingAppPackage::PINGAPP pingApp;
 			pingApp.set_time(cam.coop().gendeltatime());
 			pingApp.set_latitude(cam.coop().camparameters().basiccontainer().latitude());
 			pingApp.set_stationid(99992);
 			sendToCaService(pingApp);
+			std::cout << "***********REFLECT************";
 		}
 
 		if(cam.header().stationid() == 99992){ //return ping
-			int64_t currTime = Utils::currentTime();
+			std::chrono::system_clock::time_point end = std::chrono::system_clock::now();
+			double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end-latestPingTime).count(); //処理に要した時間をミリ秒に変換
+			std::cout << "*************RECEIVED***********   " <<  elapsed << std::endl;
 			// std::cout << "receive lat:" << cam.coop().camparameters().basiccontainer().latitude() << " nowTime:" <<  (currTime/1000000 - 10728504000) % 65536 << std::endl;
-			// std::cout << "delay:" << (currTime/1000000 - 10728504000) % 65536 - camCache[cam.coop().camparameters().basiccontainer().latitude()] << std::endl;
 		}
 
 		// std::cout << "stationID:" << cam.header().stationid() << std::endl;
@@ -145,7 +148,7 @@ void pingApp::alarm(const boost::system::error_code &ec){
 }
 
 void pingApp::scheduleNextAlarm(){
-    mTimer->expires_from_now(boost::posix_time::millisec(1000));
+    mTimer->expires_from_now(boost::posix_time::millisec(5000));
 	mTimer->async_wait(boost::bind(&pingApp::alarm, this, boost::asio::placeholders::error));
 }
 
