@@ -38,14 +38,14 @@ INITIALIZE_EASYLOGGINGPP
 pingApp::pingApp() {
 	GlobalConfig config;
 	try {
-		config.loadConfig(CAM_CONFIG_NAME);
+		config.loadConfig(PING_CONFIG_NAME);
 	}
 	catch (std::exception &e) {
 		cerr << "Error while loading /etc/config/openc2x_common: " << e.what() << endl;
 	}
 	ptree pt = load_config_tree();
 
-	mLogger = new LoggingUtility(CAM_CONFIG_NAME, CAM_CONFIG_NAME, config.mLogBasePath, config.mExpName, config.mExpNo, pt);
+	mLogger = new LoggingUtility(PING_CONFIG_NAME, PING_CONFIG_NAME, config.mLogBasePath, config.mExpName, config.mExpNo, pt);
 
 	string moduleName = "pingApp";
 	mReceiverFromCa = new CommunicationReceiver("23456", "CAM", *mLogger);
