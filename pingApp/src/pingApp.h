@@ -51,6 +51,8 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <mutex>
 #include <chrono>
+#include <fstream>
+#include <sstream>
 /**
  * The Local Dynamic Map (LDM) is responsible for maintaining data that is part of ITS.
  *
@@ -102,6 +104,8 @@ private:
 	 */
 	std::map<int,int> camCache;
 	std::chrono::system_clock::time_point latestPingTime;
+
+	std::ofstream delay_output_file;
 
 };
 
