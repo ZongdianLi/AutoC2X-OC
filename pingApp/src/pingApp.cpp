@@ -138,7 +138,7 @@ void pingApp::receiveFromCa() {
 
 		if(cam.header().stationid() == 99992){ //return ping
 			std::chrono::system_clock::time_point end = std::chrono::system_clock::now();
-			double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end-latestPingTime).count(); //処理に要した時間をミリ秒に変換
+			double elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end-latestPingTime).count(); //処理に要した時間をミリ秒に変換
 			delay_output_file << std::chrono::system_clock::to_time_t(end) << "," << elapsed << std::endl;
 			std::cout << "*************RECEIVED***********   " <<  elapsed << std::endl;
 			// std::cout << "receive lat:" << cam.coop().camparameters().basiccontainer().latitude() << " nowTime:" <<  (currTime/1000000 - 10728504000) % 65536 << std::endl;
