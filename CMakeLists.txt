@@ -39,6 +39,7 @@ add_subdirectory(ldm)
 add_subdirectory(httpServer)
 add_subdirectory(config)
 add_subdirectory(scripts)
+add_subdirectory(pingApp)
 
 ADD_CUSTOM_TARGET(
     config ALL COMMENT "Installing Recource-Files into Builddirectory"

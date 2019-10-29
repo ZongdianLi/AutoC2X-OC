@@ -65,6 +65,8 @@ static const std::string AUTOWARE_CONFIG_NAME = "autoware";
 static const std::string LDM_CONFIG_NAME = "ldm";
 /** config name for http server **/
 static const std::string HTTP_SERVER_CONFIG_NAME = "httpServer";
+/** config name for ping App. **/
+static const std::string PING_CONFIG_NAME = "pingApp";
 
 /** module name for DCC **/
 static const std::string DCC_MODULE_NAME = "Dcc";
@@ -97,6 +99,8 @@ static const std::string LDM_MODULE_NAME = "Ldm";
 /** module name for http server **/
 static const std::string HTTP_SERVER_MODULE_NAME = "WebApplication";
 
+/** module name for ping App **/
+static const std::string PING_MODULE_NAME = "pingApp";
 
 
 /**

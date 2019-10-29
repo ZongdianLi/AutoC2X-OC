@@ -37,6 +37,7 @@
 #include <common/buffers/cam.pb.h>
 #include <common/buffers/gps.pb.h>
 #include <common/buffers/obd2.pb.h>
+#include <common/buffers/pingApp.pb.h>
 #include <common/buffers/camInfo.pb.h>
 #include <common/buffers/CoopAwareness.pb.h>
 #include <common/buffers/ItsPduHeader.pb.h>
@@ -95,7 +96,7 @@ public:
 	~CaService();
 
 	/** Sends a new CAM to LDM and DCC.	 */
-	void send();
+	void send(bool isPingApp = false);
 
 	/** Calculates the heading towards North based on the two specified coordinates.
 	 *
@@ -149,7 +150,7 @@ private:
 	 * The new CAM includes the MAC address as stationId, an increasing but not unique ID, a current time stamp, and the latest GPS and OBD2 data if it is not too old (as configured).
 	 * @return The newly generated CAM.
 	 */
-	/*std::vector<uint8_t>*/CAM_t* generateCam();
+	/*std::vector<uint8_t>*/CAM_t* generateCam(bool isPingApp = false);
 
 	/** Converts ASN1 CAM structure into CAM protocol buffer.
 	 * @return The newly generated CAM protocol buffer.
@@ -170,6 +171,7 @@ private:
 	 *
 	 */
 	void receiveAutowareData();
+	void receivePingAppData();
 
 	/** Checks if heading has changed more than 4 degrees.
 	 * @return True if CAM needs to be triggered, false otherwise
@@ -211,16 +213,19 @@ private:
 
 	CommunicationSender* mSenderToDcc;
 	CommunicationSender* mSenderToLdm;
+	CommunicationSender* mSenderToPingApp;
 
 	CommunicationReceiver* mReceiverFromDcc;
 	CommunicationReceiver* mReceiverGps;
 	CommunicationReceiver* mReceiverObd2;
 	CommunicationReceiver* mReceiverAutoware;
+	CommunicationReceiver* mReceiverPingApp;
 
 	boost::thread* mThreadReceive;
 	boost::thread* mThreadGpsDataReceive;
 	boost::thread* mThreadObd2DataReceive;
 	boost::thread* mThreadAutowareDataReceive;
+	boost::thread* mThreadPingAppDataReceive;
 
 	MessageUtils* mMsgUtils;
 	LoggingUtility* mLogger;
@@ -248,6 +253,9 @@ private:
 	autowarePackage::AUTOWARE mLatestAutoware;
 	bool mAutowareValid;
 	std::mutex mMutexLatestAutoware;
+	pingAppPackage::PINGAPP mLatestPingApp;
+	bool mPingAppValid;
+	std::mutex mMutexLatestPingApp;
 
 	struct LastSentCamInfo {
 		bool hasGPS = false;
@@ -260,6 +268,7 @@ private:
 		int64_t timestamp = 0;
 	};
 	LastSentCamInfo mLastSentCamInfo;
+
 };
 
 /** @} */ //end group

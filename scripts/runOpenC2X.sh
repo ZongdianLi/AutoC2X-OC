@@ -17,8 +17,11 @@ tmux new-window -t $SESSION:1 -n 'App'
 tmux split-window -h
 tmux select-pane -t 0
 
+tmux send-keys "mkdir -p $OPENC2X/pingApp/output/delay" C-m
 
-tmux send-keys "cam" C-m
+#tmux send-keys "cam" C-m
+tmux send-keys "cd $BUILD_DIR/cam/src" C-m
+tmux send-keys "./cam" C-m
 tmux split-window -v
 
 tmux send-keys "httpServer" C-m
@@ -29,8 +32,14 @@ tmux split-window -v
 tmux send-keys "ldm" C-m
 tmux split-window -v
 
+
 tmux kill-pane
 tmux select-pane -t 3
+
+
+tmux send-keys "cd $BUILD_DIR/pingApp/src" C-m
+tmux send-keys "./pingApp" C-m
+tmux split-window -v
 
 tmux send-keys "denm" C-m
 tmux split-window -v
