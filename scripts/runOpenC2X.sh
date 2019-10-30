@@ -39,9 +39,9 @@ tmux kill-pane
 tmux select-pane -t 3
 
 
-# tmux send-keys "cd $BUILD_DIR/pingApp/src" C-m
-# tmux send-keys "./pingApp" C-m
-# tmux split-window -v
+tmux send-keys "cd $BUILD_DIR/pingApp/src" C-m
+tmux send-keys "./pingApp" C-m
+tmux split-window -v
 
 tmux send-keys "denm" C-m
 tmux split-window -v
@@ -52,8 +52,8 @@ tmux split-window -v
 # tmux send-keys "obd2" C-m
 # tmux split-window -v
 
-tmux send-keys "cd $BUILD_DIR/autoware/src" C-m
-tmux send-keys "./autoware" C-m
+# tmux send-keys "cd $BUILD_DIR/autoware/src" C-m
+# tmux send-keys "./autoware" C-m
 # tmux split-window -v
 
 
