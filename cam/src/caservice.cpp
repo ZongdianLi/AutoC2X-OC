@@ -96,7 +96,7 @@ CaService::CaService(CaServiceConfig &config, ptree& configTree) {
 	s<<lt->tm_sec;
 	std::string timestamp = s.str();
 
-	std::string filename = std::string(cur_dir) + "/../../../cam/output/delay/" + timestamp + ".csv";
+	std::string filename = std::string(cur_dir) + "/../../../cam/output/delay/atoc" + timestamp + ".csv";
 	atoc_delay_output_file.open(filename, std::ios::out);
 
 	if (mConfig.mGenerateMsgs) {
