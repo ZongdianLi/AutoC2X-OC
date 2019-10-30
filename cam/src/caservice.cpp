@@ -76,6 +76,29 @@ CaService::CaService(CaServiceConfig &config, ptree& configTree) {
 	mObd2Valid = false;
 	mAutowareValid = false;
 
+	char cur_dir[1024];
+	getcwd(cur_dir, 1024);
+
+	time_t t = time(nullptr);
+	const tm* lt = localtime(&t);
+	std::stringstream s;
+	s<<"20";
+	s<<lt->tm_year-100; //100を引くことで20xxのxxの部分になる
+	s<<"-";
+	s<<lt->tm_mon+1; //月を0からカウントしているため
+	s<<"-";
+	s<<lt->tm_mday; //そのまま
+	s<<"_";
+	s<<lt->tm_hour;
+	s<<":";
+	s<<lt->tm_min;
+	s<<":";
+	s<<lt->tm_sec;
+	std::string timestamp = s.str();
+
+	std::string filename = std::string(cur_dir) + "/../../../cam/output/delay/" + timestamp + ".csv";
+	atoc_delay_output_file.open(filename, std::ios::out);
+
 	if (mConfig.mGenerateMsgs) {
 		mTimer = new boost::asio::deadline_timer(mIoService, boost::posix_time::millisec(100));
 		mTimer->async_wait(boost::bind(&CaService::alarm, this, boost::asio::placeholders::error));
@@ -84,6 +107,9 @@ CaService::CaService(CaServiceConfig &config, ptree& configTree) {
 	else {
 		mLogger->logInfo("CAM triggering disabled");
 	}
+
+	
+
 }
 
 CaService::~CaService() {
@@ -181,6 +207,10 @@ void CaService::receiveAutowareData() {
 		mMutexLatestAutoware.lock();
 		mLatestAutoware = newAutoware;
 		mMutexLatestAutoware.unlock();
+		// std::cout << "now time:" << Utils::currentTime() << std::endl;
+		// std::cout << "generationUnixTime" << newAutoware.time() << std::endl;
+		// std::cout << "time delta:" << (Utils::currentTime() - newAutoware.time()) / 1000000.0 << std::endl;
+		atoc_delay_output_file << Utils::currentTime() << "," << (Utils::currentTime() - newAutoware.time()) / 1000000.0 << std::endl;
 	}
 }
 
@@ -532,7 +562,9 @@ CAM_t* CaService::generateCam(bool isPingApp) {
 			cam->cam.camParameters.basicContainer.referencePosition.latitude = mLatestAutoware.latitude();
 			mLastSentCamInfo.hasAUTOWARE = true;
 			mLastSentCamInfo.lastAutoware = autowarePackage::AUTOWARE(mLatestAutoware); //data needs to be copied to a new buffer because new autoware data can be received before sending
+			std::cout << "autoware comes" <<  mLatestAutoware.longitude() << std::endl;
 		} else {
+			std::cout << "autoware comes" <<  mLatestAutoware.longitude() << std::endl;
 			mLastSentCamInfo.hasAUTOWARE = false;
 			cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue = SpeedValue_unavailable;
 		}

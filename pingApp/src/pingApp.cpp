@@ -77,7 +77,6 @@ pingApp::pingApp() {
 	std::string timestamp = s.str();
 
 	std::string filename = std::string(cur_dir) + "/../../../pingApp/output/delay/" + timestamp + ".csv";
-	std::cout << "path************" << filename << std::endl;
 	delay_output_file.open(filename, std::ios::out);
 	// mTimer = new boost::asio::deadline_timer(mIoService, boost::posix_time::millisec(100));
     // mTimer->async_wait(boost::bind(&pingApp::alarm, this, boost::asio::placeholders::error));

@@ -48,6 +48,10 @@
 #include <common/asn1/CAM.h>
 #include <common/messages/MessageUtils.h>
 #include <common/buffers/autoware.pb.h>
+#include <fstream>
+#include <chrono>
+#include <ctime>
+
 
 /** Struct that hold the configuration for CaService.
  * The configuration is defined in /etc/config/openc2x_cam</a>
@@ -207,6 +211,7 @@ private:
 	 * @return True if GPS data is valid, false otherwise.
 	 */
 	bool isGPSdataValid();
+	
 
 	GlobalConfig mGlobalConfig;
 	CaServiceConfig mConfig;
@@ -269,6 +274,7 @@ private:
 	};
 	LastSentCamInfo mLastSentCamInfo;
 
+	std::ofstream atoc_delay_output_file;
 };
 
 /** @} */ //end group

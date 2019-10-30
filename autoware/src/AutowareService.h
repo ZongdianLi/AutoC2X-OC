@@ -45,6 +45,9 @@
 #include <string>
 #include <common/config/config.h>
 #include "projects.h"
+#include <chrono>
+#include <ctime>
+#include <fstream>
 
 
 /** Struct that holds the configuration for AutowareService.
@@ -131,6 +134,8 @@ public:
 
 	static std::string paramOrganize(std::string param);
 
+	static void timeCalc();
+
 private:
 	static AutowareConfig mConfig;
 	static GlobalConfig mGlobalConfig;
@@ -150,10 +155,12 @@ private:
 	static double speed;
 	static double longitude;
 	static double latitude;
+	static double generationUnixTime;
 	static geometry_msgs::PoseStamped nowPose;
 	static geometry_msgs::PoseStamped prevPose;
 
 	static PJ *p_proj;
+	static std::ofstream delay_output_file;
 
 };
 

@@ -18,6 +18,8 @@ tmux split-window -h
 tmux select-pane -t 0
 
 tmux send-keys "mkdir -p $OPENC2X/pingApp/output/delay" C-m
+tmux send-keys "mkdir -p $OPENC2X/autoware/output/delay" C-m
+tmux send-keys "mkdir -p $OPENC2X/cam/output/delay" C-m
 
 #tmux send-keys "cam" C-m
 tmux send-keys "cd $BUILD_DIR/cam/src" C-m
@@ -37,9 +39,9 @@ tmux kill-pane
 tmux select-pane -t 3
 
 
-tmux send-keys "cd $BUILD_DIR/pingApp/src" C-m
-tmux send-keys "./pingApp" C-m
-tmux split-window -v
+# tmux send-keys "cd $BUILD_DIR/pingApp/src" C-m
+# tmux send-keys "./pingApp" C-m
+# tmux split-window -v
 
 tmux send-keys "denm" C-m
 tmux split-window -v

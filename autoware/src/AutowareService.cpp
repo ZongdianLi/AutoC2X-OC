@@ -54,8 +54,10 @@ ros::NodeHandle *AutowareService::n;
 double AutowareService::speed;
 double AutowareService::latitude;
 double AutowareService::longitude;
+double AutowareService::generationUnixTime;
 geometry_msgs::PoseStamped AutowareService::nowPose;
 geometry_msgs::PoseStamped AutowareService::prevPose;
+std::ofstream AutowareService::delay_output_file;
 
 PJ *AutowareService::p_proj;
 
@@ -79,6 +81,29 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	mRandNumberGen = default_random_engine(0);
 	mBernoulli = bernoulli_distribution(0);
 	mUniform = uniform_real_distribution<double>(-0.01, 0.01);
+
+	char cur_dir[1024];
+	getcwd(cur_dir, 1024);
+
+	time_t t = time(nullptr);
+	const tm* lt = localtime(&t);
+	std::stringstream s;
+	s<<"20";
+	s<<lt->tm_year-100; //100を引くことで20xxのxxの部分になる
+	s<<"-";
+	s<<lt->tm_mon+1; //月を0からカウントしているため
+	s<<"-";
+	s<<lt->tm_mday; //そのまま
+	s<<"_";
+	s<<lt->tm_hour;
+	s<<":";
+	s<<lt->tm_min;
+	s<<":";
+	s<<lt->tm_sec;
+	std::string timestamp = s.str();
+
+	std::string filename = std::string(cur_dir) + "/../../../autoware/output/delay/" + timestamp + ".csv";
+	delay_output_file.open(filename, std::ios::out);
 
 }
 
@@ -135,10 +160,11 @@ void AutowareService::simulateData() {
 
 	//write current speed to protocol buffer
 	autoware.set_speed(speed * 100); // standard expects speed in 0.01 m/s
-	autoware.set_time(Utils::currentTime());
+	// autoware.set_time(Utils::currentTime());
+	autoware.set_time(generationUnixTime * 1000000000);
 
-	autoware.set_longitude(longitude);
-	autoware.set_latitude(latitude);
+	autoware.set_longitude(longitude * 10000000);
+	autoware.set_latitude(latitude * 10000000);
 	sendToServices(autoware);
 
 	// mTimer->expires_from_now(boost::posix_time::millisec(mConfig.mFrequency));
@@ -219,30 +245,41 @@ void AutowareService::init(ros::NodeHandle tmp) {
 }
 
 double AutowareService::calcSpeed(){
-	double prevTime = prevPose.header.stamp.sec + prevPose.header.stamp.nsec/1000000000.0;
-	double nowTime = nowPose.header.stamp.sec + nowPose.header.stamp.nsec/1000000000.0;
-	double timedelta = nowTime - prevTime;
+		double prevTime = prevPose.header.stamp.sec + prevPose.header.stamp.nsec/1000000000.0;
+		double nowTime = nowPose.header.stamp.sec + nowPose.header.stamp.nsec/1000000000.0;
+		double timedelta = nowTime - prevTime;
 
-	double d_x = pow(prevPose.pose.position.x - nowPose.pose.position.x, 2);
-	double d_y = pow(prevPose.pose.position.y - nowPose.pose.position.y, 2);
+		double d_x = pow(prevPose.pose.position.x - nowPose.pose.position.x, 2);
+		double d_y = pow(prevPose.pose.position.y - nowPose.pose.position.y, 2);
 
-	// double DEG_TO_RAD = M_PI / 180;
-	projUV xy;
-	xy.u = nowPose.pose.position.x;
-	xy.v = nowPose.pose.position.y;
-	projUV result = pj_inv(xy, p_proj);
-	result.u /= DEG_TO_RAD;
-	result.v /= DEG_TO_RAD;
-	printf("lng: %f, lat: %f", result.u, result.v); 
+		// double degToRad = M_PI / 180;
+		projUV xy;
+		xy.u = nowPose.pose.position.x;
+		xy.v = nowPose.pose.position.y;
+		projUV result = pj_inv(xy, p_proj);
+		result.u /= DEG_TO_RAD;
+		result.v /= DEG_TO_RAD;
+		printf("lng: %f, lat: %f\n", result.u, result.v); 
 
-	longitude = result.u;
-	latitude = result.v;
+		longitude = result.u;
+		latitude = result.v;
 
-	return sqrt(d_x + d_y) / timedelta;
+		return sqrt(d_x + d_y) / timedelta;
+
 }
 
-void callback(const autoware_msgs::DetectedObjectArray msg){
-// void AutowareService::callback(const geometry_msgs::PoseStamped msg){
+void AutowareService::timeCalc(){
+	geometry_msgs::PoseStamped newestPose = nowPose;
+	double messageRosTime = newestPose.header.stamp.sec +  newestPose.header.stamp.nsec / 1000000000.0;
+	double diffTimeFromRosToWall = (ros::WallTime::now().toSec() - ros::Time::now().toSec() - ros::Time::now().toSec() + ros::WallTime::now().toSec()) / 2.0;
+	// std::cout << "delay:" << (ros::WallTime::now().toSec() - (messageRosTime + diffTimeFromRosToWall)) *1000 << std::endl;
+	delay_output_file << ros::WallTime::now() << "," << (ros::WallTime::now().toSec() - (messageRosTime + diffTimeFromRosToWall)) *1000 << std::endl;
+	generationUnixTime = messageRosTime + diffTimeFromRosToWall;
+}
+
+// void callback(const autoware_msgs::DetectedObjectArray msg){
+void AutowareService::callback(const geometry_msgs::PoseStamped msg){
+	std::cout << "called" << std::endl;
 	// sensor_msgs::PointCloud out_pointcloud;
 	// sensor_msgs::convertPointCloud2ToPointCloud(msg, out_pointcloud);
 	// printf("%d\n", msg.header.seq);
@@ -256,13 +293,14 @@ void callback(const autoware_msgs::DetectedObjectArray msg){
 	// printf("%d\n", msg.width);
     // printf("%f\n", msg.pose.position.x);
 
-	// prevPose = nowPose;
-	// nowPose = msg;
-
-	const autoware_msgs::DetectedObjectArray message = msg;
-	// speed = calcSpeed();
+	prevPose = nowPose;
+	nowPose = msg;
+	// const autoware_msgs::DetectedObjectArray message = msg;
+	timeCalc();
+	speed = calcSpeed();
 	// printf("%f\n", speed);
-	// simulateData();
+	simulateData();
+	
 }
 
 
@@ -434,16 +472,17 @@ int main(int argc,  char* argv[]) {
 	AutowareService autoware(config);
 	
 	ros::init(argc, argv, "listener");
-	ros::NodeHandle n, n2;
+	ros::NodeHandle n;
 
-    // ros::Subscriber sub = n.subscribe("ndt_pose", 1024, callback);
+	ros::Subscriber sub = n.subscribe("ndt_pose", 1024, autoware.callback);
+
     // ros::Subscriber sub = n.subscribe("points_raw", 1024, callback);
 	// ros::Subscriber sub = n.subscribe("points_cluster", 1024, callback);
 	// ros::Subscriber sub = n.subscribe("detection/lidar_detector/objects", 1024, callback);
-	ros::Timer timer = n.createTimer(ros::Duration(0.1), createObjectsPublisher); //こっちでより下流のトピックに流し込む
+	// ros::Timer timer = n.createTimer(ros::Duration(0.1), createObjectsPublisher); //こっちでより下流のトピックに流し込む
 	// ros::Timer timer = n.createTimer(ros::Duration(0.1), createPointsPublisher); //こっちはグレーの四角が挿入される
 
-	// autoware.init(n);
+	autoware.init(n);
 	ros::spin();
 	return 0;
 }
