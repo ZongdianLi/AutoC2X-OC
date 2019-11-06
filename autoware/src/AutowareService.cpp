@@ -240,7 +240,7 @@ void AutowareService::init(ros::NodeHandle tmp) {
 		// mTimer->async_wait(boost::bind(&AutowareService::simulateData, this, boost::asio::placeholders::error));
 		// mIoService.run();
 	}
-	ros::spin();
+	// ros::spin();
 
 }
 
@@ -279,7 +279,6 @@ void AutowareService::timeCalc(){
 
 // void callback(const autoware_msgs::DetectedObjectArray msg){
 void AutowareService::callback(const geometry_msgs::PoseStamped msg){
-	std::cout << "called" << std::endl;
 	// sensor_msgs::PointCloud out_pointcloud;
 	// sensor_msgs::convertPointCloud2ToPointCloud(msg, out_pointcloud);
 	// printf("%d\n", msg.header.seq);
@@ -303,6 +302,9 @@ void AutowareService::callback(const geometry_msgs::PoseStamped msg){
 	
 }
 
+void AutowareService::sampleCallback(autoware_msgs::DetectedObjectArray msg){
+	std::cout << "listen:" << msg.header.stamp.sec << std::endl; 
+}
 
 
 std::vector<geometry_msgs::Point32> createLine(){
@@ -366,22 +368,24 @@ sensor_msgs::ChannelFloat32 createChannel(std::string name){
 	return result;
 }
 
+ros::Publisher pub;
 void createObjectsPublisher(const ros::TimerEvent&){
-	ros::NodeHandle n;	
-	ros::Publisher pub = n.advertise<autoware_msgs::DetectedObjectArray>("detection/lidar_detector/objects", 1000);
+// void createObjectsPublisher(){
+	// ros::NodeHandle n;	
+	std::cout << "hello" << std::endl;
 	// ros::Publisher pub = n.advertise<sensor_msgs::PointCloud2>("points_cluster", 1000);
 
 	autoware_msgs::DetectedObjectArray msg;
 	std::vector<autoware_msgs::DetectedObject> objects;
 
-	ros::Time nowTime = ros::Time::now();
-	nowTime.sec = nowTime.sec + 1;
+	// ros::Time nowTime = ros::Time::now();
+	// nowTime.sec = nowTime.sec + 1;
 
-	msg.header.stamp = nowTime;
+	// msg.header.stamp = nowTime;
 	msg.header.frame_id = "velodyne";
 
 	autoware_msgs::DetectedObject object;
-	object.header.stamp = nowTime;
+	// object.header.stamp = nowTime;
 	object.header.frame_id = "velodyne";
 	object.label = "unknown";
 	object.valid = 1;
@@ -400,7 +404,7 @@ void createObjectsPublisher(const ros::TimerEvent&){
 	channels.push_back( createChannel("rgb") );
 	sensor_msgs::PointCloud input_msg;
 	sensor_msgs::PointCloud2 output_msg;
-	input_msg.header.stamp = nowTime;
+	// input_msg.header.stamp = nowTime;
 	input_msg.header.frame_id = "velodyne";
 	input_msg.points = points;
 	input_msg.channels = channels;
@@ -408,7 +412,7 @@ void createObjectsPublisher(const ros::TimerEvent&){
 	object.pointcloud = output_msg;
 
 	geometry_msgs::PolygonStamped convex_hull_msg;
-	convex_hull_msg.header.stamp = nowTime;
+	// convex_hull_msg.header.stamp = nowTime;
 	convex_hull_msg.header.frame_id = "velodyne";
 	geometry_msgs::Polygon polygon;
 	polygon.points = createConvexHull();
@@ -419,14 +423,14 @@ void createObjectsPublisher(const ros::TimerEvent&){
 	msg.objects = objects;
 	pub.publish(msg);
 
-	printf("published %d.%d\n",nowTime.sec, nowTime.nsec);
+	// printf("published %d.%d\n",nowTime.sec, nowTime.nsec);
 }
 
 void createPointsPublisher(const ros::TimerEvent&){
 	ros::NodeHandle n;
 	ros::Publisher pub = n.advertise<sensor_msgs::PointCloud2>("points_cluster", 1000);
 
-	ros::Rate loop_rate(0.1);
+	// ros::Rate loop_rate(0.1);
 
 	std::vector<geometry_msgs::Point32> points = createLine();
 	std::vector<sensor_msgs::ChannelFloat32> channels;
@@ -472,18 +476,22 @@ int main(int argc,  char* argv[]) {
 	AutowareService autoware(config);
 	
 	ros::init(argc, argv, "listener");
-	ros::NodeHandle n;
+	ros::NodeHandle n,n2;
 
-	ros::Subscriber sub = n.subscribe("ndt_pose", 1024, autoware.callback);
-
+	// ros::Subscriber sub = n.subscribe("ndt_pose", 1024, autoware.callback);
+	
+	 pub = n.advertise<autoware_msgs::DetectedObjectArray>("detection/lidar_detector/objects", 1000);
     // ros::Subscriber sub = n.subscribe("points_raw", 1024, callback);
 	// ros::Subscriber sub = n.subscribe("points_cluster", 1024, callback);
 	// ros::Subscriber sub = n.subscribe("detection/lidar_detector/objects", 1024, callback);
-	// ros::Timer timer = n.createTimer(ros::Duration(0.1), createObjectsPublisher); //こっちでより下流のトピックに流し込む
+	ros::Timer timer = n.createTimer(ros::Duration(0.1), createObjectsPublisher); //こっちでより下流のトピックに流し込む
 	// ros::Timer timer = n.createTimer(ros::Duration(0.1), createPointsPublisher); //こっちはグレーの四角が挿入される
 
-	autoware.init(n);
+	// autoware.init(n);
+
+	std::cout << "hairuyo" << std::endl;
 	ros::spin();
+	std::cout << "detayo" << std::endl;
 	return 0;
 }
 

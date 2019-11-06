@@ -130,6 +130,8 @@ public:
 
 	static void callback(const geometry_msgs::PoseStamped msg);
 
+	static void sampleCallback(const autoware_msgs::DetectedObjectArray msg);
+
 	static double calcSpeed();
 
 	static std::string paramOrganize(std::string param);
