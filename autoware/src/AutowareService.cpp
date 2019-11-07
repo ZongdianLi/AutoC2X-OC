@@ -57,9 +57,9 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	mBernoulli = bernoulli_distribution(0);
 	mUniform = uniform_real_distribution<double>(-0.01, 0.01);
 
-	// mThreadReceive = new boost::thread(&AutowareService::receiveFromAutoware, this);
+	mThreadReceive = new boost::thread(&AutowareService::receiveFromAutoware, this);
 	// mThreadReceive = new boost::thread(&AutowareService::testSender, this);
-	testSender();
+	// testSender();
 	
 
 	// char cur_dir[1024];
@@ -136,14 +136,16 @@ void AutowareService::simulateSpeed() {
 
 //simulates Autoware data, logs and sends it
 void AutowareService::simulateData() {
+	std::cout << "simulating....." << std::endl;
 	autowarePackage::AUTOWARE autoware;
 
 	//write current speed to protocol buffer
-	autoware.set_speed(speed * 100); // standard expects speed in 0.01 m/s
+	autoware.set_speed(speed); // standard expects speed in 0.01 m/s
 	// autoware.set_time(Utils::currentTime());
-	autoware.set_time(generationUnixTime * 1000000000);
-	autoware.set_longitude(longitude * 10000000);
-	autoware.set_latitude(latitude * 10000000);
+	autoware.set_time(generationUnixTime);
+	autoware.set_longitude(longitude);
+	autoware.set_latitude(latitude);
+	std::cout << "speed:" << autoware.speed() << " time:" << autoware.time() << std::endl;
 	sendToServices(autoware);
 
 	// mTimer->expires_from_now(boost::posix_time::millisec(mConfig.mFrequency));
@@ -230,12 +232,13 @@ void AutowareService::receiveFromAutoware(){
 		longitude = message.longitude;
 		latitude = message.latitude;
 		generationUnixTime = message.time;
-
+		std::cout << message.speed << std::endl;
         if ( rsize == 0 ) {
             break;
         } else if ( rsize == -1 ) {
             perror( "recv" );
         }
+		simulateData();
     }
  
     close( client_sockfd );
@@ -283,6 +286,9 @@ int main(int argc,  char* argv[]) {
 	}
 	AutowareService autoware(config);
 
+	while(1){
+		sleep(100);
+	}
 
 	return 0;
 }

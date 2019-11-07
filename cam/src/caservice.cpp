@@ -564,7 +564,7 @@ CAM_t* CaService::generateCam(bool isPingApp) {
 			mLastSentCamInfo.lastAutoware = autowarePackage::AUTOWARE(mLatestAutoware); //data needs to be copied to a new buffer because new autoware data can be received before sending
 			std::cout << "autoware comes" <<  mLatestAutoware.longitude() << std::endl;
 		} else {
-			std::cout << "autoware comes" <<  mLatestAutoware.longitude() << std::endl;
+			std::cout << "autoware comes false" <<  mLatestAutoware.longitude() << std::endl;
 			mLastSentCamInfo.hasAUTOWARE = false;
 			cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue = SpeedValue_unavailable;
 		}
