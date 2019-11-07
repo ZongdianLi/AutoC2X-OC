@@ -29,22 +29,16 @@
  */
 
 #include "SerialPort.h"
-#include "ros/ros.h"
-#include "geometry_msgs/PoseStamped.h"
-#include "sensor_msgs/PointCloud2.h"
-#include "sensor_msgs/PointCloud.h"
-#include "sensor_msgs/point_cloud_conversion.h"
-#include "autoware_msgs/DetectedObjectArray.h"
 #include <common/utility/CommunicationSender.h>
 #include <common/utility/LoggingUtility.h>
 #include <common/utility/Constants.h>
 #include <common/buffers/autoware.pb.h>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
+#include <boost/thread.hpp>
 #include <boost/asio.hpp>
 #include <string>
 #include <common/config/config.h>
-#include "projects.h"
 #include <chrono>
 #include <ctime>
 #include <fstream>
@@ -92,6 +86,13 @@ struct AutowareConfig {
 	}
 };
 
+struct message {
+	int speed;
+	int latitude;
+	int longitude;
+	int time;
+};
+
 /**
  * Class that connects to AUTOWARE via serial port and offers its data to other modules via ZMQ.
  */
@@ -100,69 +101,45 @@ public:
 	// AutowareService(AutowareConfig &config, std::string globalConfig, std::string loggingConf, std::string statisticConf);
 	AutowareService(AutowareConfig &config);
 	~AutowareService();
-	static void init(ros::NodeHandle tmp);
+	void init();
 
-	/** Reads the actual vehicle data from AUTOWARE and distributes it via ZMQ.
-	 *  Periodically reads speed and rpm data from AUTOWARE if simulating data is turned off,
-	 *	writes it into a protocol buffer and sends it to services such as CaService and DenService.
-	 *	@param ec Boost error code.
-	 *	@param serial SerialPort that handles the actual connection to AUTOWARE via serial port.
-	 */
-	static void receiveData(const boost::system::error_code &ec, SerialPort* serial);
+	void receiveData(const boost::system::error_code &ec, SerialPort* serial);
+	void simulateSpeed();
+	void simulateData();
+	void sendToServices(autowarePackage::AUTOWARE autoware);
 
-	/** Simulates vehicle speed.
-	 *  Simulates vehicle speed using a random distribution.
-	 */
-	static void simulateSpeed();
+	double calcSpeed();
 
-	/** Simulates vehicle data and distributes it via ZMQ.
-	 *  Periodically simulates speed data if simulating data is turned on,
-	 *	writes it into a protocol buffer and sends it to services such as CaService and DenService.
-	 *	@param ec Boost error code.
-	 */
-	static void simulateData();
+	void timeCalc();
 
-	/** Distributes AUTOWARE via ZMQ.
-	 *  Sends AUTOWARE via ZMQ to services such as CaService and DenService and logs the data.
-	 *  @param autoware The AUTOWARE to be sent to services.
-	 */
-	static void sendToServices(autowarePackage::AUTOWARE autoware);
+	void receiveFromAutoware();
 
-	static void callback(const geometry_msgs::PoseStamped msg);
+	void testSender();
 
-	static void sampleCallback(const autoware_msgs::DetectedObjectArray msg);
-
-	static double calcSpeed();
-
-	static std::string paramOrganize(std::string param);
-
-	static void timeCalc();
 
 private:
-	static AutowareConfig mConfig;
-	static GlobalConfig mGlobalConfig;
+	AutowareConfig mConfig;
+	GlobalConfig mGlobalConfig;
 
-	static CommunicationSender* mSender;
-	static LoggingUtility* mLogger;
+	CommunicationSender* mSender;
+	LoggingUtility* mLogger;
 
 	//for simulation only
-	static std::default_random_engine mRandNumberGen;
-	static std::bernoulli_distribution mBernoulli;
-	static std::uniform_real_distribution<double> mUniform;
+	std::default_random_engine mRandNumberGen;
+	std::bernoulli_distribution mBernoulli;
+	std::uniform_real_distribution<double> mUniform;
 
-	static boost::asio::io_service mIoService;
-	static boost::asio::deadline_timer* mTimer;
+	boost::asio::io_service mIoService;
+	boost::asio::deadline_timer* mTimer;
 
-	static ros::NodeHandle *n;
-	static double speed;
-	static double longitude;
-	static double latitude;
-	static double generationUnixTime;
-	static geometry_msgs::PoseStamped nowPose;
-	static geometry_msgs::PoseStamped prevPose;
+	boost::thread* mThreadReceive;
 
-	static PJ *p_proj;
-	static std::ofstream delay_output_file;
+	double speed;
+	double longitude;
+	double latitude;
+	double generationUnixTime;
+
+	std::ofstream delay_output_file;
 
 };
 
