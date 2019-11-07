@@ -125,6 +125,7 @@ ptree load_config_tree(){
 	lookup_config(&pt, config_name, "obd2");
 	lookup_config(&pt, config_name, "gps");
 	lookup_config(&pt, config_name, "ldm");
+	lookup_config(&pt, config_name, "autoware");
 	
 	std::cout << "End lookup" << std::endl;
 
