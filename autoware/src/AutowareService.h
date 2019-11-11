@@ -92,6 +92,13 @@ struct AutowareConfig {
 	}
 };
 
+struct message {
+	int speed;
+	int latitude;
+	int longitude;
+	int time;
+};
+
 /**
  * Class that connects to AUTOWARE via serial port and offers its data to other modules via ZMQ.
  */
@@ -138,6 +145,8 @@ public:
 
 	static void timeCalc();
 
+	static void sendToRouter();
+
 private:
 	static AutowareConfig mConfig;
 	static GlobalConfig mGlobalConfig;
@@ -157,12 +166,16 @@ private:
 	static double speed;
 	static double longitude;
 	static double latitude;
-	static double generationUnixTime;
+	static float generationUnixTime;
+	static long generationUnixTimeSec;
+	static long generationUnixTimeNSec;
 	static geometry_msgs::PoseStamped nowPose;
 	static geometry_msgs::PoseStamped prevPose;
 
 	static PJ *p_proj;
 	static std::ofstream delay_output_file;
+
+	static int sockfd;
 
 };
 

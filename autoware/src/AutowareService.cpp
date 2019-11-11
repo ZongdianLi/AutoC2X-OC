@@ -54,10 +54,13 @@ ros::NodeHandle *AutowareService::n;
 double AutowareService::speed;
 double AutowareService::latitude;
 double AutowareService::longitude;
-double AutowareService::generationUnixTime;
+float AutowareService::generationUnixTime;
+long AutowareService::generationUnixTimeSec;
+long AutowareService::generationUnixTimeNSec;
 geometry_msgs::PoseStamped AutowareService::nowPose;
 geometry_msgs::PoseStamped AutowareService::prevPose;
 std::ofstream AutowareService::delay_output_file;
+int AutowareService::sockfd;
 
 PJ *AutowareService::p_proj;
 
@@ -102,8 +105,20 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	s<<lt->tm_sec;
 	std::string timestamp = s.str();
 
-	std::string filename = std::string(cur_dir) + "/../../../autoware/output/delay/" + timestamp + ".csv";
+	// std::string filename = std::string(cur_dir) + "/../../../autoware/output/delay/" + timestamp + ".csv";
+	std::string filename = std::string(cur_dir) + "/../autoware/output/delay/" + timestamp + ".csv";
+	std::cout << "filename:" << filename << std::endl;
 	delay_output_file.open(filename, std::ios::out);
+
+
+	std::cout << "hello" << std::endl;
+	struct sockaddr_in addr;
+	if( (sockfd = socket( AF_INET, SOCK_STREAM, 0) ) < 0 ) perror( "socket" ); 
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons( 23457 );
+	addr.sin_addr.s_addr = inet_addr( "192.168.1.1" );
+	connect( sockfd, (struct sockaddr *)&addr, sizeof( struct sockaddr_in ) );
+
 
 }
 
@@ -113,6 +128,23 @@ AutowareService::~AutowareService() {
 
 	mTimer->cancel();
 	delete mTimer;
+}
+
+void AutowareService::sendToRouter(){
+	 // データ送信
+    char send_str[10];
+    char receive_str[10];
+		message message;
+		message.speed = speed * 100;
+		message.time =  ((generationUnixTimeSec*1000 + (int)generationUnixTimeNSec/1000000 - 1072850400000)) % 65536;
+		message.longitude = longitude * 10000000;
+		message.latitude = latitude * 10000000;
+		// std::cout << "generationDelta:" <<  (long)generationUnixTime << std::endl;
+		char* my_s_bytes = static_cast<char*>(static_cast<void*>(&message));
+		if( send( sockfd, my_s_bytes, sizeof(message), 0 ) < 0 ) {
+				perror( "send" );
+		} else {
+		}
 }
 
 //reads the actual vehicle data from Autoware
@@ -165,6 +197,8 @@ void AutowareService::simulateData() {
 
 	autoware.set_longitude(longitude * 10000000);
 	autoware.set_latitude(latitude * 10000000);
+
+	
 	sendToServices(autoware);
 
 	// mTimer->expires_from_now(boost::posix_time::millisec(mConfig.mFrequency));
@@ -259,7 +293,7 @@ double AutowareService::calcSpeed(){
 		projUV result = pj_inv(xy, p_proj);
 		result.u /= DEG_TO_RAD;
 		result.v /= DEG_TO_RAD;
-		printf("lng: %f, lat: %f\n", result.u, result.v); 
+		// printf("lng: %f, lat: %f\n", result.u, result.v); 
 
 		longitude = result.u;
 		latitude = result.v;
@@ -270,15 +304,50 @@ double AutowareService::calcSpeed(){
 
 void AutowareService::timeCalc(){
 	geometry_msgs::PoseStamped newestPose = nowPose;
-	double messageRosTime = newestPose.header.stamp.sec +  newestPose.header.stamp.nsec / 1000000000.0;
-	double diffTimeFromRosToWall = (ros::WallTime::now().toSec() - ros::Time::now().toSec() - ros::Time::now().toSec() + ros::WallTime::now().toSec()) / 2.0;
-	// std::cout << "delay:" << (ros::WallTime::now().toSec() - (messageRosTime + diffTimeFromRosToWall)) *1000 << std::endl;
-	delay_output_file << ros::WallTime::now() << "," << (ros::WallTime::now().toSec() - (messageRosTime + diffTimeFromRosToWall)) *1000 << std::endl;
-	generationUnixTime = messageRosTime + diffTimeFromRosToWall;
+	float messageRosTime = newestPose.header.stamp.sec +  newestPose.header.stamp.nsec / 1000000000.0;
+	// double diffTimeFromRosToWall = (ros::WallTime::now().toSec() - ros::Time::now().toSec() - ros::Time::now().toSec() + ros::WallTime::now().toSec()) / 2.0;
+	ros::Time  a2, a3;
+	ros::WallTime a1, a4;
+	a1 = ros::WallTime::now();
+	a2 = ros::Time::now();
+	// a3 = ros::Time::now();
+	// a4 = ros::WallTime::now();
+	long diffTimeSec = ((long)a1.sec - (long)a2.sec);
+	long diffTimeNSec = ((long)a1.nsec - (long)a2.nsec);
+	// float diffTimeFromRosToWall = diffTimeSec + diffTimeNSec / 1000000000.0;
+	// std::cout << std::setprecision(20) << std::endl;
+	// std::cout << "rostime: " << a1.sec << "." << a1.nsec << std::endl;
+	// std::cout << "walltime: " << a2.sec << "." << a2.nsec << std::endl;
+	// std::cout << "Sec=" << diffTimeSec << " nsec=" << diffTimeNSec << std::endl;
+
+	
+	generationUnixTimeSec = (long)newestPose.header.stamp.sec + diffTimeSec;
+	generationUnixTimeNSec = (long)newestPose.header.stamp.nsec + diffTimeNSec;
+	if(generationUnixTimeNSec < 0){
+		generationUnixTimeSec -= 1;
+		generationUnixTimeNSec = 1000000000 + generationUnixTimeNSec;
+	}
+	if(generationUnixTimeNSec >= 1000000000){
+		generationUnixTimeSec += 1;
+		generationUnixTimeNSec -= 1000000000;
+	}
+	// std::cout << "a1.nsec:" << a1.nsec <<  " generationNSec:" << generationUnixTimeNSec << std::endl;
+	long delaySec = a1.sec - generationUnixTimeSec;
+	long delayNSec = a1.nsec - generationUnixTimeNSec;
+	if(delayNSec < 0){
+		// std::cout << "hello" << std::endl;
+		// std::cout << "sec=" << delaySec << " nsec=" << delayNSec << std::endl;
+		delaySec -= 1;
+		delayNSec = 1000000000 + delayNSec;
+	}
+	delay_output_file <<  std::setprecision(20) <<  ros::WallTime::now() << "," << delayNSec / 1000000000.0 << std::endl;
+	std::cout << "delay:" << delayNSec/ 1000000000.0 << " a1.nsec:" << a1.nsec << " generationNSec:" << generationUnixTimeNSec << std::endl;
+	// std::cout << "generationUnixTime:" <<  std::setprecision(20) << generationUnixTimeSec << "." << generationUnixTimeNSec << std::endl;
 }
 
 // void callback(const autoware_msgs::DetectedObjectArray msg){
 void AutowareService::callback(const geometry_msgs::PoseStamped msg){
+
 	// sensor_msgs::PointCloud out_pointcloud;
 	// sensor_msgs::convertPointCloud2ToPointCloud(msg, out_pointcloud);
 	// printf("%d\n", msg.header.seq);
@@ -298,8 +367,8 @@ void AutowareService::callback(const geometry_msgs::PoseStamped msg){
 	timeCalc();
 	speed = calcSpeed();
 	// printf("%f\n", speed);
-	simulateData();
-	
+	// simulateData();
+	sendToRouter();
 }
 
 void AutowareService::sampleCallback(autoware_msgs::DetectedObjectArray msg){
@@ -478,16 +547,16 @@ int main(int argc,  char* argv[]) {
 	ros::init(argc, argv, "listener");
 	ros::NodeHandle n,n2;
 
-	// ros::Subscriber sub = n.subscribe("ndt_pose", 1024, autoware.callback);
+	ros::Subscriber sub = n.subscribe("ndt_pose", 1024, autoware.callback);
 	
-	 pub = n.advertise<autoware_msgs::DetectedObjectArray>("detection/lidar_detector/objects", 1000);
+	//  pub = n.advertise<autoware_msgs::DetectedObjectArray>("detection/lidar_detector/objects", 1000);
     // ros::Subscriber sub = n.subscribe("points_raw", 1024, callback);
 	// ros::Subscriber sub = n.subscribe("points_cluster", 1024, callback);
 	// ros::Subscriber sub = n.subscribe("detection/lidar_detector/objects", 1024, callback);
-	ros::Timer timer = n.createTimer(ros::Duration(0.1), createObjectsPublisher); //こっちでより下流のトピックに流し込む
+	// ros::Timer timer = n.createTimer(ros::Duration(0.1), createObjectsPublisher); //こっちでより下流のトピックに流し込む
 	// ros::Timer timer = n.createTimer(ros::Duration(0.1), createPointsPublisher); //こっちはグレーの四角が挿入される
 
-	// autoware.init(n);
+	autoware.init(n);
 
 	std::cout << "hairuyo" << std::endl;
 	ros::spin();
