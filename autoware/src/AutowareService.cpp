@@ -145,7 +145,7 @@ void AutowareService::simulateData() {
 	autoware.set_time(generationUnixTime);
 	autoware.set_longitude(longitude);
 	autoware.set_latitude(latitude);
-	std::cout << "speed:" << autoware.speed() << " time:" << autoware.time() << std::endl;
+	std::cout << std::setprecision(20) << "speed:" << autoware.speed() << " time:" << autoware.time() << " longitude:" << autoware.longitude() << " latitude:" << autoware.latitude() << std::endl;
 	sendToServices(autoware);
 
 	// mTimer->expires_from_now(boost::posix_time::millisec(mConfig.mFrequency));

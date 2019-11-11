@@ -358,11 +358,11 @@ bool CaService::isHeadingChanged() {
 bool CaService::isAutowareSpeedChanged() {
 	mMutexLatestAutoware.lock();
 	int64_t currentTime = Utils::currentTime();
-	if (currentTime - mLatestAutoware.time() > (int64_t)mConfig.mMaxObd2Age * 1000*1000*1000) {	//AUTOWARE data too old
-		mMutexLatestAutoware.unlock();
-		mAutowareValid = false;
-		return false;
-	}
+	// if (currentTime - mLatestAutoware.time() > (int64_t)mConfig.mMaxObd2Age * 1000*1000*1000) {	//AUTOWARE data too old
+	// 	mMutexLatestAutoware.unlock();
+	// 	mAutowareValid = false;
+	// 	return false;
+	// }
 	mAutowareValid = true;
 	double deltaSpeed = abs(mLatestAutoware.speed() - mLastSentCamInfo.lastAutoware.speed());
 	if(deltaSpeed > 1.0) {
