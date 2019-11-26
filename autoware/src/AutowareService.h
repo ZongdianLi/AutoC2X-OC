@@ -139,6 +139,8 @@ private:
 	double latitude;
 	double generationUnixTime;
 
+	int sockfd;
+
 	std::ofstream delay_output_file;
 
 };

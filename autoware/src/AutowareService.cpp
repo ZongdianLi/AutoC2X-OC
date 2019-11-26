@@ -84,6 +84,13 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	// std::string filename = std::string(cur_dir) + "/../../../autoware/output/delay/" + timestamp + ".csv";
 	// delay_output_file.open(filename, std::ios::out);
 
+	struct sockaddr_in addr;
+	if( (sockfd = socket( AF_INET, SOCK_STREAM, 0) ) < 0 ) perror( "socket" ); 
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons( 23457 );
+	addr.sin_addr.s_addr = inet_addr( "192.168.1.1" );
+	connect( sockfd, (struct sockaddr *)&addr, sizeof( struct sockaddr_in ) );
+
 }
 
 AutowareService::~AutowareService() {
@@ -96,21 +103,6 @@ AutowareService::~AutowareService() {
 
 //reads the actual vehicle data from Autoware
 void AutowareService::receiveData(const boost::system::error_code &ec, SerialPort* serial) {
-	// double speed = serial->readSpeed();
-	// int rpm = serial->readRpm();
-	// cout << to_string(speed) << " " << to_string(rpm) << endl;
-	// if (speed != -1) {		//valid speed
-	// 	//write current data to protocol buffer
-	// 	autowarePackage::AUTOWARE autoware;
-	// 	autoware.set_time(Utils::currentTime());
-	// 	autoware.set_speed(speed * 100); // standard expects speed in 0.01 m/s
-	// 	if (rpm != -1) {
-	// 		autoware.set_rpm(rpm);
-	// 	}
-	// 	sendToServices(autoware);
-	// }
-	// mTimer->expires_from_now(boost::posix_time::millisec(mConfig.mFrequency));
-	// mTimer->async_wait(boost::bind(&AutowareService::receiveData, this, boost::asio::placeholders::error, serial));
 }
 
 
@@ -164,85 +156,32 @@ void AutowareService::receiveFromServices(autowarePackage::AUTOWARE autoware) {
 
 void AutowareService::init() {
 	if (!mConfig.mSimulateData) {	//use real Autoware data
-		// SerialPort* serial = new SerialPort();
-		// if (serial->connect(mConfig.mDevice) != -1) {
-		// 	mLogger->logInfo("Connected to serial port successfully");
-
-		// 	serial->init();
-
-		// 	mTimer = new boost::asio::deadline_timer(mIoService, boost::posix_time::millisec(mConfig.mFrequency));
-		// 	mTimer->async_wait(boost::bind(&AutowareService::receiveData, this, boost::asio::placeholders::error, serial));
-		// 	mIoService.run();
-
-		// 	serial->disconnect();
-		// }
-		// else {
-		// 	mLogger->logError("Cannot open serial port -> plug in Autoware and run with sudo");
-		// }
+		
 	}
 	else {				//use simulated Autoware data
-		// mTimer = new boost::asio::deadline_timer(mIoService, boost::posix_time::millisec(mConfig.mFrequency));
-		// mTimer->async_wait(boost::bind(&AutowareService::simulateData, this, boost::asio::placeholders::error));
-		// mIoService.run();
+		
 	}
-	// ros::spin();
-
 }
 
 double AutowareService::calcSpeed(){
 }
 
 void AutowareService::timeCalc(){
-	// geometry_msgs::PoseStamped newestPose = nowPose;
-	// double messageRosTime = newestPose.header.stamp.sec +  newestPose.header.stamp.nsec / 1000000000.0;
-	// double diffTimeFromRosToWall = (ros::WallTime::now().toSec() - ros::Time::now().toSec() - ros::Time::now().toSec() + ros::WallTime::now().toSec()) / 2.0;
-	// std::cout << "delay:" << (ros::WallTime::now().toSec() - (messageRosTime + diffTimeFromRosToWall)) *1000 << std::endl;
-	// delay_output_file << ros::WallTime::now() << "," << (ros::WallTime::now().toSec() - (messageRosTime + diffTimeFromRosToWall)) *1000 << std::endl;
-	// generationUnixTime = messageRosTime + diffTimeFromRosToWall;
 }
 
 void AutowareService::sendToAutoware(){
-	std::cout << "*****receive setup" << std::endl;
-	int sockfd;
-    int client_sockfd;
-    struct sockaddr_in addr;
-    socklen_t len = sizeof( struct sockaddr_in );
-    struct sockaddr_in from_addr;
-    char buf[1024];
- 
-    memset( buf, 0, sizeof( buf ) );
-    if( ( sockfd = socket( AF_INET, SOCK_STREAM, 0 ) ) < 0 ) {
-        perror( "socket" );
-    }
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons( 23457 );
-    addr.sin_addr.s_addr = INADDR_ANY;
-    if( bind( sockfd, (struct sockaddr *)&addr, sizeof( addr ) ) < 0 ) perror( "bind" );
-    if( listen( sockfd, SOMAXCONN ) < 0 ) perror( "listen" );
-    if( ( client_sockfd = accept( sockfd, (struct sockaddr *)&from_addr, &len ) ) < 0 ) perror( "accept" );
- 
-    // 受信
-    int rsize;
-    while( 1 ) {
-		message message;
-        rsize = recv( client_sockfd, buf, sizeof( buf ), 0 );
-
-		memcpy(&message, buf, sizeof(message));
-		speed = message.speed;
-		longitude = message.longitude;
-		latitude = message.latitude;
-		generationUnixTime = message.time;
-		std::cout << message.speed << std::endl;
-        if ( rsize == 0 ) {
-            break;
-        } else if ( rsize == -1 ) {
-            perror( "recv" );
-        }
-		simulateData();
-    }
- 
-    close( client_sockfd );
-    close( sockfd );
+	char send_str[10];
+    char receive_str[10];
+	message message;
+	message.speed = 100;
+	message.time =  (114) % 65536;
+	message.longitude = 35.713968752011098218 * 10000000;
+	message.latitude = 139.76268463349990157 * 10000000;
+	char* my_s_bytes = static_cast<char*>(static_cast<void*>(&message));
+	if( send( sockfd, my_s_bytes, sizeof(message), 0 ) < 0 ) {
+			perror( "send" );
+	} else {
+	}
 }
 
 void AutowareService::testSender(){
