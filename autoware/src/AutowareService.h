@@ -106,13 +106,13 @@ public:
 	void receiveData(const boost::system::error_code &ec, SerialPort* serial);
 	void simulateSpeed();
 	void simulateData();
-	void sendToServices(autowarePackage::AUTOWARE autoware);
+	void receiveFromServices(autowarePackage::AUTOWARE autoware);
 
 	double calcSpeed();
 
 	void timeCalc();
 
-	void receiveFromAutoware();
+	void sendToAutoware();
 
 	void testSender();
 

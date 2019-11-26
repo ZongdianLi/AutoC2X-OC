@@ -153,7 +153,7 @@ void AutowareService::simulateData() {
 }
 
 //logs and sends Autoware
-void AutowareService::sendToServices(autowarePackage::AUTOWARE autoware) {
+void AutowareService::receiveFromServices(autowarePackage::AUTOWARE autoware) {
 	//send buffer to services
 	string serializedAutoware;
 	autoware.SerializeToString(&serializedAutoware);
@@ -201,7 +201,7 @@ void AutowareService::timeCalc(){
 	// generationUnixTime = messageRosTime + diffTimeFromRosToWall;
 }
 
-void AutowareService::receiveFromAutoware(){
+void AutowareService::sendToAutoware(){
 	std::cout << "*****receive setup" << std::endl;
 	int sockfd;
     int client_sockfd;
