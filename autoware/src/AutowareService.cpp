@@ -57,6 +57,7 @@ double AutowareService::longitude;
 float AutowareService::generationUnixTime;
 long AutowareService::generationUnixTimeSec;
 long AutowareService::generationUnixTimeNSec;
+std::vector<message> AutowareService::message_arr;
 geometry_msgs::PoseStamped AutowareService::nowPose;
 geometry_msgs::PoseStamped AutowareService::prevPose;
 std::ofstream AutowareService::delay_output_file;
@@ -136,14 +137,14 @@ void AutowareService::sendToRouter(){
 	 // データ送信
     char send_str[10];
     char receive_str[10];
-		std::vector<message> message_arr;
-		
+		message message;
 		message.speed = speed * 100;
 		message.time =  ((generationUnixTimeSec*1000 + (int)generationUnixTimeNSec/1000000 - 1072850400000)) % 65536;
 		message.longitude = longitude * 10000000;
 		message.latitude = latitude * 10000000;
+		message_arr.push_back(message);
 		// std::cout << "generationDelta:" <<  (long)generationUnixTime << std::endl;
-		char* my_s_bytes = static_cast<char*>(static_cast<void*>(&message));
+		char* my_s_bytes = static_cast<char*>(static_cast<void*>(&message_arr));
 		if( send( sockfd, my_s_bytes, sizeof(message), 0 ) < 0 ) {
 				perror( "send" );
 		} else {
@@ -152,21 +153,6 @@ void AutowareService::sendToRouter(){
 
 //reads the actual vehicle data from Autoware
 void AutowareService::receiveData(const boost::system::error_code &ec, SerialPort* serial) {
-	// double speed = serial->readSpeed();
-	// int rpm = serial->readRpm();
-	// cout << to_string(speed) << " " << to_string(rpm) << endl;
-	// if (speed != -1) {		//valid speed
-	// 	//write current data to protocol buffer
-	// 	autowarePackage::AUTOWARE autoware;
-	// 	autoware.set_time(Utils::currentTime());
-	// 	autoware.set_speed(speed * 100); // standard expects speed in 0.01 m/s
-	// 	if (rpm != -1) {
-	// 		autoware.set_rpm(rpm);
-	// 	}
-	// 	sendToServices(autoware);
-	// }
-	// mTimer->expires_from_now(boost::posix_time::millisec(mConfig.mFrequency));
-	// mTimer->async_wait(boost::bind(&AutowareService::receiveData, this, boost::asio::placeholders::error, serial));
 }
 
 
@@ -251,34 +237,12 @@ std::string AutowareService::paramOrganize(std::string param){
 }
 
 void AutowareService::init(ros::NodeHandle tmp) {
-	// paramOrganize("proj=tmerc lat_0=40 lon_0=140.8333333333333 k=0.9999 x_0=0 y_0=0 ellps=GRS80 units=m");
 	paramOrganize("proj=tmerc lat_0=36 lon_0=139.8333333333333 k=0.9999 x_0=0 y_0=0 ellps=GRS80 units=m");
-	// paramOrganize("proj=poly ellps=sphere lon_0=100 lat_0=45");
 	n = &tmp;
-	// ros::Subscriber sub = n->subscribe("ndt_pose", 1024, callback);
 	if (!mConfig.mSimulateData) {	//use real Autoware data
-		// SerialPort* serial = new SerialPort();
-		// if (serial->connect(mConfig.mDevice) != -1) {
-		// 	mLogger->logInfo("Connected to serial port successfully");
-
-		// 	serial->init();
-
-		// 	mTimer = new boost::asio::deadline_timer(mIoService, boost::posix_time::millisec(mConfig.mFrequency));
-		// 	mTimer->async_wait(boost::bind(&AutowareService::receiveData, this, boost::asio::placeholders::error, serial));
-		// 	mIoService.run();
-
-		// 	serial->disconnect();
-		// }
-		// else {
-		// 	mLogger->logError("Cannot open serial port -> plug in Autoware and run with sudo");
-		// }
 	}
 	else {				//use simulated Autoware data
-		// mTimer = new boost::asio::deadline_timer(mIoService, boost::posix_time::millisec(mConfig.mFrequency));
-		// mTimer->async_wait(boost::bind(&AutowareService::simulateData, this, boost::asio::placeholders::error));
-		// mIoService.run();
 	}
-	// ros::spin();
 
 }
 
@@ -349,7 +313,6 @@ void AutowareService::timeCalc(){
 	// std::cout << "generationUnixTime:" <<  std::setprecision(20) << generationUnixTimeSec << "." << generationUnixTimeNSec << std::endl;
 }
 
-// void callback(const autoware_msgs::DetectedObjectArray msg){
 void AutowareService::callback(const geometry_msgs::PoseStamped msg){
 
 	// sensor_msgs::PointCloud out_pointcloud;
@@ -362,8 +325,6 @@ void AutowareService::callback(const geometry_msgs::PoseStamped msg){
 	// point.z = out_pointcloud.points[i].z;
 	// printf("%f\n", point.z);
 	// }
-	// printf("%d\n", msg.width);
-    // printf("%f\n", msg.pose.position.x);
 
 	prevPose = nowPose;
 	nowPose = msg;
@@ -373,6 +334,40 @@ void AutowareService::callback(const geometry_msgs::PoseStamped msg){
 	// printf("%f\n", speed);
 	// simulateData();
 	// sendToRouter();
+}
+
+void AutowareService::callback_objects(const autoware_msgs::DetectedObjectArray msg){
+	std::cout << "---------" << std::endl;
+	message_arr.clear();
+	for(int i = 0; i < msg.objects.size(); i++){
+		message sock_msg;
+		float sum_x = 0.0;
+		float sum_y = 0.0;
+		float sum_z = 0.0;
+		for(int j = 0; j < msg.objects[i].convex_hull.polygon.points.size(); j++){
+			sum_x += msg.objects[i].convex_hull.polygon.points[j].x;
+			sum_y += msg.objects[i].convex_hull.polygon.points[j].y;
+			sum_z += msg.objects[i].convex_hull.polygon.points[j].z;
+		}
+		sum_x /= (float)msg.objects[i].convex_hull.polygon.points.size();
+		sum_y /= (float)msg.objects[i].convex_hull.polygon.points.size();
+		sum_z /= (float)msg.objects[i].convex_hull.polygon.points.size();
+
+		projUV xy;
+		xy.u = sum_x;
+		xy.v = sum_y;
+		projUV result = pj_inv(xy, p_proj);
+		result.u /= DEG_TO_RAD;
+		result.v /= DEG_TO_RAD;
+		// std::cout << std::setprecision(20) << result.v << "," << result.u << std::endl;
+
+		sock_msg.longitude = result.u;
+		sock_msg.latitude = result.v;
+		sock_msg.speed = 0;
+		sock_msg.time =((generationUnixTimeSec*1000 + (int)generationUnixTimeNSec/1000000 - 1072850400000)) % 65536;
+
+		message_arr.push_back(sock_msg);
+	}
 }
 
 void AutowareService::sampleCallback(autoware_msgs::DetectedObjectArray msg){
@@ -552,14 +547,7 @@ int main(int argc,  char* argv[]) {
 	ros::NodeHandle n,n2;
 
 	// ros::Subscriber sub = n.subscribe("ndt_pose", 1024, autoware.callback);
-	
-	//  pub = n.advertise<autoware_msgs::DetectedObjectArray>("detection/lidar_detector/objects", 1000);
-    // ros::Subscriber sub = n.subscribe("points_raw", 1024, callback);
-	// ros::Subscriber sub = n.subscribe("points_cluster", 1024, callback);
-	ros::Subscriber sub = n.subscribe("detection/lidar_detector/objects", 1024, callback);
-	// ros::Timer timer = n.createTimer(ros::Duration(0.1), createObjectsPublisher); //こっちでより下流のトピックに流し込む
-	// ros::Timer timer = n.createTimer(ros::Duration(0.1), createPointsPublisher); //こっちはグレーの四角が挿入される
-
+	ros::Subscriber sub = n.subscribe("detection/lidar_detector/objects", 1024, autoware.callback_objects);
 	autoware.init(n);
 
 	std::cout << "hairuyo" << std::endl;
@@ -567,196 +555,3 @@ int main(int argc,  char* argv[]) {
 	std::cout << "detayo" << std::endl;
 	return 0;
 }
-
-/* points_raw message
- {header = {seq = 5339, stamp = {<ros::TimeBase<ros::Time, ros::Duration>> = {sec = 1494474168, nsec = 386117000}, <No data fields>}, frame_id = "velodyne"}, 
-  height = 1,
-  width = 25430, 
-  fields = std::vector of length 5, capacity 5 = {{name = "x", offset = 0, datatype = 7 '\a', count = 1}, {name = "y", offset = 4, 
-      datatype = 7 '\a', count = 1}, {name = "z", offset = 8, datatype = 7 '\a', count = 1}, {name = "intensity", offset = 16, datatype = 7 '\a', count = 1}, {
-      name = "ring", offset = 20, datatype = 4 '\004', count = 1}}, 
-  is_bigendian = 0 '\000', 
-  point_step = 32, 
-  row_step = 813760, 
-  data = std::vector of length 813760, capacity 813760 = {229 '\345', 152 '\230', 180 '\264', 64 '@', 138 '\212', 197 '\305', 81 'Q', 65 'A', 83 'S', 33 '!', 
-    127 '\177', 62 '>', 123 '{', 127 '\177', 0 '\000', 0 '\000', 0 '\000', 0 '\000', 128 '\200', 63 '?', 8 '\b', 0 '\000', 0 '\000', 0 '\000', 165 '\245', 8 '\b', 
-    0 '\000', 0 '\000', 1 '\001', 0 '\000', 0 '\000', 0 '\000', 225 '\341', 0 '\000', 183 '\267', 64 '@', 248 '\370', 118 'v', 84 'T', 65 'A', 241 '\361', 
-    249 '\371', 65 'A', 63 '?', 123 '{', 127 '\177', 0 '\000', 0 '\000', 0 '\000', 0 '\000', 64 '@', 64 '@', 9 '\t', 0 '\000', 0 '\000', 0 '\000', 165 '\245', 
-    8 '\b', 0 '\000', 0 '\000', 1 '\001', 0 '\000', 0 '\000', 0 '\000', 210 '\322', 74 'J', 15 '\017', 64 '@', 217 '\331', 71 'G', 166 '\246', 64 '@', 1 '\001', 
-    199 '\307', 140 '\214', 191 '\277', 123 '{', 127 '\177', 0 '\000', 0 '\000', 0 '\000', 0 '\000', 168 '\250', 65 'A', 2 '\002', 0 '\000', 0 '\000', 0 '\000', 
-    165 '\245', 8 '\b', 0 '\000', 0 '\000', 1 '\001', 0 '\000', 0 '\000', 0 '\000', 58 ':', 85 'U', 180 '\264', 64 '@', 188 '\274', 41 ')', 81 'Q', 65 'A', 
-    22 '\026', 107 'k', 159 '\237', 63 '?', 123 '{', 127 '\177', 0 '\000', 0 '\000', 0 '\000', 0 '\000', 160 '\240', 64 '@', 10 '\n', 0 '\000', 0 '\000', 
-    0 '\000', 165 '\245', 8 '\b', 0 '\000', 0 '\000', 1 '\001', 0 '\000', 0 '\000', 0 '\000', 108 'l', 78 'N', 38 '&', 64 '@', 221 '\335', 228 '\344', 192 '\300', 
-    64 '@', 178 '\262', 19 '\023', 133 '\205', 191 '\277', 123 '{', 127 '\177', 0 '\000', 0 '\000', 0 '\000', 0 '\000', 64 '@', 64 '@', 3 '\003', 0 '\000', 
-    0 '\000', 0 '\000', 165 '\245', 8 '\b', 0 '\000', 0 '\000', 1 '\001', 0 '\000', 0 '\000', 0 '\000', 39 '\'', 118 'v', 202 '\312', 64 '@', 141 '\215', 
-    183 '\267', 106 'j', 65 'A', 2 '\002', 22 '\026', 251 '\373', 63 '?', 123 '{', 127 '\177', 0 '\000', 0 '\000', 0 '\000', 0 '\000', 0 '\000', 64 '@', 11 '\v', 
-    0 '\000', 0 '\000', 0 '\000', 165 '\245', 8 '\b', 0 '\000', 0 '\000', 1 '\001', 0 '\000', 0 '\000', 0 '\000', 86 'V', 209 '\321', 2 '\002', 64 '@', 28 '\034', 
-    150 '\226', 151 '\227', 64 '@'...}, 
-  is_dense = 1 '\001'}
-*/
-
-/*
-{header = {seq = 5971, stamp = {<ros::TimeBase<ros::Time, ros::Duration>> = {sec = 1494474234, nsec = 646776000}, <No data fields>}, frame_id = "velodyne"}, 
-  points = std::vector of length 27068, capacity 27068 = {{x = -4.45708418, y = -7.89715528, z = -2.42979336}, {x = -23.9344826, y = -42.3903313, 
-      z = 0.849722803}, {x = -5.35591841, y = -9.48586082, z = -2.51495266}, {x = -24.018795, y = -42.5223236, z = 2.55943799}, {x = -6.57362795, y = -11.6330585, 
-      z = -2.59729218}, {x = -24.0642624, y = -42.5681152, z = 4.27812672}, {x = -8.29219818, y = -14.6683578, z = -2.66877246}, {x = -24.1633358, 
-      y = -42.7259598, z = 6.02692699}, {x = -7.20689917, y = -12.7381487, z = 2.31804609}, {x = -7.83165693, y = -13.8311443, z = 3.08957958}, {x = -23.9783688, 
-      y = -42.312664, z = -0.848919988}, {x = -7.64205456, y = -13.4798307, z = 4.15197515}, {x = -4.48271275, y = -7.87819147, z = -2.42875814}, {
-      x = -24.1006355, y = -42.3559151, z = 0.850630283}, {x = -5.38707018, y = -9.46372032, z = -2.51405311}, {x = -24.1710339, y = -42.4451675, z = 2.55985665}, 
-
-  channels = std::vector of length 2, capacity 2 = {
-	  {name = "intensity", values = std::vector of length 27068, capacity 27068 = {16, 36, 1, 42, 2, 44, 3, 40, 13 
-        3, 63, 11, 16, 36, 1, 42, 2, 44, 3, 40, 9, 13, 57, 28, 63, 7, 16, 36, 1, 42, 2, 45, 3, 11, 11, 16, 17, 28, 63, 47, 16, 36, 1, 43, 2, 45, 3, 6, 20, 13, 14, 
-        27, 63, 16, 36, 1, 42, 2, 44, 3, 2, 16, 13, 14, 26, 63, 16, 35, 1, 2, 43, 3, 14, 3, 13, 14, 12, 63, 44, 16, 34, 1, 40, 2, 3, 21, 16, 13, 3, 12, 63, 42, 
-        16, 1, 40, 2, 41, 3, 9, 16, 13, 10, 16, 41, 16, 31, 1, 2, 40, 3, 15, 16, 21, 40, 16, 30, 1, 37, 2, 38, 3, 5, 24, 10, 63, 39, 16, 29, 1, 2, 37, 3, 10, 12, 
-        11, 21, 1, 38, 16, 28, 1, 33, 2, 37, 3, 10, 3, 10, 15, 1, 63, 37, 16, 27, 1, 32, 2, 35, 3, 17, 20, 11, 16, 41, 8, 63, 36, 16, 25, 1, 31, 2, 3, 3, 4, 16, 
-        11, 28, 39, 16, 63, 36, 16, 25, 1, 30, 2, 13, 3, 9, 13, 11, 26, 37, 20, 63, 35, 16, 23, 1...}}, 
-	  {name = "ring", values = std::vector of length 27068, capacity 27068 = {0, 8, 1, 9, 2, 10, 3, 11, 12, 13, 7, 15, 0, 8, 1, 9, 2, 10, 3, 11, 12, 5, 6, 14, 7, 15, 0, 8, 1, 9,2, 10, 3, 11, 12, 5, 13, 14, 7, 15, 0, 8, 1, 9, 2, 10, 3, 11, 12, 5, 13, 14, 7, 0, 8, 1, 9, 2, 10, 3, 11, 12, 5, 13, 14, 7, 0, 8, 1, 2, 10, 3, 11, 12, 5, 13, 14, 7, 15, 0, 8, 1, 9, 2, 3, 11, 12, 5, 13, 14, 7, 15, 0, 1, 9, 2, 10, 3, 11, 12, 5, 13, 14, 15, 0, 8, 1, 2, 10, 3, 11, 12, 13, 15, 0, 8, 1, 9, 2, 10,3 , 11, 12, 13, 7, 15, 0, 8, 1, 2, 10, 3, 11, 12, 5, 13, 14, 15, 0, 8, 1, 9, 2, 10, 3, 11, 12, 5, 13, 14, 7, 15, 0, 8, 1, 9, 2, 10, 3, 11, 12, 5, 13, 6, 14, 7, 15, 0, 8, 1, 9, 2, 10, 3, 11, 12, 5, 13, 6, 14, 7, 15, 0, 8, 1, 9, 2, 10, 3, 11, 12, 5, 13, 6, 14, 7, 15, 0, 8, 1...}}
-	  }
-*/
-/*
-	/points_cluster
-	{
-		header = {seq = 75, stamp = {<ros::TimeBase<ros::Time, ros::Duration>> = {
-        sec = 1494473986, nsec = 903388000}, <No data fields>}, frame_id = "velodyne"}, 
-    height = 1, 
-		width = 6360, 
-		fields = std::vector of length 4, capacity 4 = {{name = "x", 
-      offset = 0, datatype = 7 '\a', count = 1}, {name = "y", offset = 4, datatype = 7 '\a', 
-      count = 1}, {name = "z", offset = 8, datatype = 7 '\a', count = 1}, {name = "rgb", 
-      offset = 16, datatype = 7 '\a', count = 1}}, 
-		is_bigendian = 0 '\000', 
-		point_step = 32, 
-    row_step = 203520, 
-		data = std::vector of length 203520, capacity 203520 = {144 '\220', 60 '<', 
-    145 '\221', 192 '\300', 9 '\t', 13 '\r', 251 '\373', 192 '\300', 111 'o', 235 '\353', 
-    5 '\005', 192 '\300', 0 '\000', 0 '\000', 128 '\200', 63 '?', 187 '\273', 81 'Q', 
-    151 '\227', 0 '\000', 0 '\000', 0 '\000', 0 '\000', 0 '\000', 64 '@', 22 '\026', 255 '\377', 
-    240 '\360', 255 '\377', 127 '\177', 0 '\000', 0 '\000', 69 'E', 68 'D', 157 '\235', 
-    192 '\300', 64 '@', 208 '\320', 7 '\a', 193 '\301', 71 'G', 10 '\n', 244 '\364', 191 '\277', 
-    0 '\000', 0 '\000', 128 '\200', 63 '?', 187 '\273', 81 'Q', 151 '\227', 0 '\000', 0 '\000', 
-    0 '\000', 0 '\000', 0 '\000', 64 '@', 22 '\026', 255 '\377', 240 '\360', 255 '\377', 
-    127 '\177', 0 '\000', 0 '\000', 39 '\'', 47 '/', 169 '\251', 192 '\300', 232 '\350', 
-    11 '\v', 18 '\022', 193 '\301', 41 ')', 218 '\332', 213 '\325', 191 '\277', 0 '\000', 
-    0 '\000', 128 '\200', 63 '?', 187 '\273', 81 'Q', 151 '\227', 0 '\000', 0 '\000', 0 '\000', 
-    0 '\000', 0 '\000', 64 '@', 22 '\026', 255 '\377', 240 '\360', 255 '\377', 127 '\177', 
-    0 '\000', 0 '\000', 254 '\376', 96 '`', 204 '\314', 192 '\300', 21 '\025', 55 '7', 48 '0', 
-    193 '\301', 166 '\246', 146 '\222', 142 '\216', 191 '\277', 0 '\000', 0 '\000', 128 '\200', 
-    63 '?', 187 '\273', 81 'Q', 151 '\227', 0 '\000', 0 '\000', 0 '\000', 0 '\000', 0 '\000', 
-    64 '@', 22 '\026', 255 '\377', 240 '\360', 255 '\377', 127 '\177', 0 '\000', 0 '\000', 
-    68 'D', 18 '\022', 204 '\314', 192 '\300', 255 '\377', 206 '\316', 47 '/', 193 '\301', 
----Type <return> to continue, or q <return> to quit---
-    15 '\017', 115 's', 42 '*', 191 '\277', 0 '\000', 0 '\000', 128 '\200', 63 '?', 187 '\273', 
-    81 'Q', 151 '\227', 0 '\000', 0 '\000', 0 '\000', 0 '\000', 0 '\000', 64 '@', 22 '\026', 
-    255 '\377', 240 '\360', 255 '\377', 127 '\177', 0 '\000', 0 '\000', 87 'W', 139 '\213', 
-    236 '\354', 192 '\300', 202 '\312', 179 '\263', 75 'K', 193 '\301', 121 'y', 145 '\221', 
-    131 '\203', 190 '\276', 0 '\000', 0 '\000', 128 '\200', 63 '?', 187 '\273', 81 'Q', 
-    151 '\227', 0 '\000', 0 '\000', 0 '\000', 0 '\000', 0 '\000', 64 '@', 22 '\026', 255 '\377', 
-    240 '\360', 255 '\377', 127 '\177', 0 '\000', 0 '\000', 182 '\266', 127 '\177', 158 '\236', 
-    192 '\300', 71 'G', 200 '\310', 7 '\a', 193 '\301'...}, is_dense = 1 '\001'}
-
-*/
-
-// detected objects array
-/*
-{header = {seq = 3385, stamp = {<ros::TimeBase<ros::Time, ros::Duration>> = {sec = 1494473977, nsec = 362651000}, <No data fields>}, 
-    frame_id = "velodyne"}, 
-objects = std::vector of length 29, capacity 29 = 
-				{{header = {seq = 4405, stamp = {<ros::TimeBase<ros::Time, ros::Duration>> = {
-            sec = 1494473977, nsec = 362651000}, <No data fields>}, frame_id = "velodyne"},
-					id = 0, 
-					label = "unknown", 
-					score = 1, 
-					color = {r = 0, g = 0, b = 0, a = 0}, 
-					valid = 1 '\001', 
-					space_frame = "velodyne", 
-					pose = {
-						position = {x = 3.7677645683288574, y = -8.3126049041748047, z = -0.97285497188568115}, 
-        		orientation = {x = 0, y = 0, z = 0, w = 1}
-					}, 
-					dimensions = {x = 16.302268981933594, y = 4.062281608581543, z = 2.3455097675323486}, 
-					variance = {x = 0, y = 0, z = 0}, 
-					velocity = {linear = {x = 0, y = 0, z = 0}, angular = {x = 0, y = 0, z = 0}}, 
-					acceleration = {linear = {x = 0, y = 0, z = 0}, angular = {x = 0, y = 0, z = 0}}, 
-					pointcloud = {header = {seq = 4405, stamp = {<ros::TimeBase<ros::Time, ros::Duration>> = {sec = 1494473977, 
-              nsec = 362651000}, <No data fields>}, frame_id = "velodyne"}, height = 1, width = 1482, fields = std::vector of length 4, capacity 4 = {{
-            name = "x", offset = 0, datatype = 7 '\a', count = 1}, {name = "y", offset = 4, datatype = 7 '\a', count = 1}, {name = "z", offset = 8, 
-            datatype = 7 '\a', count = 1}, {name = "rgb", offset = 16, datatype = 7 '\a', count = 1}}, is_bigendian = 0 '\000', point_step = 32, 
-						row_step = 47424, data = std::vector of length 47424, capacity 47424 = {207 '\317', 179 '\263', 62 '>', 65 'A', 192 '\300', 1 '\001', 201 '\311', 
-							192 '\300', 157 '\235', 190 '\276', 211 '\323', 191 '\277', 0 '\000', 0 '\000', 128 '\200', 63 '?', 187 '\273', 81 'Q', 151 '\227', 0 '\000', 
-							0 '\000', 0 '\000', 0 '\000', 0 '\000', 64 '@', 22 '\026', 255 '\377', 240 '\360', 255 '\377', 127 '\177', 0 '\000', 0 '\000', 167 '\247', 4 '\004', 
-							55 '7', 65 'A', 162 '\242', 37 '%', 201 '\311', 192 '\300', 104 'h', 33 '!', 205 '\315', 191 '\277', 0 '\000', 0 '\000', 128 '\200', 63 '?', 
-							187 '\273', 81 'Q', 151 '\227', 0 '\000', 0 '\000', 0 '\000', 0 '\000', 0 '\000', 64 '@', 22 '\026', 255 '\377', 240 '\360', 255 '\377', 127 '\177', 
-							0 '\000', 0 '\000', 156 '\234', 170 '\252', 57 '9', 65 'A', 155 '\233', 191 '\277', 205 '\315', 192 '\300', 252 '\374', 127 '\177', 208 '\320', 
-							191 '\277', 0 '\000', 0 '\000', 128 '\200', 63 '?', 187 '\273', 81 'Q', 151 '\227', 0 '\000', 0 '\000', 0 '\000', 0 '\000', 0 '\000', 64 '@', 
-							22 '\026', 255 '\377', 240 '\360', 255 '\377', 127 '\177', 0 '\000', 0 '\000', 224 '\340', 4 '\004', 56 '8', 65 'A', 47 '/', 177 '\261', 210 '\322', 
-							192 '\300', 19 '\023', 72 'H', 208 '\320', 191 '\277', 0 '\000', 0 '\000', 128 '\200', 63 '?', 187 '\273', 81 'Q', 151 '\227', 0 '\000', 0 '\000', 
-							0 '\000', 0 '\000', 0 '\000', 64 '@', 22 '\026', 255 '\377', 240 '\360', 255 '\377', 127 '\177', 0 '\000', 0 '\000', 128 '\200', 58 ':', 55 '7', 
-							65 'A', 78 'N', 103 'g', 211 '\323', 192 '\300', 74 'J', 200 '\310', 207 '\317', 191 '\277', 0 '\000', 0 '\000', 128 '\200', 63 '?', 187 '\273', 
-							81 'Q', 151 '\227', 0 '\000', 0 '\000', 0 '\000', 0 '\000', 0 '\000', 64 '@', 22 '\026', 255 '\377', 240 '\360', 255 '\377', 127 '\177', 0 '\000', 
-							0 '\000', 219 '\333', 58 ':', 50 '2', 65 'A', 6 '\006', 226 '\342', 208 '\320', 192 '\300', 87 'W', 234 '\352', 202 '\312', 191 '\277', 0 '\000', 
-							0 '\000', 128 '\200', 63 '?', 187 '\273', 81 'Q', 151 '\227', 0 '\000', 0 '\000', 0 '\000', 0 '\000', 0 '\000', 64 '@', 22 '\026', 255 '\377', 
-							240 '\360', 255 '\377', 127 '\177', 0 '\000', 0 '\000', 143 '\217', 36 '$', 52 '4', 65 'A', 16 '\020', 231 '\347', 212 '\324', 192 '\300'...}, 
-								is_dense = 1 '\001'}, 
-						convex_hull = {header = {seq = 4405, stamp = {<ros::TimeBase<ros::Time, ros::Duration>> = {sec = 1494473977, 
-              nsec = 362651000}, <No data fields>}, frame_id = "velodyne"}, polygon = {points = std::vector of length 22, capacity 22 = {{x = 11.9188986, 
-              y = -6.28146362, z = -2.14560986}, {x = 11.4386358, y = -6.28584385, z = -2.14560986}, {x = -3.8541646, y = -7.54143143, z = -2.14560986}, {
-              x = -3.92919087, y = -7.55756712, z = -2.14560986}, {x = -4.38336992, y = -7.82386923, z = -2.14560986}, {x = -3.69044614, y = -8.95813179, 
-              z = -2.14560986}, {x = -2.57893419, y = -9.40120506, z = -2.14560986}, {x = 5.3091197, y = -10.3437452, z = -2.14560986}, {x = 10.6661654, 
-              y = -8.86780643, z = -2.14560986}, {x = 11.3075743, y = -7.85019159, z = -2.14560986}, {x = 11.9188986, y = -6.28146362, z = -2.14560986}, {
-              x = 11.9188986, y = -6.28146362, z = 0.199899867}, {x = 11.4386358, y = -6.28584385, z = 0.199899867}, {x = -3.8541646, y = -7.54143143,
-*/
-
-/*
-{header = {seq = 0, stamp = {<ros::TimeBase<ros::Time, ros::Duration>> = {sec = 1494474087, nsec = 88049764}, <No data fields>}, frame_id = "velodyne"}, 
- id = 0, 
- label = "unknown",
- score = 0, 
- color = {r = 0, g = 0, b = 0, a = 0}, 
- valid = 1 '\001', 
- space_frame = "", 
- pose = {position = {x = 0, y = 0, z = 0}, orientation = {
-      x = 0, y = 0, z = 0, w = 0}}, 
-dimensions = {x = 0, y = 0, z = 0}, 
-variance = {x = 0, y = 0, z = 0}, 
-velocity = {linear = {x = 0, y = 0, z = 0}, angular = {x = 0, 
-      y = 0, z = 0}}, 
-acceleration = {linear = {x = 0, y = 0, z = 0}, angular = {x = 0, y = 0, z = 0}}, 
-pointcloud = {header = {seq = 0, 
-      stamp = {<ros::TimeBase<ros::Time, ros::Duration>> = {sec = 0, nsec = 0}, <No data fields>}, frame_id = ""}, height = 0, width = 0, 
-    fields = std::vector of length 0, capacity 0, is_bigendian = 0 '\000', point_step = 0, row_step = 0, data = std::vector of length 0, capacity 0, 
-    is_dense = 0 '\000'}, 
-	convex_hull = {header = {seq = 0, stamp = {<ros::TimeBase<ros::Time, ros::Duration>> = {sec = 0, nsec = 0}, <No data fields>}, 
-      frame_id = ""}, polygon = {points = std::vector of length 0, capacity 0}},
-	candidate_trajectories = {id = 0, lanes = std::vector of length 0, capacity 0}, 
-  pose_reliable = 0 '\000', 
-	velocity_reliable = 0 '\000', 
-	acceleration_reliable = 0 '\000', 
-	image_frame = "",
-	x = 0,
-	y = 0, 
-	width = 0, 
-	height = 0, 
-	angle = 0, 
-  roi_image = {header = {seq = 0, stamp = {<ros::TimeBase<ros::Time, ros::Duration>> = {sec = 0, nsec = 0}, <No data fields>}, frame_id = ""}, height = 0, width = 0,
-    encoding = "", is_bigendian = 0 '\000', step = 0, data = std::vector of length 0, capacity 0}, indicator_state = 0 '\000', behavior_state = 0 '\000', 
-  user_defined_info = std::vector of length 0, capacity 0}
-*/
-
-/*
- candidate_trajectories = {id = 0, lanes = std::vector of length 0, capacity 0}, 
- pose_reliable = 0 '\000', velocity_reliable = 0 '\000', 
-      acceleration_reliable = 0 '\000', image_frame = "", x = 0, y = 0, width = 0, height = 0, angle = 0, 
-roi_image = {header = {seq = 0, 
-          stamp = {<ros::TimeBase<ros::Time, ros::Duration>> = {sec = 0, nsec = 0}, <No data fields>}, frame_id = ""}, height = 0, width = 0, encoding = "", 
-        is_bigendian = 0 '\000', step = 0, data = std::vector of length 0, capacity 0}, 
-	indicator_state = 0 '\000', behavior_state = 0 '\000', 
-      user_defined_info = std::vector of length 0, capacity 0}, {header = {seq = 5458, stamp = {<ros::TimeBase<ros::Time, ros::Duration>> = {sec = 1494474086, 
-            nsec = 189481000}, <No data fields>}, frame_id = "velodyne"}, id = 0, label = "unknown", score = 1, color = {r = 0, g = 0, b = 0, a = 0}, valid = 1 '\001', 
-      space_frame = "velodyne", pose = {position = {x = 0.73513799905776978, y = -12.209321975708008, z = -1.63214111328125}, orientation = {x = 0, y = 0, z = 0, 
-          w = 1}}, dimensions = {x = 1.7810214757919312, y = 2.5647516250610352, z = 1.2586542367935181}, variance = {x = 0, y = 0, z = 0}, velocity = {linear = {
-          x = 0, y = 0, z = 0}, angular = {x = 0, y = 0, z = 0}}, acceleration = {linear = {x = 0, y = 0, z = 0}, angular = {x = 0, y = 0, z = 0}}, pointcloud = {
-        header = {seq = 5458, stamp = {<ros::TimeBase<ros::Time, ros::Duration>> = {sec = 1494474086, nsec = 189481000}, <No data fields>}, frame_id = "velodyne"}, 
-        height = 1, width = 28, fields = std::vector of length 4, capacity 4 = {{name = "x", offset = 0, datatype = 7 '\a', count = 1}, {name = "y", offset = 4, 
-            datatype = 7 '\a', count = 1}, {name = "z", offset = 8, datatype = 7 '\a', count = 1}, {name = "rgb", offset = 16, datatype = 7 '\a', count = 1}}, 
-*/

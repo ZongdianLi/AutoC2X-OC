@@ -136,6 +136,7 @@ public:
 	static void sendToServices(autowarePackage::AUTOWARE autoware);
 
 	static void callback(const geometry_msgs::PoseStamped msg);
+	static void callback_objects(const autoware_msgs::DetectedObjectArray msg);
 
 	static void sampleCallback(const autoware_msgs::DetectedObjectArray msg);
 
@@ -176,6 +177,8 @@ private:
 	static std::ofstream delay_output_file;
 
 	static int sockfd;
+
+	static std::vector<message> message_arr;
 
 };
 
