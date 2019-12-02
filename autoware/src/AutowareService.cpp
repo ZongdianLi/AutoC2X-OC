@@ -112,12 +112,14 @@ AutowareService::AutowareService(AutowareConfig &config) {
 
 
 	std::cout << "hello" << std::endl;
-	struct sockaddr_in addr;
-	if( (sockfd = socket( AF_INET, SOCK_STREAM, 0) ) < 0 ) perror( "socket" ); 
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons( 23457 );
-	addr.sin_addr.s_addr = inet_addr( "192.168.1.1" );
-	connect( sockfd, (struct sockaddr *)&addr, sizeof( struct sockaddr_in ) );
+
+	//通信モードの時は使う
+	// struct sockaddr_in addr;
+	// if( (sockfd = socket( AF_INET, SOCK_STREAM, 0) ) < 0 ) perror( "socket" ); 
+	// addr.sin_family = AF_INET;
+	// addr.sin_port = htons( 23457 );
+	// addr.sin_addr.s_addr = inet_addr( "192.168.1.1" );
+	// connect( sockfd, (struct sockaddr *)&addr, sizeof( struct sockaddr_in ) );
 
 
 }
@@ -134,7 +136,8 @@ void AutowareService::sendToRouter(){
 	 // データ送信
     char send_str[10];
     char receive_str[10];
-		message message;
+		std::vector<message> message_arr;
+		
 		message.speed = speed * 100;
 		message.time =  ((generationUnixTimeSec*1000 + (int)generationUnixTimeNSec/1000000 - 1072850400000)) % 65536;
 		message.longitude = longitude * 10000000;
@@ -248,7 +251,8 @@ std::string AutowareService::paramOrganize(std::string param){
 }
 
 void AutowareService::init(ros::NodeHandle tmp) {
-	paramOrganize("proj=tmerc lat_0=40 lon_0=140.8333333333333 k=0.9999 x_0=0 y_0=0 ellps=GRS80 units=m");
+	// paramOrganize("proj=tmerc lat_0=40 lon_0=140.8333333333333 k=0.9999 x_0=0 y_0=0 ellps=GRS80 units=m");
+	paramOrganize("proj=tmerc lat_0=36 lon_0=139.8333333333333 k=0.9999 x_0=0 y_0=0 ellps=GRS80 units=m");
 	// paramOrganize("proj=poly ellps=sphere lon_0=100 lat_0=45");
 	n = &tmp;
 	// ros::Subscriber sub = n->subscribe("ndt_pose", 1024, callback);
@@ -293,7 +297,7 @@ double AutowareService::calcSpeed(){
 		projUV result = pj_inv(xy, p_proj);
 		result.u /= DEG_TO_RAD;
 		result.v /= DEG_TO_RAD;
-		// printf("lng: %f, lat: %f\n", result.u, result.v); 
+		std::cout << std::setprecision(20) << result.v << "," << result.u << std::endl;
 
 		longitude = result.u;
 		latitude = result.v;
@@ -341,7 +345,7 @@ void AutowareService::timeCalc(){
 		delayNSec = 1000000000 + delayNSec;
 	}
 	delay_output_file <<  std::setprecision(20) <<  ros::WallTime::now() << "," << delayNSec / 1000000000.0 << std::endl;
-	std::cout << "delay:" << delayNSec/ 1000000000.0 << " a1.nsec:" << a1.nsec << " generationNSec:" << generationUnixTimeNSec << std::endl;
+	// std::cout << "delay:" << delayNSec/ 1000000000.0 << " a1.nsec:" << a1.nsec << " generationNSec:" << generationUnixTimeNSec << std::endl;
 	// std::cout << "generationUnixTime:" <<  std::setprecision(20) << generationUnixTimeSec << "." << generationUnixTimeNSec << std::endl;
 }
 
@@ -368,7 +372,7 @@ void AutowareService::callback(const geometry_msgs::PoseStamped msg){
 	speed = calcSpeed();
 	// printf("%f\n", speed);
 	// simulateData();
-	sendToRouter();
+	// sendToRouter();
 }
 
 void AutowareService::sampleCallback(autoware_msgs::DetectedObjectArray msg){
@@ -547,12 +551,12 @@ int main(int argc,  char* argv[]) {
 	ros::init(argc, argv, "listener");
 	ros::NodeHandle n,n2;
 
-	ros::Subscriber sub = n.subscribe("ndt_pose", 1024, autoware.callback);
+	// ros::Subscriber sub = n.subscribe("ndt_pose", 1024, autoware.callback);
 	
 	//  pub = n.advertise<autoware_msgs::DetectedObjectArray>("detection/lidar_detector/objects", 1000);
     // ros::Subscriber sub = n.subscribe("points_raw", 1024, callback);
 	// ros::Subscriber sub = n.subscribe("points_cluster", 1024, callback);
-	// ros::Subscriber sub = n.subscribe("detection/lidar_detector/objects", 1024, callback);
+	ros::Subscriber sub = n.subscribe("detection/lidar_detector/objects", 1024, callback);
 	// ros::Timer timer = n.createTimer(ros::Duration(0.1), createObjectsPublisher); //こっちでより下流のトピックに流し込む
 	// ros::Timer timer = n.createTimer(ros::Duration(0.1), createPointsPublisher); //こっちはグレーの四角が挿入される
 
