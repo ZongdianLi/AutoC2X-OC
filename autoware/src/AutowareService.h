@@ -42,7 +42,13 @@
 #include <chrono>
 #include <ctime>
 #include <fstream>
+#include <boost/serialization/serialization.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
 
+namespace asio = boost::asio;
+using asio::ip::tcp;
 
 /** Struct that holds the configuration for AutowareService.
  * The configuration is defined in <a href="../../autoware/config/config.xml">autoware/config/config.xml</a>.
@@ -93,6 +99,27 @@ struct message {
 	int time;
 };
 
+struct socket_message{
+	std::vector<int> speed;
+	std::vector<int> latitude;
+	std::vector<int> longitude;
+	std::vector<int> time;
+
+private:
+	friend class boost::serialization::access;
+	template<class Archive>
+		void serialize( Archive& ar, unsigned int ver){
+			ar & speed;
+			ar & latitude;
+			ar & longitude;
+			ar & time;
+		}
+};
+
+// struct socket_message{
+// 	std::vector<message> data;
+// };
+
 /**
  * Class that connects to AUTOWARE via serial port and offers its data to other modules via ZMQ.
  */
@@ -141,6 +168,10 @@ private:
 
 	std::ofstream delay_output_file;
 
+	// std::vector<message> message_arr;
+	// socket_message s_message;
+
+	// tcp::socket socket(asio::io_service);
 };
 
 /** @} */ //end group

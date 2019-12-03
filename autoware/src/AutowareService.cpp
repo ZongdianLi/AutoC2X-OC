@@ -33,6 +33,8 @@
 #include <math.h>
 
 using namespace std;
+namespace asio = boost::asio;
+using asio::ip::tcp;
 
 INITIALIZE_EASYLOGGINGPP
 
@@ -84,6 +86,8 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	// std::string filename = std::string(cur_dir) + "/../../../autoware/output/delay/" + timestamp + ".csv";
 	// delay_output_file.open(filename, std::ios::out);
 
+	asio::io_service io_service;
+	tcp::socket socket(io_service);
 }
 
 AutowareService::~AutowareService() {
@@ -208,7 +212,7 @@ void AutowareService::receiveFromAutoware(){
     struct sockaddr_in addr;
     socklen_t len = sizeof( struct sockaddr_in );
     struct sockaddr_in from_addr;
-    char buf[1024];
+    char buf[4096];
  
     memset( buf, 0, sizeof( buf ) );
     if( ( sockfd = socket( AF_INET, SOCK_STREAM, 0 ) ) < 0 ) {
@@ -225,53 +229,82 @@ void AutowareService::receiveFromAutoware(){
     int rsize;
     while( 1 ) {
 		message message;
+		socket_message s_message;
+		std::stringstream ss;
+		memset( buf, 0, sizeof( buf ) );
         rsize = recv( client_sockfd, buf, sizeof( buf ), 0 );
+		// memcpy(&message_arr, buf, sizeof(message_arr));
+		ss << buf;
 
-		memcpy(&message, buf, sizeof(message));
-		speed = message.speed;
-		longitude = message.longitude;
-		latitude = message.latitude;
-		generationUnixTime = message.time;
-		std::cout << message.speed << std::endl;
+		boost::archive::text_iarchive archive(ss);
+		archive >> s_message;
+		std::cout << "received" << std::endl;
+		// memcpy(&message, buf, sizeof(message));
+		// for(int i = 0; i < s_message.data.size(); i++){
+		// 	message_arr.data.push_back(message_arr.data[i]);
+		// 	std::cout << "lat:" << message_arr.data[i].latitude << " lon:" << message_arr.data[i].longitude << std::endl;
+		// }
+		for(int i = 0; i < s_message.latitude.size(); i++){
+			std::cout << "lat:" << s_message.latitude[i] << " lon:" << s_message.longitude[i] << " speed:" << s_message.speed[i] << " time:" << s_message.time[i] << std::endl;
+		}
+		speed = s_message.speed[0];
+		longitude = s_message.longitude[0];
+		latitude = s_message.latitude[0];
+		generationUnixTime = s_message.time[0];
+		std::cout << s_message.speed[0] << std::endl;
         if ( rsize == 0 ) {
             break;
         } else if ( rsize == -1 ) {
             perror( "recv" );
         }
-		simulateData();
+		// simulateData();
     }
  
     close( client_sockfd );
     close( sockfd );
+
+
+	// asio::io_service io_service;
+	// tcp::socket socket(io_service);
+	// tcp::acceptor acc(io_service, tcp::endpoint(tcp::v4(), 23457));
+
+	// boost::system::error_code error;
+	// acc.accept(socket, error);
+
+	// if(error){
+	// 	std::cout << "accept failed:" << error.message() << std::endl;
+	// } else {
+	// 	std::cout << "accept correct!" << std::endl;
+	// }
 }
 
 void AutowareService::testSender(){
-	int sockfd;
-    struct sockaddr_in addr;
-    if( (sockfd = socket( AF_INET, SOCK_STREAM, 0) ) < 0 ) perror( "socket" ); 
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons( 23457 );
-    addr.sin_addr.s_addr = inet_addr( "127.0.0.1" );
-    connect( sockfd, (struct sockaddr *)&addr, sizeof( struct sockaddr_in ) );
+	// int sockfd;
+    // struct sockaddr_in addr;
+    // if( (sockfd = socket( AF_INET, SOCK_STREAM, 0) ) < 0 ) perror( "socket" ); 
+    // addr.sin_family = AF_INET;
+    // addr.sin_port = htons( 23457 );
+    // addr.sin_addr.s_addr = inet_addr( "127.0.0.1" );
+    // connect( sockfd, (struct sockaddr *)&addr, sizeof( struct sockaddr_in ) );
  
-    // データ送信
-    char send_str[10];
-    char receive_str[10];
-	message message;
-    for ( int i = 0; i < 10; i++ ){
-        sprintf( send_str, "%d", i );
-		message.speed = i + 10000;
-		message.time = i * 2;
-		message.longitude = i * 5;
-		message.latitude = i * 3;
-		char* my_s_bytes = static_cast<char*>(static_cast<void*>(&message));
-        if( send( sockfd, my_s_bytes, sizeof(message), 0 ) < 0 ) {
-            perror( "send" );
-        } else {
-        }
-        sleep( 1 );
-    }
-    close( sockfd );
+    // // データ送信
+    // char send_str[10];
+    // char receive_str[10];
+	// message message;
+    // for ( int i = 0; i < 10; i++ ){
+    //     sprintf( send_str, "%d", i );
+	// 	message.speed = i + 10000;
+	// 	message.time = i * 2;
+	// 	message.longitude = i * 5;
+	// 	message.latitude = i * 3;
+	// 	char* my_s_bytes = static_cast<char*>(static_cast<void*>(&message));
+    //     if( send( sockfd, my_s_bytes, sizeof(message), 0 ) < 0 ) {
+    //         perror( "send" );
+    //     } else {
+    //     }
+    //     sleep( 1 );
+    // }
+    // close( sockfd );
 }
 
 int main(int argc,  char* argv[]) {
