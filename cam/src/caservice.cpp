@@ -57,18 +57,18 @@ CaService::CaService(CaServiceConfig &config, ptree& configTree) {
 	mReceiverFromDcc = new CommunicationReceiver("5555", "CAM", *mLogger);
 	mSenderToDcc = new CommunicationSender("6666", *mLogger);
 	mSenderToLdm = new CommunicationSender("8888", *mLogger);
-	mSenderToPingApp = new CommunicationSender("23456", *mLogger);
+	// mSenderToPingApp = new CommunicationSender("23456", *mLogger);
 
 	mReceiverGps = new CommunicationReceiver( "3333", "GPS", *mLogger);
 	mReceiverObd2 = new CommunicationReceiver("2222", "OBD2", *mLogger);
 	mReceiverAutoware = new CommunicationReceiver("25000", "AUTOWARE",*mLogger);
-	mReceiverPingApp = new CommunicationReceiver("34567", "PINGAPP", *mLogger);
+	// mReceiverPingApp = new CommunicationReceiver("34567", "PINGAPP", *mLogger);
 
 	mThreadReceive = new boost::thread(&CaService::receive, this);
 	mThreadGpsDataReceive = new boost::thread(&CaService::receiveGpsData, this);
 	mThreadObd2DataReceive = new boost::thread(&CaService::receiveObd2Data, this);
 	mThreadAutowareDataReceive = new boost::thread(&CaService::receiveAutowareData, this);
-	mThreadPingAppDataReceive = new boost::thread(&CaService::receivePingAppData, this);
+	// mThreadPingAppDataReceive = new boost::thread(&CaService::receivePingAppData, this);
 
 	mIdCounter = 0;
 
@@ -214,7 +214,7 @@ void CaService::receiveAutowareData() {
 	}
 }
 
-void CaService::receivePingAppData() {
+void CaService::receiveReflectedData() {
 	string serializedPingApp;
 	pingAppPackage::PINGAPP newPingApp;
 
@@ -427,12 +427,12 @@ void CaService::scheduleNextAlarm() {
 }
 
 //generate CAM and send to LDM and DCC
-void CaService::send(bool isPingApp) {
+void CaService::send(bool isAutoware) {
 	string serializedData;
 	dataPackage::DATA data;
 
 	// Standard compliant CAM
-	CAM_t* cam = generateCam(isPingApp);
+	CAM_t* cam = generateCam(isAutoware);
 	vector<uint8_t> encodedCam = mMsgUtils->encodeMessage(&asn_DEF_CAM, cam);
 	string strCam(encodedCam.begin(), encodedCam.end());
 	mLogger->logDebug("Encoded CAM size: " + to_string(strCam.length()));
@@ -462,14 +462,14 @@ void CaService::send(bool isPingApp) {
 }
 
 //generate new CAM with latest gps and obd2 data
-CAM_t* CaService::generateCam(bool isPingApp) {
+CAM_t* CaService::generateCam(bool isAutoware) {
 	mLogger->logDebug("Generating CAM as per UPER");
 	CAM_t* cam = static_cast<CAM_t*>(calloc(1, sizeof(CAM_t)));
 	if (!cam) {
 		throw runtime_error("could not allocate CAM_t");
 	}
 	// ITS pdu header
-	if (isPingApp){
+	if (isAutoware){
 		cam->header.stationID = mLatestPingApp.stationid();
 	} else {
 		cam->header.stationID = mGlobalConfig.mStationID;// mIdCounter; //
@@ -513,7 +513,7 @@ CAM_t* CaService::generateCam(bool isPingApp) {
 	cam->cam.camParameters.basicContainer.referencePosition.altitude.altitudeConfidence = AltitudeConfidence_unavailable;
 	mMutexLatestGps.unlock();
 
-	if(isPingApp){
+	if(isAutoware){
 		cam->cam.camParameters.basicContainer.referencePosition.latitude = mLatestPingApp.latitude();
 	}
 

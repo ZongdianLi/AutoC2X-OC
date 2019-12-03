@@ -39,6 +39,7 @@
 #include <common/buffers/obd2.pb.h>
 #include <common/buffers/pingApp.pb.h>
 #include <common/buffers/camInfo.pb.h>
+#include <common/buffers/autoware.pb.h>
 #include <common/buffers/CoopAwareness.pb.h>
 #include <common/buffers/ItsPduHeader.pb.h>
 #include <boost/asio.hpp>
@@ -100,7 +101,7 @@ public:
 	~CaService();
 
 	/** Sends a new CAM to LDM and DCC.	 */
-	void send(bool isPingApp = false);
+	void send(bool isAutoware = false);
 
 	/** Calculates the heading towards North based on the two specified coordinates.
 	 *
@@ -154,7 +155,7 @@ private:
 	 * The new CAM includes the MAC address as stationId, an increasing but not unique ID, a current time stamp, and the latest GPS and OBD2 data if it is not too old (as configured).
 	 * @return The newly generated CAM.
 	 */
-	/*std::vector<uint8_t>*/CAM_t* generateCam(bool isPingApp = false);
+	/*std::vector<uint8_t>*/CAM_t* generateCam(bool isAutoware = false);
 
 	/** Converts ASN1 CAM structure into CAM protocol buffer.
 	 * @return The newly generated CAM protocol buffer.
@@ -175,7 +176,7 @@ private:
 	 *
 	 */
 	void receiveAutowareData();
-	void receivePingAppData();
+	void receiveReflectedData();
 
 	/** Checks if heading has changed more than 4 degrees.
 	 * @return True if CAM needs to be triggered, false otherwise
@@ -218,19 +219,19 @@ private:
 
 	CommunicationSender* mSenderToDcc;
 	CommunicationSender* mSenderToLdm;
-	CommunicationSender* mSenderToPingApp;
+	CommunicationSender* mSenderToAutoware; //反射してきたpingパケットをautowareモジュールに送るために必要
 
 	CommunicationReceiver* mReceiverFromDcc;
 	CommunicationReceiver* mReceiverGps;
 	CommunicationReceiver* mReceiverObd2;
 	CommunicationReceiver* mReceiverAutoware;
-	CommunicationReceiver* mReceiverPingApp;
+	// CommunicationReceiver* mReceiverPingApp;
 
 	boost::thread* mThreadReceive;
 	boost::thread* mThreadGpsDataReceive;
 	boost::thread* mThreadObd2DataReceive;
 	boost::thread* mThreadAutowareDataReceive;
-	boost::thread* mThreadPingAppDataReceive;
+	// boost::thread* mThreadPingAppDataReceive;
 
 	MessageUtils* mMsgUtils;
 	LoggingUtility* mLogger;

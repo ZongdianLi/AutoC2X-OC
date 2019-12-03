@@ -233,17 +233,11 @@ void AutowareService::receiveFromAutoware(){
 		std::stringstream ss;
 		memset( buf, 0, sizeof( buf ) );
         rsize = recv( client_sockfd, buf, sizeof( buf ), 0 );
-		// memcpy(&message_arr, buf, sizeof(message_arr));
 		ss << buf;
 
 		boost::archive::text_iarchive archive(ss);
 		archive >> s_message;
 		std::cout << "received" << std::endl;
-		// memcpy(&message, buf, sizeof(message));
-		// for(int i = 0; i < s_message.data.size(); i++){
-		// 	message_arr.data.push_back(message_arr.data[i]);
-		// 	std::cout << "lat:" << message_arr.data[i].latitude << " lon:" << message_arr.data[i].longitude << std::endl;
-		// }
 		for(int i = 0; i < s_message.latitude.size(); i++){
 			std::cout << "lat:" << s_message.latitude[i] << " lon:" << s_message.longitude[i] << " speed:" << s_message.speed[i] << " time:" << s_message.time[i] << std::endl;
 		}
