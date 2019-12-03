@@ -39,9 +39,56 @@ using asio::ip::tcp;
 INITIALIZE_EASYLOGGINGPP
 
 
+AutowareConfig AutowareService::mConfig;
+GlobalConfig AutowareService::mGlobalConfig;
+CommunicationSender* AutowareService::mSender;
+LoggingUtility* AutowareService::mLogger;
 
-void init(ros::NodeHandle n) {
-	paramOrganize("proj=tmerc lat_0=36 lon_0=139.8333333333333 k=0.9999 x_0=0 y_0=0 ellps=GRS80 units=m");
+	//for simulation only
+std::default_random_engine AutowareService::mRandNumberGen;
+std::bernoulli_distribution AutowareService::mBernoulli;
+std::uniform_real_distribution<double> AutowareService::mUniform;
+
+boost::asio::io_service AutowareService::mIoService;
+boost::asio::deadline_timer* AutowareService::mTimer;
+
+ros::NodeHandle *AutowareService::n;
+double AutowareService::speed;
+double AutowareService::latitude;
+double AutowareService::longitude;
+float AutowareService::generationUnixTime;
+long AutowareService::generationUnixTimeSec;
+long AutowareService::generationUnixTimeNSec;
+socket_message AutowareService::messages_arr;
+geometry_msgs::PoseStamped AutowareService::nowPose;
+geometry_msgs::PoseStamped AutowareService::prevPose;
+std::ofstream AutowareService::delay_output_file;
+int AutowareService::sockfd;
+
+PJ *AutowareService::p_proj;
+
+
+
+
+AutowareService::AutowareService(AutowareConfig &config) {
+	try {
+		mGlobalConfig.loadConfig(AUTOWARE_CONFIG_NAME);
+	}
+	catch (std::exception &e) {
+		cerr << "Error while loading /etc/config/openc2x_common: " << e.what() << endl;
+	}
+	mConfig = config;
+	ptree pt = load_config_tree();
+	mLogger = new LoggingUtility(AUTOWARE_CONFIG_NAME, AUTOWARE_MODULE_NAME, mGlobalConfig.mLogBasePath, mGlobalConfig.mExpName, mGlobalConfig.mExpNo, pt);
+
+	mSender = new CommunicationSender("25000", *mLogger);
+	// mLogger = new LoggingUtility("AutowareService", mGlobalConfig.mExpNo, loggingConf, statisticConf);
+	mLogger->logStats("speed (m/sec)");
+	
+	//for simulation only
+	mRandNumberGen = default_random_engine(0);
+	mBernoulli = bernoulli_distribution(0);
+	mUniform = uniform_real_distribution<double>(-0.01, 0.01);
 
 	char cur_dir[1024];
 	getcwd(cur_dir, 1024);
@@ -72,64 +119,108 @@ void init(ros::NodeHandle n) {
 	std::cout << "hello" << std::endl;
 
 	//通信モードの時は使う
-	struct sockaddr_in addr;
-	if( (sockfd = socket( AF_INET, SOCK_STREAM, 0) ) < 0 ) perror( "socket" ); 
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons( 23457 );
-	addr.sin_addr.s_addr = inet_addr( "192.168.1.1" );
-	connect( sockfd, (struct sockaddr *)&addr, sizeof( struct sockaddr_in ) );
+	// struct sockaddr_in addr;
+	// if( (sockfd = socket( AF_INET, SOCK_STREAM, 0) ) < 0 ) perror( "socket" ); 
+	// addr.sin_family = AF_INET;
+	// addr.sin_port = htons( 23457 );
+	// addr.sin_addr.s_addr = inet_addr( "192.168.1.1" );
+	// connect( sockfd, (struct sockaddr *)&addr, sizeof( struct sockaddr_in ) );
 
-	// asio::io_service io_service;
-	// tcp::socket socket(io_service);
+	asio::io_service io_service;
+	tcp::socket socket(io_service);
 
-	// boost::system::error_code error;
-	// socket.connect(tcp::endpoint(asio::ip::address::from_string("192.168.1.1"), 23457), error);
-	// if(error){
-	// 	std::cout << "connect failed : " << error.message() << std::endl;
-	// } else {
-	// 	std::cout << "connected" << std::endl;
-	// }
+	boost::system::error_code error;
+	socket.connect(tcp::endpoint(asio::ip::address::from_string("192.168.1.1"), 23457), error);
+	if(error){
+		std::cout << "connect failed : " << error.message() << std::endl;
+	} else {
+		std::cout << "connected" << std::endl;
+	}
 
 }
 
+AutowareService::~AutowareService() {
+	delete mSender;
+	delete mLogger;
 
-void sendToRouter(){
+	mTimer->cancel();
+	delete mTimer;
+}
+
+void AutowareService::sendToRouter(){
 	 // データ送信
     char send_str[10];
     char receive_str[10];
-	message message;
-	message.speed = speed * 100;
-	message.time =  ((generationUnixTimeSec*1000 + (int)generationUnixTimeNSec/1000000 - 1072850400000)) % 65536;
-	message.longitude = longitude * 10000000;
-	message.latitude = latitude * 10000000;
-	
-	s_message.speed.push_back(speed * 100);
-	s_message.time.push_back(((generationUnixTimeSec*1000 + (int)generationUnixTimeNSec/1000000 - 1072850400000)) % 65536);
-	s_message.longitude.push_back(longitude * 10000000);
-	s_message.latitude.push_back(latitude * 10000000);
-	// s_message.data.push_back(message);
-
-	std::stringstream ss;
-	boost::archive::text_oarchive archive(ss);
-	archive << s_message;
-
-
-
-	// // std::cout << "generationDelta:" <<  (long)generationUnixTime << std::endl;
-	// char* my_s_bytes = static_cast<char*>(static_cast<void*>(&messages_arr));
-	// // char* my_s_bytes = static_cast<char*>(static_cast<void*>(&message));
-	
-	ss.seekg(0, ios::end);
-	if( send( sockfd, ss.str().c_str(), ss.tellp(), 0 ) < 0 ) {
-	// if( send( sockfd, my_s_bytes, sizeof(message), 0 ) < 0 ) {
-			perror( "send" );
-	} else {
-	}
-
-
+		message message;
+		message.speed = speed * 100;
+		message.time =  ((generationUnixTimeSec*1000 + (int)generationUnixTimeNSec/1000000 - 1072850400000)) % 65536;
+		message.longitude = longitude * 10000000;
+		message.latitude = latitude * 10000000;
+		messages_arr.data.push_back(message);
+		// std::cout << "generationDelta:" <<  (long)generationUnixTime << std::endl;
+		char* my_s_bytes = static_cast<char*>(static_cast<void*>(&messages_arr));
+		// char* my_s_bytes = static_cast<char*>(static_cast<void*>(&message));
+		std::cout << "sending..." << std::endl;
+		if( send( sockfd, my_s_bytes, sizeof(messages_arr), 0 ) < 0 ) {
+		// if( send( sockfd, my_s_bytes, sizeof(message), 0 ) < 0 ) {
+				perror( "send" );
+		} else {
+		}
 }
 
-std::string paramOrganize(std::string param){
+//reads the actual vehicle data from Autoware
+void AutowareService::receiveData(const boost::system::error_code &ec, SerialPort* serial) {
+}
+
+
+//simulates realistic vehicle speed
+void AutowareService::simulateSpeed() {
+	double pCurr = mBernoulli.p();
+	double pNew = pCurr + mUniform(mRandNumberGen);
+	pNew = min(0.15, max(0.0, pNew));		//pNew always between 0 and 0.15
+
+	mBernoulli = bernoulli_distribution(pNew);
+
+	double sum = 0;
+
+	for (int i=0; i<1000; i++) {
+		double r = mBernoulli(mRandNumberGen);
+		sum += min(1.0, max(0.0, r)) * 100;	//*100 to convert to 0-15 m/s
+	}
+	cout << to_string(sum) << endl;
+	speed = sum / 1000.0;
+	// return sum / 1000.0;					//avg to avoid rapid/drastic changes in speed
+}
+
+//simulates Autoware data, logs and sends it
+void AutowareService::simulateData() {
+	autowarePackage::AUTOWARE autoware;
+
+	//write current speed to protocol buffer
+	autoware.set_speed(speed * 100); // standard expects speed in 0.01 m/s
+	// autoware.set_time(Utils::currentTime());
+	autoware.set_time(generationUnixTime * 1000000000);
+
+	autoware.set_longitude(longitude * 10000000);
+	autoware.set_latitude(latitude * 10000000);
+
+	
+	sendToServices(autoware);
+
+	// mTimer->expires_from_now(boost::posix_time::millisec(mConfig.mFrequency));
+	// mTimer->async_wait(boost::bind(&AutowareService::simulateData, this, boost::asio::placeholders::error));
+}
+
+//logs and sends Autoware
+void AutowareService::sendToServices(autowarePackage::AUTOWARE autoware) {
+	//send buffer to services
+	string serializedAutoware;
+	autoware.SerializeToString(&serializedAutoware);
+	mSender->sendData("AUTOWARE", serializedAutoware);
+	mLogger->logStats(to_string(autoware.speed()) + " (" + to_string(autoware.speed()/100*3.6) + "km/h)"); // In csv, we log speed in m/sec
+}
+
+std::string AutowareService::paramOrganize(std::string param){
 	char **prm;
 	std::string params;
   params=param+" no_defs";
@@ -162,7 +253,17 @@ std::string paramOrganize(std::string param){
  
 }
 
-double calcSpeed(){
+void AutowareService::init(ros::NodeHandle tmp) {
+	paramOrganize("proj=tmerc lat_0=36 lon_0=139.8333333333333 k=0.9999 x_0=0 y_0=0 ellps=GRS80 units=m");
+	n = &tmp;
+	if (!mConfig.mSimulateData) {	//use real Autoware data
+	}
+	else {				//use simulated Autoware data
+	}
+
+}
+
+double AutowareService::calcSpeed(){
 		double prevTime = prevPose.header.stamp.sec + prevPose.header.stamp.nsec/1000000000.0;
 		double nowTime = nowPose.header.stamp.sec + nowPose.header.stamp.nsec/1000000000.0;
 		double timedelta = nowTime - prevTime;
@@ -186,7 +287,7 @@ double calcSpeed(){
 
 }
 
-void timeCalc(){
+void AutowareService::timeCalc(){
 	geometry_msgs::PoseStamped newestPose = nowPose;
 	float messageRosTime = newestPose.header.stamp.sec +  newestPose.header.stamp.nsec / 1000000000.0;
 	// double diffTimeFromRosToWall = (ros::WallTime::now().toSec() - ros::Time::now().toSec() - ros::Time::now().toSec() + ros::WallTime::now().toSec()) / 2.0;
@@ -229,7 +330,7 @@ void timeCalc(){
 	// std::cout << "generationUnixTime:" <<  std::setprecision(20) << generationUnixTimeSec << "." << generationUnixTimeNSec << std::endl;
 }
 
-void callback(const geometry_msgs::PoseStamped msg){
+void AutowareService::callback(const geometry_msgs::PoseStamped msg){
 
 	// sensor_msgs::PointCloud out_pointcloud;
 	// sensor_msgs::convertPointCloud2ToPointCloud(msg, out_pointcloud);
@@ -249,18 +350,14 @@ void callback(const geometry_msgs::PoseStamped msg){
 	speed = calcSpeed();
 	// printf("%f\n", speed);
 	// simulateData();
-	sendToRouter();
+	// sendToRouter();
 }
 
-void callback_objects(const autoware_msgs::DetectedObjectArray msg){
+void AutowareService::callback_objects(const autoware_msgs::DetectedObjectArray msg){
 	std::cout << "---------" << std::endl;
-	s_message.longitude.clear();
-	s_message.latitude.clear();
-	s_message.speed.clear();
-	s_message.time.clear();
-	// s_message.data.clear();
+	messages_arr.data.clear();
 	for(int i = 0; i < msg.objects.size(); i++){
-		message s;
+		message sock_msg;
 		float sum_x = 0.0;
 		float sum_y = 0.0;
 		float sum_z = 0.0;
@@ -281,22 +378,17 @@ void callback_objects(const autoware_msgs::DetectedObjectArray msg){
 		result.v /= DEG_TO_RAD;
 		// std::cout << std::setprecision(20) << result.v << "," << result.u << std::endl;
 
-		s_message.longitude.push_back(result.u * 10000000);
-		s_message.latitude.push_back(result.v * 10000000);
-		s_message.speed.push_back(0);
-		s_message.time.push_back(((generationUnixTimeSec*1000 + (int)generationUnixTimeNSec/1000000 - 1072850400000)) % 65536);
+		sock_msg.longitude = result.u;
+		sock_msg.latitude = result.v;
+		sock_msg.speed = 0;
+		sock_msg.time =((generationUnixTimeSec*1000 + (int)generationUnixTimeNSec/1000000 - 1072850400000)) % 65536;
 
-		std::cout << std::setprecision(20) <<  "lat:" << result.v * 10000000 << " lon:" << result.u * 10000000 << " time:" << (((long)generationUnixTimeSec*1000 + (long)generationUnixTimeNSec/1000000 - 1072850400000)) % 65536 << std::endl;
-		// s.longitud e = result.u;
-		// s.latitude = result.v;
-		// s.speed = 0;
-		// s.time = ((generationUnixTimeSec*1000 + (int)generationUnixTimeNSec/1000000 - 1072850400000)) % 65536;
-		// s_message.data.push_back(s);
+		messages_arr.data.push_back(sock_msg);
 	}
-	// sendToRouter();
+	sendToRouter();
 }
 
-void sampleCallback(autoware_msgs::DetectedObjectArray msg){
+void AutowareService::sampleCallback(autoware_msgs::DetectedObjectArray msg){
 	std::cout << "listen:" << msg.header.stamp.sec << std::endl; 
 }
 
@@ -446,17 +538,35 @@ void createPointsPublisher(const ros::TimerEvent&){
 	pub.publish(output_msg);
 	printf("published:%d\n", output_msg.header.seq);
 
+		// ros::spinOnce();
+		// loop_rate.sleep();
+
+	// }
+	
+
 }
 
 
 
 int main(int argc,  char* argv[]) {
+
+
+	AutowareConfig config;
+	try {
+		config.loadConfig();
+	}
+	catch (std::exception &e) {
+		cerr << "Error while loading config.xml: " << e.what() << endl << flush;
+		return EXIT_FAILURE;
+	}
+	AutowareService autoware(config);
+	
 	ros::init(argc, argv, "listener");
 	ros::NodeHandle n,n2;
 
-	ros::Subscriber sub1 = n.subscribe("ndt_pose", 1024, callback);
-	ros::Subscriber sub2 = n.subscribe("detection/lidar_detector/objects", 1024, callback_objects);
-	init(n);
+	// ros::Subscriber sub = n.subscribe("ndt_pose", 1024, autoware.callback);
+	ros::Subscriber sub = n.subscribe("detection/lidar_detector/objects", 1024, autoware.callback_objects);
+	autoware.init(n);
 
 	std::cout << "hairuyo" << std::endl;
 	ros::spin();
