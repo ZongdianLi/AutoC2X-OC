@@ -30,6 +30,7 @@
 
 #include "SerialPort.h"
 #include <common/utility/CommunicationSender.h>
+#include <common/utility/CommunicationReceiver.h>
 #include <common/utility/LoggingUtility.h>
 #include <common/utility/Constants.h>
 #include <common/buffers/autoware.pb.h>
@@ -42,6 +43,7 @@
 #include <chrono>
 #include <ctime>
 #include <fstream>
+#include <random>
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/archive/text_iarchive.hpp>
@@ -133,7 +135,6 @@ public:
 	void receiveData(const boost::system::error_code &ec, SerialPort* serial);
 	void simulateSpeed();
 	void simulateData();
-	void sendToServices(autowarePackage::AUTOWARE autoware);
 
 	double calcSpeed();
 
@@ -143,12 +144,17 @@ public:
 
 	void testSender();
 
+	void receiveFromCaService();
+
+	void sendToServices(autowarePackage::AUTOWARE autoware);
+
 
 private:
 	AutowareConfig mConfig;
 	GlobalConfig mGlobalConfig;
 
 	CommunicationSender* mSender;
+	CommunicationReceiver* mReceiverFromCaService;
 	LoggingUtility* mLogger;
 
 	//for simulation only
@@ -160,6 +166,7 @@ private:
 	boost::asio::deadline_timer* mTimer;
 
 	boost::thread* mThreadReceive;
+	boost::thread* mThreadReceiveFromCaService;
 
 	double speed;
 	double longitude;
@@ -168,10 +175,9 @@ private:
 
 	std::ofstream delay_output_file;
 
-	// std::vector<message> message_arr;
-	// socket_message s_message;
+	socket_message s_message;
 
-	// tcp::socket socket(asio::io_service);
+	std::random_device rnd;     // 非決定的な乱数生成器を生成
 };
 
 /** @} */ //end group

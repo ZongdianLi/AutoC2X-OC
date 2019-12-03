@@ -1,9 +1,10 @@
 package autowarePackage;
 
 message AUTOWARE {
-	optional int64 time = 1;
-	optional int64 speed = 2;
-	optional int64 rpm = 3;
-	optional int64 longitude = 4;
-	optional int64 latitude = 5;
+	optional int64 id = 1;
+	optional int64 time = 2;
+	optional int64 speed = 3;
+	optional int64 rpm = 4;
+	optional int64 longitude = 5;
+	optional int64 latitude = 6;
 }

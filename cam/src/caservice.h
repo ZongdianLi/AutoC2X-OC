@@ -225,13 +225,13 @@ private:
 	CommunicationReceiver* mReceiverGps;
 	CommunicationReceiver* mReceiverObd2;
 	CommunicationReceiver* mReceiverAutoware;
-	// CommunicationReceiver* mReceiverPingApp;
+	CommunicationReceiver* mReceiverPingApp;
 
 	boost::thread* mThreadReceive;
 	boost::thread* mThreadGpsDataReceive;
 	boost::thread* mThreadObd2DataReceive;
 	boost::thread* mThreadAutowareDataReceive;
-	// boost::thread* mThreadPingAppDataReceive;
+	boost::thread* mThreadPingAppDataReceive;
 
 	MessageUtils* mMsgUtils;
 	LoggingUtility* mLogger;
@@ -276,6 +276,8 @@ private:
 	LastSentCamInfo mLastSentCamInfo;
 
 	std::ofstream atoc_delay_output_file;
+
+	std::vector<autowarePackage::AUTOWARE> waiting_data;
 };
 
 /** @} */ //end group

@@ -57,7 +57,7 @@ CaService::CaService(CaServiceConfig &config, ptree& configTree) {
 	mReceiverFromDcc = new CommunicationReceiver("5555", "CAM", *mLogger);
 	mSenderToDcc = new CommunicationSender("6666", *mLogger);
 	mSenderToLdm = new CommunicationSender("8888", *mLogger);
-	// mSenderToPingApp = new CommunicationSender("23456", *mLogger);
+	mSenderToAutoware = new CommunicationSender("23456", *mLogger);
 
 	mReceiverGps = new CommunicationReceiver( "3333", "GPS", *mLogger);
 	mReceiverObd2 = new CommunicationReceiver("2222", "OBD2", *mLogger);
@@ -68,6 +68,7 @@ CaService::CaService(CaServiceConfig &config, ptree& configTree) {
 	mThreadGpsDataReceive = new boost::thread(&CaService::receiveGpsData, this);
 	mThreadObd2DataReceive = new boost::thread(&CaService::receiveObd2Data, this);
 	mThreadAutowareDataReceive = new boost::thread(&CaService::receiveAutowareData, this);
+	
 	// mThreadPingAppDataReceive = new boost::thread(&CaService::receivePingAppData, this);
 
 	mIdCounter = 0;
@@ -108,8 +109,6 @@ CaService::CaService(CaServiceConfig &config, ptree& configTree) {
 		mLogger->logInfo("CAM triggering disabled");
 	}
 
-	
-
 }
 
 CaService::~CaService() {
@@ -126,7 +125,7 @@ CaService::~CaService() {
 	delete mReceiverFromDcc;
 	delete mSenderToDcc;
 	delete mSenderToLdm;
-	delete mSenderToPingApp;
+	// delete mSenderToPingApp;
 
 	delete mReceiverGps;
 	delete mReceiverObd2;
@@ -140,7 +139,7 @@ CaService::~CaService() {
 	delete mTimer;
 }
 
-//receive CAM from DCC and forward to LDM
+//receive CAM from DCC and forward to LDM and autoware?
 void CaService::receive() {
 	string envelope;		//envelope
 	string serializedAsnCam;	//byte string (serialized)
@@ -164,7 +163,7 @@ void CaService::receive() {
 		mLogger->logInfo("Forward incoming CAM " + to_string(cam->header.stationID) + " to LDM");
 		mSenderToLdm->send(envelope, serializedProtoCam);	//send serialized CAM to LDM
 
-		mSenderToPingApp->send(envelope, serializedProtoCam);
+		mSenderToAutoware->send(envelope, serializedProtoCam);
 	}
 }
 
@@ -196,7 +195,7 @@ void CaService::receiveObd2Data() {
 	}
 }
 
-void CaService::receiveAutowareData() {
+void CaService::receiveAutowareData() { //実装
 	string serializedAutoware;
 	autowarePackage::AUTOWARE newAutoware;
 
@@ -206,6 +205,7 @@ void CaService::receiveAutowareData() {
 		mLogger->logDebug("Received AUTOWARE with speed (m/s): " + to_string(10));
 		mMutexLatestAutoware.lock();
 		mLatestAutoware = newAutoware;
+		waiting_data.push_back(newAutoware);
 		mMutexLatestAutoware.unlock();
 		// std::cout << "now time:" << Utils::currentTime() << std::endl;
 		// std::cout << "generationUnixTime" << newAutoware.time() << std::endl;
@@ -214,7 +214,7 @@ void CaService::receiveAutowareData() {
 	}
 }
 
-void CaService::receiveReflectedData() {
+void CaService::receiveReflectedData() { //実装
 	string serializedPingApp;
 	pingAppPackage::PINGAPP newPingApp;
 
@@ -318,7 +318,7 @@ void CaService::alarm(const boost::system::error_code &ec) {
 }
 
 void CaService::trigger() {
-	send();
+	send(true);
 	scheduleNextAlarm();
 }
 
@@ -428,37 +428,44 @@ void CaService::scheduleNextAlarm() {
 
 //generate CAM and send to LDM and DCC
 void CaService::send(bool isAutoware) {
-	string serializedData;
-	dataPackage::DATA data;
+	std::cout << "*********lets send CAM:" << waiting_data.size() << std::endl;
+	while(waiting_data.size() > 0){
+		mLatestAutoware = waiting_data.back();
+		waiting_data.pop_back();
 
-	// Standard compliant CAM
-	CAM_t* cam = generateCam(isAutoware);
-	vector<uint8_t> encodedCam = mMsgUtils->encodeMessage(&asn_DEF_CAM, cam);
-	string strCam(encodedCam.begin(), encodedCam.end());
-	mLogger->logDebug("Encoded CAM size: " + to_string(strCam.length()));
+		string serializedData;
+		dataPackage::DATA data;
 
-	data.set_id(messageID_cam);
-	data.set_type(dataPackage::DATA_Type_CAM);
-	data.set_priority(dataPackage::DATA_Priority_BE);
+		// Standard compliant CAM
+		CAM_t* cam = generateCam(isAutoware);
+		vector<uint8_t> encodedCam = mMsgUtils->encodeMessage(&asn_DEF_CAM, cam);
+		string strCam(encodedCam.begin(), encodedCam.end());
+		mLogger->logDebug("Encoded CAM size: " + to_string(strCam.length()));
 
-	int64_t currTime = Utils::currentTime();
-	data.set_createtime(currTime);
-	data.set_validuntil(currTime + mConfig.mExpirationTime*1000*1000*1000);
-	data.set_content(strCam);
+		// data.set_id(messageID_cam);
+		data.set_id(messageID_cam);
+		data.set_type(dataPackage::DATA_Type_CAM);
+		data.set_priority(dataPackage::DATA_Priority_BE);
 
-	data.SerializeToString(&serializedData);
-	mLogger->logInfo("Send new CAM to DCC and LDM\n");
+		int64_t currTime = Utils::currentTime();
+		data.set_createtime(currTime);
+		data.set_validuntil(currTime + mConfig.mExpirationTime*1000*1000*1000);
+		data.set_content(strCam);
 
-	mSenderToDcc->send("CAM", serializedData);	//send serialized DATA to DCC
+		data.SerializeToString(&serializedData);
+		mLogger->logInfo("Send new CAM to DCC and LDM\n");
 
-	camPackage::CAM camProto = convertAsn1toProtoBuf(cam);
-	string serializedProtoCam;
-	camProto.SerializeToString(&serializedProtoCam);
-	mSenderToLdm->send("CAM", serializedProtoCam); //send serialized CAM to LDM
+		mSenderToDcc->send("CAM", serializedData);	//send serialized DATA to DCC
 
-	// mSenderToPingApp->send("CAM", serializedProtoCam); //本来ここではpingAppに送信しなくて良い（自身の車両情報なので)
+		camPackage::CAM camProto = convertAsn1toProtoBuf(cam);
+		string serializedProtoCam;
+		camProto.SerializeToString(&serializedProtoCam);
+		mSenderToLdm->send("CAM", serializedProtoCam); //send serialized CAM to LDM
 
-    asn_DEF_CAM.free_struct(&asn_DEF_CAM, cam, 0);
+		// mSenderToPingApp->send("CAM", serializedProtoCam); //本来ここではpingAppに送信しなくて良い（自身の車両情報なので)
+
+		asn_DEF_CAM.free_struct(&asn_DEF_CAM, cam, 0);
+	}
 }
 
 //generate new CAM with latest gps and obd2 data
@@ -470,7 +477,7 @@ CAM_t* CaService::generateCam(bool isAutoware) {
 	}
 	// ITS pdu header
 	if (isAutoware){
-		cam->header.stationID = mLatestPingApp.stationid();
+		cam->header.stationID = mLatestAutoware.id();
 	} else {
 		cam->header.stationID = mGlobalConfig.mStationID;// mIdCounter; //
 	}

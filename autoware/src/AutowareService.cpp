@@ -51,6 +51,7 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	mLogger = new LoggingUtility(AUTOWARE_CONFIG_NAME, AUTOWARE_MODULE_NAME, mGlobalConfig.mLogBasePath, mGlobalConfig.mExpName, mGlobalConfig.mExpNo, pt);
 
 	mSender = new CommunicationSender("25000", *mLogger);
+	mReceiverFromCaService = new CommunicationReceiver("23456", "AUTOWARE", *mLogger);
 	// mLogger = new LoggingUtility("AutowareService", mGlobalConfig.mExpNo, loggingConf, statisticConf);
 	mLogger->logStats("speed (m/sec)");
 	
@@ -59,35 +60,37 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	mBernoulli = bernoulli_distribution(0);
 	mUniform = uniform_real_distribution<double>(-0.01, 0.01);
 
-	mThreadReceive = new boost::thread(&AutowareService::receiveFromAutoware, this);
+	// mThreadReceive = new boost::thread(&AutowareService::receiveFromAutoware, this);
+	mThreadReceiveFromCaService = new boost::thread(&AutowareService::receiveFromCaService, this);
 	// mThreadReceive = new boost::thread(&AutowareService::testSender, this);
-	// testSender();
+	while(1){
+		testSender();
+		sleep(1);
+	}
 	
 
-	// char cur_dir[1024];
-	// getcwd(cur_dir, 1024);
-	// time_t t = time(nullptr);
-	// const tm* lt = localtime(&t);
-	// std::stringstream s;
-	// s<<"20";
-	// s<<lt->tm_year-100; //100を引くことで20xxのxxの部分になる
-	// s<<"-";
-	// s<<lt->tm_mon+1; //月を0からカウントしているため
-	// s<<"-";
-	// s<<lt->tm_mday; //そのまま
-	// s<<"_";
-	// s<<lt->tm_hour;
-	// s<<":";
-	// s<<lt->tm_min;
-	// s<<":";
-	// s<<lt->tm_sec;
-	// std::string timestamp = s.str();
+	char cur_dir[1024];
+	getcwd(cur_dir, 1024);
+	time_t t = time(nullptr);
+	const tm* lt = localtime(&t);
+	std::stringstream s;
+	s<<"20";
+	s<<lt->tm_year-100; //100を引くことで20xxのxxの部分になる
+	s<<"-";
+	s<<lt->tm_mon+1; //月を0からカウントしているため
+	s<<"-";
+	s<<lt->tm_mday; //そのまま
+	s<<"_";
+	s<<lt->tm_hour;
+	s<<":";
+	s<<lt->tm_min;
+	s<<":";
+	s<<lt->tm_sec;
+	std::string timestamp = s.str();
 
-	// std::string filename = std::string(cur_dir) + "/../../../autoware/output/delay/" + timestamp + ".csv";
-	// delay_output_file.open(filename, std::ios::out);
+	std::string filename = std::string(cur_dir) + "/../../../autoware/output/delay/" + timestamp + ".csv";
+	delay_output_file.open(filename, std::ios::out);
 
-	asio::io_service io_service;
-	tcp::socket socket(io_service);
 }
 
 AutowareService::~AutowareService() {
@@ -118,7 +121,6 @@ void AutowareService::receiveData(const boost::system::error_code &ec, SerialPor
 }
 
 
-
 //simulates realistic vehicle speed
 void AutowareService::simulateSpeed() {
 	double pCurr = mBernoulli.p();
@@ -141,17 +143,24 @@ void AutowareService::simulateSpeed() {
 //simulates Autoware data, logs and sends it
 void AutowareService::simulateData() {
 	std::cout << "simulating....." << std::endl;
-	autowarePackage::AUTOWARE autoware;
-
-	//write current speed to protocol buffer
-	autoware.set_speed(speed); // standard expects speed in 0.01 m/s
-	// autoware.set_time(Utils::currentTime());
-	autoware.set_time(generationUnixTime);
-	autoware.set_longitude(longitude);
-	autoware.set_latitude(latitude);
-	std::cout << std::setprecision(20) << "speed:" << autoware.speed() << " time:" << autoware.time() << " longitude:" << autoware.longitude() << " latitude:" << autoware.latitude() << std::endl;
-	sendToServices(autoware);
-
+	for(int i=0; i < s_message.speed.size(); i++){
+		autowarePackage::AUTOWARE autoware;
+		if(i == s_message.speed.size()-1){
+			autoware.set_id(0);
+		} else {
+			std::mt19937 mt(rnd());     //  メルセンヌ・ツイスタの32ビット版、引数は初期シード値
+			std::uniform_int_distribution<> rand10000(1, 9999);        // [0, 9999] 範囲の一様乱数
+			autoware.set_id(rand10000(mt));
+		}
+		//write current speed to protocol buffer
+		autoware.set_speed(s_message.speed[i]); // standard expects speed in 0.01 m/s
+		// autoware.set_time(Utils::currentTime());
+		autoware.set_time(s_message.time[i]);
+		autoware.set_longitude(s_message.longitude[i]);
+		autoware.set_latitude(s_message.latitude[i]);
+		// std::cout << std::setprecision(20) << "speed:" << autoware.speed() << " time:" << autoware.time() << " longitude:" << autoware.longitude() << " latitude:" << autoware.latitude() << std::endl;
+		sendToServices(autoware);
+	}
 	// mTimer->expires_from_now(boost::posix_time::millisec(mConfig.mFrequency));
 	// mTimer->async_wait(boost::bind(&AutowareService::simulateData, this, boost::asio::placeholders::error));
 }
@@ -229,7 +238,7 @@ void AutowareService::receiveFromAutoware(){
     int rsize;
     while( 1 ) {
 		message message;
-		socket_message s_message;
+		// socket_message s_message;
 		std::stringstream ss;
 		memset( buf, 0, sizeof( buf ) );
         rsize = recv( client_sockfd, buf, sizeof( buf ), 0 );
@@ -272,33 +281,38 @@ void AutowareService::receiveFromAutoware(){
 	// }
 }
 
+
+
 void AutowareService::testSender(){
-	// int sockfd;
-    // struct sockaddr_in addr;
-    // if( (sockfd = socket( AF_INET, SOCK_STREAM, 0) ) < 0 ) perror( "socket" ); 
-    // addr.sin_family = AF_INET;
-    // addr.sin_port = htons( 23457 );
-    // addr.sin_addr.s_addr = inet_addr( "127.0.0.1" );
-    // connect( sockfd, (struct sockaddr *)&addr, sizeof( struct sockaddr_in ) );
- 
-    // // データ送信
-    // char send_str[10];
-    // char receive_str[10];
-	// message message;
-    // for ( int i = 0; i < 10; i++ ){
-    //     sprintf( send_str, "%d", i );
-	// 	message.speed = i + 10000;
-	// 	message.time = i * 2;
-	// 	message.longitude = i * 5;
-	// 	message.latitude = i * 3;
-	// 	char* my_s_bytes = static_cast<char*>(static_cast<void*>(&message));
-    //     if( send( sockfd, my_s_bytes, sizeof(message), 0 ) < 0 ) {
-    //         perror( "send" );
-    //     } else {
-    //     }
-    //     sleep( 1 );
-    // }
-    // close( sockfd );
+	s_message.speed.clear();
+	s_message.latitude.clear();
+	s_message.longitude.clear();
+	s_message.time.clear();
+
+	for(int i = 0; i < 10; i++){
+		std::mt19937 mt(rnd());     //  メルセンヌ・ツイスタの32ビット版、引数は初期シード値
+		std::uniform_int_distribution<> rand10000(1, 9999);        // [0, 9999] 範囲の一様乱数
+		s_message.speed.push_back(rand10000(mt));
+		s_message.time.push_back(rand10000(mt));
+		s_message.latitude.push_back(rand10000(mt));
+		s_message.longitude.push_back(rand10000(mt));
+	}
+	simulateData();
+}
+
+void AutowareService::receiveFromCaService(){
+	string serializedAutoware;
+	autowarePackage::AUTOWARE newAutoware;
+
+	while (1) {
+		serializedAutoware = mReceiverFromCaService->receiveData();
+		std::cout << "receive from caservice" << std::endl;
+		// newGps.ParseFromString(serializedGps);
+		// mLogger->logDebug("Received GPS with latitude: " + to_string(newGps.latitude()) + ", longitude: " + to_string(newGps.longitude()));
+		// mMutexLatestGps.lock();
+		// mLatestGps = newGps;
+		// mMutexLatestGps.unlock();
+	}
 }
 
 int main(int argc,  char* argv[]) {
@@ -312,10 +326,6 @@ int main(int argc,  char* argv[]) {
 		return EXIT_FAILURE;
 	}
 	AutowareService autoware(config);
-
-	while(1){
-		sleep(100);
-	}
 
 	return 0;
 }
