@@ -147,6 +147,7 @@ void CaService::receive() {
 
 	while (1) {
 		pair<string, string> received = mReceiverFromDcc->receive();
+		std::cout << " ****** okaeri ******" << std::endl;
 		envelope = received.first;
 		serializedAsnCam = received.second;			//serialized DATA
 
@@ -161,7 +162,7 @@ void CaService::receive() {
 		camProto.SerializeToString(&serializedProtoCam);
 
 		mLogger->logInfo("Forward incoming CAM " + to_string(cam->header.stationID) + " to LDM");
-		mSenderToLdm->send(envelope, serializedProtoCam);	//send serialized CAM to LDM
+		// mSenderToLdm->send(envelope, serdializedProtoCam);	//send serialized CAM to LDM
 
 		mSenderToAutoware->send(envelope, serializedProtoCam);
 	}
@@ -428,8 +429,8 @@ void CaService::scheduleNextAlarm() {
 
 //generate CAM and send to LDM and DCC
 void CaService::send(bool isAutoware) {
-	std::cout << "*********lets send CAM:" << waiting_data.size() << std::endl;
 	while(waiting_data.size() > 0){
+		std::cout << "*********lets send CAM:" << waiting_data.size() << std::endl;
 		mLatestAutoware = waiting_data.back();
 		waiting_data.pop_back();
 

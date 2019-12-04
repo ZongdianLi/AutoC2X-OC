@@ -51,23 +51,12 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	mLogger = new LoggingUtility(AUTOWARE_CONFIG_NAME, AUTOWARE_MODULE_NAME, mGlobalConfig.mLogBasePath, mGlobalConfig.mExpName, mGlobalConfig.mExpNo, pt);
 
 	mSender = new CommunicationSender("25000", *mLogger);
-	mReceiverFromCaService = new CommunicationReceiver("23456", "AUTOWARE", *mLogger);
+	mReceiverFromCaService = new CommunicationReceiver("23456", "CAM", *mLogger);
 	// mLogger = new LoggingUtility("AutowareService", mGlobalConfig.mExpNo, loggingConf, statisticConf);
 	mLogger->logStats("speed (m/sec)");
 	
-	//for simulation only
-	mRandNumberGen = default_random_engine(0);
-	mBernoulli = bernoulli_distribution(0);
-	mUniform = uniform_real_distribution<double>(-0.01, 0.01);
-
-	// mThreadReceive = new boost::thread(&AutowareService::receiveFromAutoware, this);
 	mThreadReceiveFromCaService = new boost::thread(&AutowareService::receiveFromCaService, this);
-	// mThreadReceive = new boost::thread(&AutowareService::testSender, this);
-	while(1){
-		testSender();
-		sleep(1);
-	}
-	
+	// mThreadTestSender = new boost::thread(&AutowareService::testSender, this);
 
 	char cur_dir[1024];
 	getcwd(cur_dir, 1024);
@@ -91,11 +80,20 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	std::string filename = std::string(cur_dir) + "/../../../autoware/output/delay/" + timestamp + ".csv";
 	delay_output_file.open(filename, std::ios::out);
 
+	while(1){
+		testSender();
+		sleep(1);
+	}
 }
 
 AutowareService::~AutowareService() {
 	delete mSender;
 	delete mLogger;
+
+	delete mReceiverFromCaService;
+	delete mThreadReceive;
+	delete mThreadReceiveFromCaService;
+	delete mThreadTestSender;
 
 	mTimer->cancel();
 	delete mTimer;
@@ -103,21 +101,6 @@ AutowareService::~AutowareService() {
 
 //reads the actual vehicle data from Autoware
 void AutowareService::receiveData(const boost::system::error_code &ec, SerialPort* serial) {
-	// double speed = serial->readSpeed();
-	// int rpm = serial->readRpm();
-	// cout << to_string(speed) << " " << to_string(rpm) << endl;
-	// if (speed != -1) {		//valid speed
-	// 	//write current data to protocol buffer
-	// 	autowarePackage::AUTOWARE autoware;
-	// 	autoware.set_time(Utils::currentTime());
-	// 	autoware.set_speed(speed * 100); // standard expects speed in 0.01 m/s
-	// 	if (rpm != -1) {
-	// 		autoware.set_rpm(rpm);
-	// 	}
-	// 	sendToServices(autoware);
-	// }
-	// mTimer->expires_from_now(boost::posix_time::millisec(mConfig.mFrequency));
-	// mTimer->async_wait(boost::bind(&AutowareService::receiveData, this, boost::asio::placeholders::error, serial));
 }
 
 
@@ -177,41 +160,16 @@ void AutowareService::sendToServices(autowarePackage::AUTOWARE autoware) {
 
 void AutowareService::init() {
 	if (!mConfig.mSimulateData) {	//use real Autoware data
-		// SerialPort* serial = new SerialPort();
-		// if (serial->connect(mConfig.mDevice) != -1) {
-		// 	mLogger->logInfo("Connected to serial port successfully");
-
-		// 	serial->init();
-
-		// 	mTimer = new boost::asio::deadline_timer(mIoService, boost::posix_time::millisec(mConfig.mFrequency));
-		// 	mTimer->async_wait(boost::bind(&AutowareService::receiveData, this, boost::asio::placeholders::error, serial));
-		// 	mIoService.run();
-
-		// 	serial->disconnect();
-		// }
-		// else {
-		// 	mLogger->logError("Cannot open serial port -> plug in Autoware and run with sudo");
-		// }
 	}
 	else {				//use simulated Autoware data
-		// mTimer = new boost::asio::deadline_timer(mIoService, boost::posix_time::millisec(mConfig.mFrequency));
-		// mTimer->async_wait(boost::bind(&AutowareService::simulateData, this, boost::asio::placeholders::error));
-		// mIoService.run();
 	}
 	// ros::spin();
-
 }
 
 double AutowareService::calcSpeed(){
 }
 
 void AutowareService::timeCalc(){
-	// geometry_msgs::PoseStamped newestPose = nowPose;
-	// double messageRosTime = newestPose.header.stamp.sec +  newestPose.header.stamp.nsec / 1000000000.0;
-	// double diffTimeFromRosToWall = (ros::WallTime::now().toSec() - ros::Time::now().toSec() - ros::Time::now().toSec() + ros::WallTime::now().toSec()) / 2.0;
-	// std::cout << "delay:" << (ros::WallTime::now().toSec() - (messageRosTime + diffTimeFromRosToWall)) *1000 << std::endl;
-	// delay_output_file << ros::WallTime::now() << "," << (ros::WallTime::now().toSec() - (messageRosTime + diffTimeFromRosToWall)) *1000 << std::endl;
-	// generationUnixTime = messageRosTime + diffTimeFromRosToWall;
 }
 
 void AutowareService::receiveFromAutoware(){
@@ -284,34 +242,38 @@ void AutowareService::receiveFromAutoware(){
 
 
 void AutowareService::testSender(){
-	s_message.speed.clear();
-	s_message.latitude.clear();
-	s_message.longitude.clear();
-	s_message.time.clear();
+	while(1){
+		s_message.speed.clear();
+		s_message.latitude.clear();
+		s_message.longitude.clear();
+		s_message.time.clear();
 
-	for(int i = 0; i < 10; i++){
-		std::mt19937 mt(rnd());     //  メルセンヌ・ツイスタの32ビット版、引数は初期シード値
-		std::uniform_int_distribution<> rand10000(1, 9999);        // [0, 9999] 範囲の一様乱数
-		s_message.speed.push_back(rand10000(mt));
-		s_message.time.push_back(rand10000(mt));
-		s_message.latitude.push_back(rand10000(mt));
-		s_message.longitude.push_back(rand10000(mt));
+		for(int i = 0; i < 10; i++){
+			std::mt19937 mt(rnd());     //  メルセンヌ・ツイスタの32ビット版、引数は初期シード値
+			std::uniform_int_distribution<> rand10000(1, 9999);        // [0, 9999] 範囲の一様乱数
+			s_message.speed.push_back(rand10000(mt));
+			s_message.time.push_back(rand10000(mt));
+			s_message.latitude.push_back(rand10000(mt));
+			s_message.longitude.push_back(rand10000(mt));
+		}
+		simulateData();
+		sleep(1);
 	}
-	simulateData();
 }
 
 void AutowareService::receiveFromCaService(){
 	string serializedAutoware;
-	autowarePackage::AUTOWARE newAutoware;
+	camPackage::CAM cam;
 
 	while (1) {
-		serializedAutoware = mReceiverFromCaService->receiveData();
+		pair<string, string> received = mReceiverFromCaService->receive();
 		std::cout << "receive from caservice" << std::endl;
-		// newGps.ParseFromString(serializedGps);
-		// mLogger->logDebug("Received GPS with latitude: " + to_string(newGps.latitude()) + ", longitude: " + to_string(newGps.longitude()));
-		// mMutexLatestGps.lock();
-		// mLatestGps = newGps;
-		// mMutexLatestGps.unlock();
+
+		serializedAutoware = received.second;
+		cam.ParseFromString(serializedAutoware);
+		int64_t currTime = Utils::currentTime();
+		long genDeltaTime = (long)(currTime/1000000 - 10728504000) % 65536;
+		delay_output_file << std::setprecision(20) << cam.header().stationid() << "" << "," << genDeltaTime << std::endl;
 	}
 }
 

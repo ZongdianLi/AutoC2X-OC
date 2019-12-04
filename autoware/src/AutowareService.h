@@ -33,6 +33,7 @@
 #include <common/utility/CommunicationReceiver.h>
 #include <common/utility/LoggingUtility.h>
 #include <common/utility/Constants.h>
+#include <common/buffers/cam.pb.h>
 #include <common/buffers/autoware.pb.h>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
@@ -48,9 +49,6 @@
 #include <boost/serialization/vector.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
-
-namespace asio = boost::asio;
-using asio::ip::tcp;
 
 /** Struct that holds the configuration for AutowareService.
  * The configuration is defined in <a href="../../autoware/config/config.xml">autoware/config/config.xml</a>.
@@ -167,6 +165,9 @@ private:
 
 	boost::thread* mThreadReceive;
 	boost::thread* mThreadReceiveFromCaService;
+
+	boost::thread* mThreadTestSender;
+
 
 	double speed;
 	double longitude;
