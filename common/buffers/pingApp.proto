@@ -4,4 +4,6 @@ message PINGAPP {
 	optional double time = 1;
 	optional int64 latitude = 2;
 	optional int64 stationid = 3;
+	optional int64 longitude = 4;
+	optional int64 speed = 5;
 }

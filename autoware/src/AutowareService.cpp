@@ -51,13 +51,15 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	mSender = new CommunicationSender("25000", *mLogger);
 	// mLogger = new LoggingUtility("AutowareService", mGlobalConfig.mExpNo, loggingConf, statisticConf);
 	mLogger->logStats("speed (m/sec)");
+
+	mReceiverFromCa = new CommunicationReceiver("23456", "CAM", *mLogger);
 	
 	//for simulation only
 	mRandNumberGen = default_random_engine(0);
 	mBernoulli = bernoulli_distribution(0);
 	mUniform = uniform_real_distribution<double>(-0.01, 0.01);
 
-	mThreadReceive = new boost::thread(&AutowareService::receiveFromAutoware, this);
+	mThreadReceive = new boost::thread(&AutowareService::receiveFromCa, this);
 	// mThreadReceive = new boost::thread(&AutowareService::testSender, this);
 	// testSender();
 	
@@ -138,28 +140,37 @@ void AutowareService::simulateData() {
 	autoware.set_longitude(longitude);
 	autoware.set_latitude(latitude);
 	std::cout << std::setprecision(20) << "speed:" << autoware.speed() << " time:" << autoware.time() << " longitude:" << autoware.longitude() << " latitude:" << autoware.latitude() << std::endl;
-	sendToServices(autoware);
+	// sendToServices(autoware);
 
 	// mTimer->expires_from_now(boost::posix_time::millisec(mConfig.mFrequency));
 	// mTimer->async_wait(boost::bind(&AutowareService::simulateData, this, boost::asio::placeholders::error));
 }
 
 //logs and sends Autoware
-void AutowareService::receiveFromServices(autowarePackage::AUTOWARE autoware) {
-	//send buffer to services
-	string serializedAutoware;
-	autoware.SerializeToString(&serializedAutoware);
-	mSender->sendData("AUTOWARE", serializedAutoware);
-	mLogger->logStats(to_string(autoware.speed()) + " (" + to_string(autoware.speed()/100*3.6) + "km/h)"); // In csv, we log speed in m/sec
+void AutowareService::receiveFromCa() {
+	string serializedCam;
+	camPackage::CAM cam;
+
+	while(1){
+		pair<string, string> received = mReceiverFromCa->receive();
+		std::cout << "receive from ca" << std::endl;
+
+		serializedCam = received.second;
+		cam.ParseFromString(serializedCam);
+		std::cout << "stationid:" << cam.header().stationid() << " latitude:" << cam.coop().camparameters().basiccontainer().latitude() << " longitude:" << cam.coop().camparameters().basiccontainer().longitude() << " speed:" <<  cam.coop().camparameters().highfreqcontainer().basicvehiclehighfreqcontainer().speed() << std::endl;
+
+		s_message.latitude.push_back( cam.coop().camparameters().basiccontainer().latitude() );
+		s_message.longitude.push_back( cam.coop().camparameters().basiccontainer().longitude() );
+		s_message.time.push_back( cam.coop().gendeltatime() );
+		s_message.speed.push_back( cam.coop().camparameters().highfreqcontainer().basicvehiclehighfreqcontainer().speed() );
+	}
 }
 
 
 void AutowareService::init() {
 	if (!mConfig.mSimulateData) {	//use real Autoware data
-		
 	}
 	else {				//use simulated Autoware data
-		
 	}
 }
 

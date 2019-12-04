@@ -175,7 +175,6 @@ private:
 	 *
 	 */
 	void receiveAutowareData();
-	void receivePingAppData();
 
 	/** Checks if heading has changed more than 4 degrees.
 	 * @return True if CAM needs to be triggered, false otherwise
@@ -211,6 +210,8 @@ private:
 	 * @return True if GPS data is valid, false otherwise.
 	 */
 	bool isGPSdataValid();
+
+	void reflect(CAM_t* cam);
 	
 
 	GlobalConfig mGlobalConfig;
@@ -218,19 +219,20 @@ private:
 
 	CommunicationSender* mSenderToDcc;
 	CommunicationSender* mSenderToLdm;
-	CommunicationSender* mSenderToPingApp;
+	// CommunicationSender* mSenderToPingApp;
+	CommunicationSender* mSenderToAutoware;
 
 	CommunicationReceiver* mReceiverFromDcc;
 	CommunicationReceiver* mReceiverGps;
 	CommunicationReceiver* mReceiverObd2;
 	CommunicationReceiver* mReceiverAutoware;
-	CommunicationReceiver* mReceiverPingApp;
+	// CommunicationReceiver* mReceiverPingApp;
 
 	boost::thread* mThreadReceive;
 	boost::thread* mThreadGpsDataReceive;
 	boost::thread* mThreadObd2DataReceive;
 	boost::thread* mThreadAutowareDataReceive;
-	boost::thread* mThreadPingAppDataReceive;
+	// boost::thread* mThreadPingAppDataReceive;
 
 	MessageUtils* mMsgUtils;
 	LoggingUtility* mLogger;

@@ -30,13 +30,19 @@
 
 #include "SerialPort.h"
 #include <common/utility/CommunicationSender.h>
+#include <common/utility/CommunicationReceiver.h>
 #include <common/utility/LoggingUtility.h>
 #include <common/utility/Constants.h>
 #include <common/buffers/autoware.pb.h>
+#include <common/buffers/cam.pb.h>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/thread.hpp>
 #include <boost/asio.hpp>
+#include <boost/serialization/serialization.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
 #include <string>
 #include <common/config/config.h>
 #include <chrono>
@@ -93,6 +99,22 @@ struct message {
 	int time;
 };
 
+struct socket_message{
+	std::vector<int> speed;
+	std::vector<int> latitude;
+	std::vector<int> longitude;
+	std::vector<int> time;
+private:
+	friend class boost::serialization::access;
+	template<class Archive>
+		void serialize( Archive& ar, unsigned int ver){
+			ar & speed;
+			ar & latitude;
+			ar & longitude;
+			ar & time;
+		}
+};
+
 /**
  * Class that connects to AUTOWARE via serial port and offers its data to other modules via ZMQ.
  */
@@ -106,7 +128,7 @@ public:
 	void receiveData(const boost::system::error_code &ec, SerialPort* serial);
 	void simulateSpeed();
 	void simulateData();
-	void receiveFromServices(autowarePackage::AUTOWARE autoware);
+	void receiveFromCa();
 
 	double calcSpeed();
 
@@ -123,6 +145,10 @@ private:
 
 	CommunicationSender* mSender;
 	LoggingUtility* mLogger;
+
+	CommunicationReceiver* mReceiverFromCa;
+
+	boost::thread* mThreadReceiveFromCa;
 
 	//for simulation only
 	std::default_random_engine mRandNumberGen;
@@ -142,6 +168,9 @@ private:
 	int sockfd;
 
 	std::ofstream delay_output_file;
+
+	socket_message s_message;
+	
 
 };
 

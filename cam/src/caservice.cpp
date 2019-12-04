@@ -57,18 +57,18 @@ CaService::CaService(CaServiceConfig &config, ptree& configTree) {
 	mReceiverFromDcc = new CommunicationReceiver("5555", "CAM", *mLogger);
 	mSenderToDcc = new CommunicationSender("6666", *mLogger);
 	mSenderToLdm = new CommunicationSender("8888", *mLogger);
-	mSenderToPingApp = new CommunicationSender("23456", *mLogger);
+	mSenderToAutoware = new CommunicationSender("23456", *mLogger);
 
 	mReceiverGps = new CommunicationReceiver( "3333", "GPS", *mLogger);
 	mReceiverObd2 = new CommunicationReceiver("2222", "OBD2", *mLogger);
 	mReceiverAutoware = new CommunicationReceiver("25000", "AUTOWARE",*mLogger);
-	mReceiverPingApp = new CommunicationReceiver("34567", "PINGAPP", *mLogger);
+	// mReceiverPingApp = new CommunicationReceiver("34567", "PINGAPP", *mLogger);
 
 	mThreadReceive = new boost::thread(&CaService::receive, this);
 	mThreadGpsDataReceive = new boost::thread(&CaService::receiveGpsData, this);
 	mThreadObd2DataReceive = new boost::thread(&CaService::receiveObd2Data, this);
 	mThreadAutowareDataReceive = new boost::thread(&CaService::receiveAutowareData, this);
-	mThreadPingAppDataReceive = new boost::thread(&CaService::receivePingAppData, this);
+	// mThreadPingAppDataReceive = new boost::thread(&CaService::receivePingAppData, this);
 
 	mIdCounter = 0;
 
@@ -126,7 +126,7 @@ CaService::~CaService() {
 	delete mReceiverFromDcc;
 	delete mSenderToDcc;
 	delete mSenderToLdm;
-	delete mSenderToPingApp;
+	// delete mSenderToPingApp;
 
 	delete mReceiverGps;
 	delete mReceiverObd2;
@@ -140,13 +140,14 @@ CaService::~CaService() {
 	delete mTimer;
 }
 
-//receive CAM from DCC and forward to LDM
+//receive CAM from DCC and forward to LDM and autoware and reflect
 void CaService::receive() {
 	string envelope;		//envelope
 	string serializedAsnCam;	//byte string (serialized)
 	string serializedProtoCam;
 
 	while (1) {
+
 		pair<string, string> received = mReceiverFromDcc->receive();
 		envelope = received.first;
 		serializedAsnCam = received.second;			//serialized DATA
@@ -164,7 +165,12 @@ void CaService::receive() {
 		mLogger->logInfo("Forward incoming CAM " + to_string(cam->header.stationID) + " to LDM");
 		mSenderToLdm->send(envelope, serializedProtoCam);	//send serialized CAM to LDM
 
-		mSenderToPingApp->send(envelope, serializedProtoCam);
+
+		reflect(cam);
+
+		//autowareモジュールにもここで送ってあげる
+		mSenderToAutoware->send(envelope, serializedProtoCam);
+
 	}
 }
 
@@ -196,6 +202,7 @@ void CaService::receiveObd2Data() {
 	}
 }
 
+//これいらなくね？
 void CaService::receiveAutowareData() {
 	string serializedAutoware;
 	autowarePackage::AUTOWARE newAutoware;
@@ -213,22 +220,6 @@ void CaService::receiveAutowareData() {
 		atoc_delay_output_file << Utils::currentTime() << "," << (Utils::currentTime() - newAutoware.time()) / 1000000.0 << std::endl;
 	}
 }
-
-void CaService::receivePingAppData() {
-	string serializedPingApp;
-	pingAppPackage::PINGAPP newPingApp;
-
-	while (1) {
-		serializedPingApp = mReceiverPingApp->receiveData();
-		send(true);
-		newPingApp.ParseFromString(serializedPingApp);
-		// mLogger->logDebug("Received OBD2 with speed (m/s): " + to_string(newObd.speed()));
-		mMutexLatestPingApp.lock();
-		mLatestPingApp = newPingApp;
-		mMutexLatestPingApp.unlock();
-	}
-}
-
 
 //sends info about triggering to LDM
 void CaService::sendCamInfo(string triggerReason, double delta) {
@@ -426,6 +417,21 @@ void CaService::scheduleNextAlarm() {
 	mTimer->async_wait(boost::bind(&CaService::alarm, this, boost::asio::placeholders::error));
 }
 
+void CaService::reflect(CAM_t *c){
+	std::cout << " ****** reflecting *******" << std::endl;
+	
+	string serializedData;
+	dataPackage::DATA data;
+
+	mLatestPingApp.set_time(c->cam.generationDeltaTime);
+	mLatestPingApp.set_speed(c->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue);
+	mLatestPingApp.set_latitude(c->cam.camParameters.basicContainer.referencePosition.latitude);
+	mLatestPingApp.set_longitude(c->cam.camParameters.basicContainer.referencePosition.longitude);
+	mLatestPingApp.set_stationid(c->header.stationID);
+
+	send(true);
+}
+
 //generate CAM and send to LDM and DCC
 void CaService::send(bool isPingApp) {
 	string serializedData;
@@ -479,7 +485,7 @@ CAM_t* CaService::generateCam(bool isPingApp) {
 
 	// generation delta time
 	int64_t currTime = Utils::currentTime();
-	if (false){
+	if (isPingApp){
 		cam->cam.generationDeltaTime = mLatestPingApp.time();
 	} else {
 		if (mLastSentCamInfo.timestamp) {
@@ -513,10 +519,7 @@ CAM_t* CaService::generateCam(bool isPingApp) {
 	cam->cam.camParameters.basicContainer.referencePosition.altitude.altitudeConfidence = AltitudeConfidence_unavailable;
 	mMutexLatestGps.unlock();
 
-	if(isPingApp){
-		cam->cam.camParameters.basicContainer.referencePosition.latitude = mLatestPingApp.latitude();
-	}
-
+	
 	cam->cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorConfidence = 0;
 	cam->cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorOrientation = 0;
 	cam->cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMinorConfidence = 0;
@@ -570,6 +573,12 @@ CAM_t* CaService::generateCam(bool isPingApp) {
 		}
 		cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedConfidence = SpeedConfidence_unavailable;
 		mMutexLatestAutoware.unlock();
+
+		if(isPingApp){
+			cam->cam.camParameters.basicContainer.referencePosition.latitude = mLatestPingApp.latitude();
+			cam->cam.camParameters.basicContainer.referencePosition.longitude = mLatestPingApp.longitude();
+			cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue = mLatestPingApp.speed();
+		}
 
 		cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleLength.vehicleLengthValue = VehicleLengthValue_unavailable;
 		cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleLength.vehicleLengthConfidenceIndication = VehicleLengthConfidenceIndication_unavailable;
