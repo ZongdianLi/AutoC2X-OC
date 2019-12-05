@@ -54,14 +54,7 @@ AutowareService::AutowareService(AutowareConfig &config) {
 
 	mReceiverFromCa = new CommunicationReceiver("23456", "CAM", *mLogger);
 	
-	//for simulation only
-	mRandNumberGen = default_random_engine(0);
-	mBernoulli = bernoulli_distribution(0);
-	mUniform = uniform_real_distribution<double>(-0.01, 0.01);
-
 	mThreadReceive = new boost::thread(&AutowareService::receiveFromCa, this);
-	// mThreadReceive = new boost::thread(&AutowareService::testSender, this);
-	// testSender();
 	
 
 	// char cur_dir[1024];
@@ -90,8 +83,13 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	if( (sockfd = socket( AF_INET, SOCK_STREAM, 0) ) < 0 ) perror( "socket" ); 
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons( 23457 );
-	addr.sin_addr.s_addr = inet_addr( "192.168.1.1" );
+	addr.sin_addr.s_addr = inet_addr( "192.168.1.2" );
 	connect( sockfd, (struct sockaddr *)&addr, sizeof( struct sockaddr_in ) );
+
+	while(1){
+		testSender();
+		sleep(1);
+	}
 
 }
 
@@ -181,47 +179,88 @@ void AutowareService::timeCalc(){
 }
 
 void AutowareService::sendToAutoware(){
-	char send_str[10];
-    char receive_str[10];
-	message message;
-	message.speed = 100;
-	message.time =  (114) % 65536;
-	message.longitude = 35.713968752011098218 * 10000000;
-	message.latitude = 139.76268463349990157 * 10000000;
-	char* my_s_bytes = static_cast<char*>(static_cast<void*>(&message));
-	if( send( sockfd, my_s_bytes, sizeof(message), 0 ) < 0 ) {
+
+	for(int i=0; i<s_message.speed.size(); i++){
+		std::cout  <<  "latitude:" << std::setprecision(20) << s_message.latitude[i] << " longitude:" << s_message.longitude[i] << std::endl;
+	}
+
+	std::stringstream ss;
+	boost::archive::text_oarchive archive(ss);
+	archive << s_message;
+
+	std::cout << ss.str() << std::endl;
+
+
+	ss.seekg(0, ios::end);
+	if( send( sockfd, ss.str().c_str(), ss.tellp(), 0 ) < 0 ) {
 			perror( "send" );
 	} else {
+		
 	}
+	s_message.speed.clear();
+	s_message.latitude.clear();
+	s_message.longitude.clear();
+	s_message.time.clear();
 }
 
 void AutowareService::testSender(){
-	int sockfd;
-    struct sockaddr_in addr;
-    if( (sockfd = socket( AF_INET, SOCK_STREAM, 0) ) < 0 ) perror( "socket" ); 
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons( 23457 );
-    addr.sin_addr.s_addr = inet_addr( "127.0.0.1" );
-    connect( sockfd, (struct sockaddr *)&addr, sizeof( struct sockaddr_in ) );
+	// int sockfd;
+    // struct sockaddr_in addr;
+    // if( (sockfd = socket( AF_INET, SOCK_STREAM, 0) ) < 0 ) perror( "socket" ); 
+    // addr.sin_family = AF_INET;
+    // addr.sin_port = htons( 23457 );
+    // addr.sin_addr.s_addr = inet_addr( "127.0.0.1" );
+    // connect( sockfd, (struct sockaddr *)&addr, sizeof( struct sockaddr_in ) );
  
-    // データ送信
-    char send_str[10];
-    char receive_str[10];
-	message message;
-    for ( int i = 0; i < 10; i++ ){
-        sprintf( send_str, "%d", i );
-		message.speed = i + 10000;
-		message.time = i * 2;
-		message.longitude = i * 5;
-		message.latitude = i * 3;
-		char* my_s_bytes = static_cast<char*>(static_cast<void*>(&message));
-        if( send( sockfd, my_s_bytes, sizeof(message), 0 ) < 0 ) {
-            perror( "send" );
-        } else {
-        }
-        sleep( 1 );
-    }
-    close( sockfd );
+    // // データ送信
+    // char send_str[10];
+    // char receive_str[10];
+	// message message;
+    // for ( int i = 0; i < 10; i++ ){
+    //     sprintf( send_str, "%d", i );
+	// 	message.speed = i + 10000;
+	// 	message.time = i * 2;
+	// 	message.longitude = i * 5;
+	// 	message.latitude = i * 3;
+	// 	char* my_s_bytes = static_cast<char*>(static_cast<void*>(&message));
+    //     if( send( sockfd, my_s_bytes, sizeof(message), 0 ) < 0 ) {
+    //         perror( "send" );
+    //     } else {
+    //     }
+    //     sleep( 1 );
+    // }
+    // close( sockfd );
+
+	std::mt19937 mt(rnd());
+	std::uniform_int_distribution<> rand(0, 100);
+	std::cout << std::setprecision(20) << rand(mt) / 1000000.0 << std::endl;
+
+	s_message.speed.push_back(rand(mt)/1000.0);
+	s_message.latitude.push_back(35.714464 * 10000000);
+	s_message.longitude.push_back(139.760606 * 10000000);
+	s_message.time.push_back(rand(mt)/1000.0);
+
+	s_message.speed.push_back(rand(mt)/1000.0);
+	s_message.latitude.push_back(35.71419722 * 10000000 + rand(mt)*0);
+	s_message.longitude.push_back(139.76148888 * 10000000 + rand(mt)*0);
+	s_message.time.push_back(rand(mt)/1000.0);
+
+	s_message.speed.push_back(rand(mt)/1000.0);
+	s_message.latitude.push_back(35.714497 * 10000000 + rand(mt)*0);
+	s_message.longitude.push_back(139.763014 * 10000000 + rand(mt)*0);
+	s_message.time.push_back(rand(mt)/1000.0);
+
+	s_message.speed.push_back(rand(mt)/1000.0);
+	s_message.latitude.push_back(35.713997 * 10000000 + rand(mt)*0);
+	s_message.longitude.push_back(139.760153 * 10000000 + rand(mt)*0);
+	s_message.time.push_back(rand(mt)/1000.0);
+
+	s_message.speed.push_back(rand(mt)/1000.0);
+	s_message.latitude.push_back(35.712992 * 10000000 + rand(mt)*0);
+	s_message.longitude.push_back(139.759819 * 10000000 + rand(mt)*0);
+	s_message.time.push_back(rand(mt)/1000.0);
+	
+	sendToAutoware();
 }
 
 int main(int argc,  char* argv[]) {
@@ -236,9 +275,7 @@ int main(int argc,  char* argv[]) {
 	}
 	AutowareService autoware(config);
 
-	while(1){
-		sleep(100);
-	}
+	
 
 	return 0;
 }

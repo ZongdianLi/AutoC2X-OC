@@ -48,6 +48,7 @@
 #include <chrono>
 #include <ctime>
 #include <fstream>
+#include <random>
 
 
 /** Struct that holds the configuration for AutowareService.
@@ -169,8 +170,10 @@ private:
 
 	std::ofstream delay_output_file;
 
-	socket_message s_message;
-	
+	socket_message s_message;	
+
+	std::random_device rnd;
+
 
 };
 
