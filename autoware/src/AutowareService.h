@@ -31,6 +31,7 @@
 #include "SerialPort.h"
 #include <common/utility/CommunicationSender.h>
 #include <common/utility/CommunicationReceiver.h>
+#include <common/utility/CommunicationClient.h>
 #include <common/utility/LoggingUtility.h>
 #include <common/utility/Constants.h>
 #include <common/buffers/autoware.pb.h>
@@ -49,6 +50,14 @@
 #include <ctime>
 #include <fstream>
 #include <random>
+
+#include <common/buffers/cam.pb.h>
+#include <common/buffers/denm.pb.h>
+#include <common/buffers/gps.pb.h>
+#include <common/buffers/obd2.pb.h>
+#include <common/buffers/dccInfo.pb.h>
+#include <common/buffers/camInfo.pb.h>
+#include <common/buffers/ldmData.pb.h>
 
 
 /** Struct that holds the configuration for AutowareService.
@@ -101,6 +110,7 @@ struct message {
 };
 
 struct socket_message{
+	long timestamp;
 	std::vector<int> speed;
 	std::vector<int> latitude;
 	std::vector<int> longitude;
@@ -109,6 +119,7 @@ private:
 	friend class boost::serialization::access;
 	template<class Archive>
 		void serialize( Archive& ar, unsigned int ver){
+			ar & timestamp;
 			ar & speed;
 			ar & latitude;
 			ar & longitude;
@@ -135,9 +146,15 @@ public:
 
 	void timeCalc();
 
-	void sendToAutoware();
+	void sendToAutoware(long timestamp);
 
 	void testSender();
+
+	void receiveSignalFromAutoware();
+
+	long requestCam(std::string condition);
+
+
 
 
 private:
@@ -160,6 +177,7 @@ private:
 	boost::asio::deadline_timer* mTimer;
 
 	boost::thread* mThreadReceive;
+	boost::thread* mThreadReceiveFromAutoware;
 
 	double speed;
 	double longitude;
@@ -167,13 +185,18 @@ private:
 	double generationUnixTime;
 
 	int sockfd;
+	int flag;
 
 	std::ofstream delay_output_file;
 
 	socket_message s_message;	
+	socket_message tmp_message;	
 
 	std::random_device rnd;
 
+	CommunicationClient* mClientCam;
+
+	long newestLdmKey;
 
 };
 
