@@ -33,10 +33,9 @@
 #include <math.h>
 
 using namespace std;
-namespace asio = boost::asio;
-using asio::ip::tcp;
 
 INITIALIZE_EASYLOGGINGPP
+
 
 
 
@@ -68,8 +67,9 @@ void init(ros::NodeHandle n) {
 	std::cout << "filename:" << filename << std::endl;
 	delay_output_file.open(filename, std::ios::out);
 
-
-	std::cout << "hello" << std::endl;
+	filename = std::string(cur_dir) + "/../autoware/output/1_2_delay/" + timestamp + ".csv";
+	std::cout << "filename:" << filename << std::endl;
+	one_two_delay_file.open(filename, std::ios::out);
 
 	//通信モードの時は使う
 	struct sockaddr_in addr;
@@ -79,54 +79,36 @@ void init(ros::NodeHandle n) {
 	addr.sin_addr.s_addr = inet_addr( "192.168.1.1" );
 	connect( sockfd, (struct sockaddr *)&addr, sizeof( struct sockaddr_in ) );
 
-	// asio::io_service io_service;
-	// tcp::socket socket(io_service);
-
-	// boost::system::error_code error;
-	// socket.connect(tcp::endpoint(asio::ip::address::from_string("192.168.1.1"), 23457), error);
-	// if(error){
-	// 	std::cout << "connect failed : " << error.message() << std::endl;
-	// } else {
-	// 	std::cout << "connected" << std::endl;
-	// }
-
 }
 
 
 void sendToRouter(){
 	 // データ送信
-    char send_str[10];
-    char receive_str[10];
+	char send_str[10];
+	char receive_str[10];
 	message message;
 	message.speed = speed * 100;
 	message.time =  ((generationUnixTimeSec*1000 + (int)generationUnixTimeNSec/1000000 - 1072850400000)) % 65536;
 	message.longitude = longitude * 10000000;
 	message.latitude = latitude * 10000000;
 	
+	s_message.timestamp = Utils::currentTime();
 	s_message.speed.push_back(speed * 100);
 	s_message.time.push_back(((generationUnixTimeSec*1000 + (int)generationUnixTimeNSec/1000000 - 1072850400000)) % 65536);
 	s_message.longitude.push_back(longitude * 10000000);
 	s_message.latitude.push_back(latitude * 10000000);
-	// s_message.data.push_back(message);
+
+	std::cout << "delay: " <<  s_message.timestamp << std::endl;
 
 	std::stringstream ss;
 	boost::archive::text_oarchive archive(ss);
 	archive << s_message;
 
-
-
-	// // std::cout << "generationDelta:" <<  (long)generationUnixTime << std::endl;
-	// char* my_s_bytes = static_cast<char*>(static_cast<void*>(&messages_arr));
-	// // char* my_s_bytes = static_cast<char*>(static_cast<void*>(&message));
-	
 	ss.seekg(0, ios::end);
 	if( send( sockfd, ss.str().c_str(), ss.tellp(), 0 ) < 0 ) {
-	// if( send( sockfd, my_s_bytes, sizeof(message), 0 ) < 0 ) {
 			perror( "send" );
 	} else {
 	}
-
-
 }
 
 std::string paramOrganize(std::string param){
@@ -183,7 +165,6 @@ double calcSpeed(){
 		latitude = result.v;
 
 		return sqrt(d_x + d_y) / timedelta;
-
 }
 
 void timeCalc(){
@@ -230,30 +211,15 @@ void timeCalc(){
 }
 
 void callback(const geometry_msgs::PoseStamped msg){
-
-	// sensor_msgs::PointCloud out_pointcloud;
-	// sensor_msgs::convertPointCloud2ToPointCloud(msg, out_pointcloud);
-	// printf("%d\n", msg.header.seq);
-	// for(int i = 0 ; i < out_pointcloud.points.size(); ++i){
-	// geometry_msgs::Point32 point;
-	//  x = -6372.1474609375, y = -31747.03125,
-	//Dooo something here
-	// point.z = out_pointcloud.points[i].z;
-	// printf("%f\n", point.z);
-	// }
-
 	prevPose = nowPose;
 	nowPose = msg;
-	// const autoware_msgs::DetectedObjectArray message = msg;
 	timeCalc();
 	speed = calcSpeed();
-	// printf("%f\n", speed);
-	// simulateData();
 	sendToRouter();
 }
 
 void callback_objects(const autoware_msgs::DetectedObjectArray msg){
-	std::cout << "---------" << std::endl;
+	// std::cout << "---------" << std::endl;
 	s_message.longitude.clear();
 	s_message.latitude.clear();
 	s_message.speed.clear();
@@ -286,7 +252,7 @@ void callback_objects(const autoware_msgs::DetectedObjectArray msg){
 		s_message.speed.push_back(0);
 		s_message.time.push_back(((generationUnixTimeSec*1000 + (int)generationUnixTimeNSec/1000000 - 1072850400000)) % 65536);
 
-		std::cout << std::setprecision(20) <<  "lat:" << result.v * 10000000 << " lon:" << result.u * 10000000 << " time:" << (((long)generationUnixTimeSec*1000 + (long)generationUnixTimeNSec/1000000 - 1072850400000)) % 65536 << std::endl;
+		// std::cout << std::setprecision(20) <<  "lat:" << result.v * 10000000 << " lon:" << result.u * 10000000 << " time:" << (((long)generationUnixTimeSec*1000 + (long)generationUnixTimeNSec/1000000 - 1072850400000)) % 65536 << std::endl;
 		// s.longitud e = result.u;
 		// s.latitude = result.v;
 		// s.speed = 0;
@@ -300,157 +266,54 @@ void sampleCallback(autoware_msgs::DetectedObjectArray msg){
 	std::cout << "listen:" << msg.header.stamp.sec << std::endl; 
 }
 
+void receiveFromRouter(){
+		std::cout << "*****receive setup" << std::endl;
+		int sockfd;
+    int client_sockfd;
+    struct sockaddr_in addr;
+    socklen_t len = sizeof( struct sockaddr_in );
+    struct sockaddr_in from_addr;
+    char buf[4096];
+ 
+    memset( buf, 0, sizeof( buf ) );
+    if( ( sockfd = socket( AF_INET, SOCK_STREAM, 0 ) ) < 0 ) {
+        perror( "socket" );
+    }
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons( 23458 );
+    addr.sin_addr.s_addr = INADDR_ANY;
+    if( bind( sockfd, (struct sockaddr *)&addr, sizeof( addr ) ) < 0 ) perror( "bind" );
+    if( listen( sockfd, SOMAXCONN ) < 0 ) perror( "listen" );
+    if( ( client_sockfd = accept( sockfd, (struct sockaddr *)&from_addr, &len ) ) < 0 ) perror( "accept" );
+ 
+    // 受信
+    int rsize;
+    while( 1 ) {
+		message message;
+		// socket_message s_message;
+		std::stringstream ss;
+		memset( buf, 0, sizeof( buf ) );
+        rsize = recv( client_sockfd, buf, sizeof( buf ), 0 );
+		ss << buf;
 
-std::vector<geometry_msgs::Point32> createLine(){
-	std::vector<geometry_msgs::Point32> result;
-	int N = 50;
-	for(int x = 0; x < N; x++){
-		for(int y = 0; y < N; y++){
-			for(int z = 0; z < N; z++){
-				geometry_msgs::Point32 p;
-				p.x = x*0.1 + 10;
-				p.y = y*0.1;
-				p.z = z*0.1;
-				result.push_back(p);
-			}
-		}
-	}
-	return result;
-}
-
-std::vector<geometry_msgs::Point32> createConvexHull(){
-	std::vector<geometry_msgs::Point32> result;
-
-	geometry_msgs::Point32 a1, a2, a3, a4;
-
-	a1.x = 10;
-	a1.y = 0;
-	a1.z = 0;
-	
-	a2.x = 15;
-	a2.y = 0;
-	a2.z = 0;
-
-	a3.x = 15;
-	a3.y = 5;
-	a3.z = 0;
-
-	a4.x = 10;
-	a4.y = 5;
-	a4.z = 0;
-
-	result.push_back(a1);
-	result.push_back(a2);
-	result.push_back(a3);
-	result.push_back(a4);
-	result.push_back(a1);
-
-	return result;
-}
-
-sensor_msgs::ChannelFloat32 createChannel(std::string name){
-	sensor_msgs::ChannelFloat32 result;
-	int N = 50;
-	result.name = name;
-
-	std::vector<float> values;
-	for(int i=0; i<N*N*N ; i++){
-		values.push_back(0.9);
-	}
-
-	result.values = values;
-	return result;
-}
-
-ros::Publisher pub;
-void createObjectsPublisher(const ros::TimerEvent&){
-// void createObjectsPublisher(){
-	// ros::NodeHandle n;	
-	std::cout << "hello" << std::endl;
-	// ros::Publisher pub = n.advertise<sensor_msgs::PointCloud2>("points_cluster", 1000);
-
-	autoware_msgs::DetectedObjectArray msg;
-	std::vector<autoware_msgs::DetectedObject> objects;
-
-	// ros::Time nowTime = ros::Time::now();
-	// nowTime.sec = nowTime.sec + 1;
-
-	// msg.header.stamp = nowTime;
-	msg.header.frame_id = "velodyne";
-
-	autoware_msgs::DetectedObject object;
-	// object.header.stamp = nowTime;
-	object.header.frame_id = "velodyne";
-	object.label = "unknown";
-	object.valid = 1;
-	object.score = 1;
-	object.space_frame = "velodyne";
-	object.pose.position.x = 5;
-	object.pose.position.y = -10;
-	object.pose.orientation.w = 1;
-	object.dimensions.x = 16.3;
-	object.dimensions.y = 4.06;
-	object.dimensions.z = 2.34;
-
-
-	std::vector<geometry_msgs::Point32> points = createLine();
-	std::vector<sensor_msgs::ChannelFloat32> channels;
-	channels.push_back( createChannel("rgb") );
-	sensor_msgs::PointCloud input_msg;
-	sensor_msgs::PointCloud2 output_msg;
-	// input_msg.header.stamp = nowTime;
-	input_msg.header.frame_id = "velodyne";
-	input_msg.points = points;
-	input_msg.channels = channels;
-	sensor_msgs::convertPointCloudToPointCloud2(input_msg, output_msg);
-	object.pointcloud = output_msg;
-
-	geometry_msgs::PolygonStamped convex_hull_msg;
-	// convex_hull_msg.header.stamp = nowTime;
-	convex_hull_msg.header.frame_id = "velodyne";
-	geometry_msgs::Polygon polygon;
-	polygon.points = createConvexHull();
-	convex_hull_msg.polygon = polygon;
-	object.convex_hull = convex_hull_msg;
-
-	objects.push_back(object);
-	msg.objects = objects;
-	pub.publish(msg);
-
-	// printf("published %d.%d\n",nowTime.sec, nowTime.nsec);
-}
-
-void createPointsPublisher(const ros::TimerEvent&){
-	ros::NodeHandle n;
-	ros::Publisher pub = n.advertise<sensor_msgs::PointCloud2>("points_cluster", 1000);
-
-	// ros::Rate loop_rate(0.1);
-
-	std::vector<geometry_msgs::Point32> points = createLine();
-	std::vector<sensor_msgs::ChannelFloat32> channels;
-	channels.push_back( createChannel("rgb") );
-
-	// while (ros::ok()){
-	ros::Time nowTime = ros::Time::now();
-	nowTime.sec = nowTime.sec + 1;
-	
-	sensor_msgs::PointCloud input_msg;
-	sensor_msgs::PointCloud2 output_msg;
-
-	input_msg.header.stamp = nowTime;
-	input_msg.header.frame_id = "velodyne";
-	input_msg.points = points;
-	input_msg.channels = channels;
-
-	sensor_msgs::convertPointCloudToPointCloud2(input_msg, output_msg);
-	pub.publish(output_msg);
-	printf("published:%d\n", output_msg.header.seq);
+		boost::archive::text_iarchive archive(ss);
+		archive >> s_message;
+		one_two_delay_file << Utils::currentTime() << "," << s_message.timestamp << std::endl;
+        if ( rsize == 0 ) {
+            break;
+        } else if ( rsize == -1 ) {
+            perror( "recv" );
+        }
+    }
+    close( client_sockfd );
+    close( sockfd );
 
 }
-
 
 
 int main(int argc,  char* argv[]) {
+		mThreadReceiveFromRouter = new boost::thread(boost::ref(receiveFromRouter));
+
 	ros::init(argc, argv, "listener");
 	ros::NodeHandle n,n2;
 

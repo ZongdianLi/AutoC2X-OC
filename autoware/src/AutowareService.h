@@ -16,6 +16,7 @@
 #include <boost/serialization/vector.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
+#include <boost/thread.hpp>
 #include <string>
 #include <common/config/config.h>
 #include "projects.h"
@@ -23,9 +24,6 @@
 #include <ctime>
 #include <fstream>
 #include <iostream>
-
-namespace asio = boost::asio;
-using asio::ip::tcp;
 
 struct message {
 	int speed;
@@ -36,6 +34,7 @@ struct message {
 };
 
 struct socket_message{
+	long timestamp;
 	std::vector<int> speed;
 	std::vector<int> latitude;
 	std::vector<int> longitude;
@@ -45,6 +44,7 @@ private:
 	friend class boost::serialization::access;
 	template<class Archive>
 		void serialize( Archive& ar, unsigned int ver){
+			ar & timestamp;
 			ar & speed;
 			ar & latitude;
 			ar & longitude;
@@ -52,16 +52,6 @@ private:
 		}
 };
 
-// struct socket_message{
-// 	std::vector<message> data;
-
-// private:
-// 	friend class boost::serialization::access;
-// 	template<class Archive>
-// 		void serialize( Archive& ar, unsigned int ver){
-// 			ar & data;
-// 		}
-// };
 
 
 void init(ros::NodeHandle n);
@@ -71,10 +61,10 @@ void timeCalc();
 void callback(const geometry_msgs::PoseStamped msg);
 void callback_objects(const autoware_msgs::DetectedObjectArray msg);
 void sampleCallback(autoware_msgs::DetectedObjectArray msg);
-std::vector<geometry_msgs::Point32> createLine();std::vector<geometry_msgs::Point32> createConvexHull();
-sensor_msgs::ChannelFloat32 createChannel(std::string name);
-void createObjectsPublisher(const ros::TimerEvent&);
-void createPointsPublisher(const ros::TimerEvent&);
+// std::vector<geometry_msgs::Point32> createLine();std::vector<geometry_msgs::Point32> createConvexHull();
+// sensor_msgs::ChannelFloat32 createChannel(std::string name);
+// void createObjectsPublisher(const ros::TimerEvent&);
+// void createPointsPublisher(const ros::TimerEvent&);
 std::string paramOrganize(std::string param);
 
 
@@ -88,11 +78,13 @@ long generationUnixTimeNSec;
 geometry_msgs::PoseStamped nowPose;
 geometry_msgs::PoseStamped prevPose;
 
+boost::thread *mThreadReceiveFromRouter;
+
 PJ *p_proj;
 std::ofstream delay_output_file;
+std::ofstream one_two_delay_file;
 
 int sockfd;
 
 socket_message s_message;
 
-tcp::socket socket(asio::io_service);
