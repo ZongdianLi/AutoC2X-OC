@@ -52,8 +52,8 @@ tmux split-window -v
 # tmux send-keys "obd2" C-m
 # tmux split-window -v
 
-tmux send-keys "cd $BUILD_DIR/autoware/src" C-m
-tmux send-keys "./autoware" C-m
+# tmux send-keys "cd $BUILD_DIR/autoware/src" C-m
+# tmux send-keys "./autoware" C-m
 # tmux split-window -v
 
 

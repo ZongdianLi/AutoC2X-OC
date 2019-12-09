@@ -102,6 +102,7 @@ struct message {
 };
 
 struct socket_message{
+	long timestamp;
 	std::vector<int> speed;
 	std::vector<int> latitude;
 	std::vector<int> longitude;
@@ -111,6 +112,7 @@ private:
 	friend class boost::serialization::access;
 	template<class Archive>
 		void serialize( Archive& ar, unsigned int ver){
+			ar & timestamp;
 			ar & speed;
 			ar & latitude;
 			ar & longitude;
@@ -146,6 +148,8 @@ public:
 
 	void receiveFromCaService();
 
+	void sendBackToAutoware(socket_message msg);
+
 	void sendToServices(autowarePackage::AUTOWARE autoware);
 
 
@@ -178,6 +182,9 @@ private:
 	socket_message s_message;
 
 	std::random_device rnd;     // 非決定的な乱数生成器を生成
+
+	int sock_fd;
+	int flag;
 };
 
 /** @} */ //end group

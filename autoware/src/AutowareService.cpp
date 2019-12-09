@@ -60,36 +60,38 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	mBernoulli = bernoulli_distribution(0);
 	mUniform = uniform_real_distribution<double>(-0.01, 0.01);
 
-	// mThreadReceive = new boost::thread(&AutowareService::receiveFromAutoware, this);
-	mThreadReceiveFromCaService = new boost::thread(&AutowareService::receiveFromCaService, this);
-	// mThreadReceive = new boost::thread(&AutowareService::testSender, this);
-	while(1){
-		testSender();
-		sleep(1);
-	}
 	
 
-	char cur_dir[1024];
-	getcwd(cur_dir, 1024);
-	time_t t = time(nullptr);
-	const tm* lt = localtime(&t);
-	std::stringstream s;
-	s<<"20";
-	s<<lt->tm_year-100; //100を引くことで20xxのxxの部分になる
-	s<<"-";
-	s<<lt->tm_mon+1; //月を0からカウントしているため
-	s<<"-";
-	s<<lt->tm_mday; //そのまま
-	s<<"_";
-	s<<lt->tm_hour;
-	s<<":";
-	s<<lt->tm_min;
-	s<<":";
-	s<<lt->tm_sec;
-	std::string timestamp = s.str();
+	mThreadReceive = new boost::thread(&AutowareService::receiveFromAutoware, this);
+	// mThreadReceiveFromCaService = new boost::thread(&AutowareService::receiveFromCaService, this);
+	// mThreadReceive = new boost::thread(&AutowareService::testSender, this);
+	// while(1){
+	// 	testSender();
+	// 	sleep(1);
+	// }
+	
 
-	std::string filename = std::string(cur_dir) + "/../../../autoware/output/delay/" + timestamp + ".csv";
-	delay_output_file.open(filename, std::ios::out);
+	// char cur_dir[1024];
+	// getcwd(cur_dir, 1024);
+	// time_t t = time(nullptr);
+	// const tm* lt = localtime(&t);
+	// std::stringstream s;
+	// s<<"20";
+	// s<<lt->tm_year-100; //100を引くことで20xxのxxの部分になる
+	// s<<"-";
+	// s<<lt->tm_mon+1; //月を0からカウントしているため
+	// s<<"-";
+	// s<<lt->tm_mday; //そのまま
+	// s<<"_";
+	// s<<lt->tm_hour;
+	// s<<":";
+	// s<<lt->tm_min;
+	// s<<":";
+	// s<<lt->tm_sec;
+	// std::string timestamp = s.str();
+
+	// std::string filename = std::string(cur_dir) + "/../../../autoware/output/delay/" + timestamp + ".csv";
+	// delay_output_file.open(filename, std::ios::out);
 
 }
 
@@ -247,9 +249,9 @@ void AutowareService::receiveFromAutoware(){
 		boost::archive::text_iarchive archive(ss);
 		archive >> s_message;
 		std::cout << "received" << std::endl;
-		for(int i = 0; i < s_message.latitude.size(); i++){
-			std::cout << "lat:" << s_message.latitude[i] << " lon:" << s_message.longitude[i] << " speed:" << s_message.speed[i] << " time:" << s_message.time[i] << std::endl;
-		}
+		// for(int i = 0; i < s_message.latitude.size(); i++){
+		// 	std::cout << "lat:" << s_message.latitude[i] << " lon:" << s_message.longitude[i] << " speed:" << s_message.speed[i] << " time:" << s_message.time[i] << std::endl;
+		// }
 		speed = s_message.speed[0];
 		longitude = s_message.longitude[0];
 		latitude = s_message.latitude[0];
@@ -261,6 +263,8 @@ void AutowareService::receiveFromAutoware(){
             perror( "recv" );
         }
 		// simulateData();
+		std::cout << s_message.timestamp << std::endl;
+		sendBackToAutoware(s_message);
     }
  
     close( client_sockfd );
@@ -281,6 +285,30 @@ void AutowareService::receiveFromAutoware(){
 	// }
 }
 
+void AutowareService::sendBackToAutoware(socket_message msg){
+	
+	if(flag != 100){
+		struct sockaddr_in addr;
+		if(( sock_fd = socket(AF_INET, SOCK_STREAM, 0) ) < 0 ) perror("socket");
+		addr.sin_family = AF_INET;
+		addr.sin_port = htons(23458);
+		addr.sin_addr.s_addr = inet_addr("192.168.1.2");
+		connect( sock_fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in) );
+		flag = 100;
+	}
+	
+	std::cout << "reflecting:::" << ""<<  msg.timestamp << std::endl;
+	std::stringstream ss;
+	boost::archive::text_oarchive archive(ss);
+	archive << msg;
+
+	ss.seekg(0, ios::end);
+	if( send( sock_fd, ss.str().c_str(), ss.tellp(), 0) < 0 ){
+		perror("send");
+	} else {
+
+	}
+}
 
 
 void AutowareService::testSender(){
