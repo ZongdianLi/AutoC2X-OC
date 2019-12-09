@@ -141,11 +141,8 @@ void AutowareService::simulateData() {
 		autoware.set_time(s_message.time[i]);
 		autoware.set_longitude(s_message.longitude[i]);
 		autoware.set_latitude(s_message.latitude[i]);
-		// std::cout << std::setprecision(20) << "speed:" << autoware.speed() << " time:" << autoware.time() << " longitude:" << autoware.longitude() << " latitude:" << autoware.latitude() << std::endl;
 		sendToServices(autoware);
 	}
-	// mTimer->expires_from_now(boost::posix_time::millisec(mConfig.mFrequency));
-	// mTimer->async_wait(boost::bind(&AutowareService::simulateData, this, boost::asio::placeholders::error));
 }
 
 //logs and sends Autoware
@@ -247,8 +244,8 @@ void AutowareService::testSender(){
 		s_message.latitude.clear();
 		s_message.longitude.clear();
 		s_message.time.clear();
-
-		for(int i = 0; i < 10; i++){
+		
+		for(int i = 0; i <500; i++){
 			std::mt19937 mt(rnd());     //  メルセンヌ・ツイスタの32ビット版、引数は初期シード値
 			std::uniform_int_distribution<> rand10000(1, 9999);        // [0, 9999] 範囲の一様乱数
 			s_message.speed.push_back(rand10000(mt));
@@ -273,7 +270,7 @@ void AutowareService::receiveFromCaService(){
 		cam.ParseFromString(serializedAutoware);
 		int64_t currTime = Utils::currentTime();
 		long genDeltaTime = (long)(currTime/1000000 - 10728504000) % 65536;
-		delay_output_file << std::setprecision(20) << cam.header().stationid() << "" << "," << genDeltaTime << std::endl;
+		delay_output_file << std::setprecision(20) << cam.header().stationid() << "" << "," << genDeltaTime << "," << currTime << std::endl;
 	}
 }
 

@@ -429,10 +429,14 @@ void CaService::scheduleNextAlarm() {
 
 //generate CAM and send to LDM and DCC
 void CaService::send(bool isAutoware) {
-	while(waiting_data.size() > 0){
-		std::cout << "*********lets send CAM:" << waiting_data.size() << std::endl;
-		mLatestAutoware = waiting_data.back();
-		waiting_data.pop_back();
+	std::chrono::system_clock::time_point start, end;
+	start = std::chrono::system_clock::now();
+	std::cout << "*********lets send CAM:" << waiting_data.size() << std::endl;
+	for(int i = 0; i< waiting_data.size(); i++){
+	// while(waiting_data.size() > 0){
+		// mLatestAutoware = waiting_data.back();
+		mLatestAutoware = waiting_data[i];
+		// waiting_data.pop_back();
 
 		string serializedData;
 		dataPackage::DATA data;
@@ -467,6 +471,9 @@ void CaService::send(bool isAutoware) {
 
 		asn_DEF_CAM.free_struct(&asn_DEF_CAM, cam, 0);
 	}
+	waiting_data.clear();
+	end = std::chrono::system_clock::now();
+	std::cout << "******* time elapsed*********" << std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << std::endl;
 }
 
 //generate new CAM with latest gps and obd2 data
@@ -570,9 +577,9 @@ CAM_t* CaService::generateCam(bool isAutoware) {
 			cam->cam.camParameters.basicContainer.referencePosition.latitude = mLatestAutoware.latitude();
 			mLastSentCamInfo.hasAUTOWARE = true;
 			mLastSentCamInfo.lastAutoware = autowarePackage::AUTOWARE(mLatestAutoware); //data needs to be copied to a new buffer because new autoware data can be received before sending
-			std::cout << "autoware comes" <<  mLatestAutoware.longitude() << std::endl;
+			// std::cout << "autoware comes" <<  mLatestAutoware.longitude() << std::endl;
 		} else {
-			std::cout << "autoware comes false" <<  mLatestAutoware.longitude() << std::endl;
+			// std::cout << "autoware comes false" <<  mLatestAutoware.longitude() << std::endl;
 			mLastSentCamInfo.hasAUTOWARE = false;
 			cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue = SpeedValue_unavailable;
 		}
