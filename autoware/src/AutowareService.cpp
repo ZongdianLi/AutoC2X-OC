@@ -81,8 +81,6 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	std::string filename = std::string(cur_dir) + "/../../../autoware/output/delay/" + timestamp + ".csv";
 	delay_output_file.open(filename, std::ios::out);
 
-	
-
 	while(1){
 		// testSender();
 		// sendToAutoware(10000);
