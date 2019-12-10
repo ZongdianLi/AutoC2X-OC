@@ -86,10 +86,10 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	addr.sin_addr.s_addr = inet_addr( "192.168.1.2" );
 	connect( sockfd, (struct sockaddr *)&addr, sizeof( struct sockaddr_in ) );
 
-	while(1){
-		testSender();
-		sleep(1);
-	}
+	// while(1){
+	// 	testSender();
+	// 	sleep(1);
+	// }
 
 }
 
