@@ -91,7 +91,8 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	addr.sin_addr.s_addr = inet_addr( "192.168.1.2" );
 	connect( sockfd, (struct sockaddr *)&addr, sizeof( struct sockaddr_in ) );
 	while(1){
-		testSender();
+		// testSender();
+		sendToAutoware(100000);
 		sleep(1);
 	}
 
@@ -187,73 +188,73 @@ void AutowareService::sendToAutoware(long timestamp){
 	s_message.time.clear();
 }
 
-void AutowareService::receiveSignalFromAutoware(){
-	std::cout << "*****receive setup" << std::endl;
-	int sock_fd;
-    int client_sockfd;
-    struct sockaddr_in addr;
-    socklen_t len = sizeof( struct sockaddr_in );
-    struct sockaddr_in from_addr;
-    char buf[4096];
+// void AutowareService::receiveSignalFromAutoware(){
+// 	std::cout << "*****receive setup" << std::endl;
+// 	int sock_fd;
+//     int client_sockfd;
+//     struct sockaddr_in addr;
+//     socklen_t len = sizeof( struct sockaddr_in );
+//     struct sockaddr_in from_addr;
+//     char buf[4096];
  
-    memset( buf, 0, sizeof( buf ) );
-    if( ( sock_fd = socket( AF_INET, SOCK_STREAM, 0 ) ) < 0 ) {
-        perror( "socket" );
-    }
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons( 23458 );
-    addr.sin_addr.s_addr = INADDR_ANY;
-    if( bind( sock_fd, (struct sockaddr *)&addr, sizeof( addr ) ) < 0 ) perror( "bind" );
-    if( listen( sock_fd, SOMAXCONN ) < 0 ) perror( "listen" );
-    if( ( client_sockfd = accept( sock_fd, (struct sockaddr *)&from_addr, &len ) ) < 0 ) perror( "accept" );
+//     memset( buf, 0, sizeof( buf ) );
+//     if( ( sock_fd = socket( AF_INET, SOCK_STREAM, 0 ) ) < 0 ) {
+//         perror( "socket" );
+//     }
+//     addr.sin_family = AF_INET;
+//     addr.sin_port = htons( 23458 );
+//     addr.sin_addr.s_addr = INADDR_ANY;
+//     if( bind( sock_fd, (struct sockaddr *)&addr, sizeof( addr ) ) < 0 ) perror( "bind" );
+//     if( listen( sock_fd, SOMAXCONN ) < 0 ) perror( "listen" );
+//     if( ( client_sockfd = accept( sock_fd, (struct sockaddr *)&from_addr, &len ) ) < 0 ) perror( "accept" );
  
-    // 受信
-    int rsize;
-    while( 1 ) {
-		std::stringstream ss;
-		memset( buf, 0, sizeof( buf ) );
-        rsize = recv( client_sockfd, buf, sizeof( buf ), 0 );
-		std::cout << "received" << std::endl;
+//     // 受信
+//     int rsize;
+//     while( 1 ) {
+// 		std::stringstream ss;
+// 		memset( buf, 0, sizeof( buf ) );
+//         rsize = recv( client_sockfd, buf, sizeof( buf ), 0 );
+// 		std::cout << "received" << std::endl;
 
-		if(flag != 100){
-			std::cout << "socket open" << std::endl;
-			struct sockaddr_in addr;
-			if( (sockfd = socket( AF_INET, SOCK_STREAM, 0) ) < 0 ) perror( "socket" ); 
-			addr.sin_family = AF_INET;
-			addr.sin_port = htons( 23457 );
-			addr.sin_addr.s_addr = inet_addr( "192.168.1.2" );
-			connect( sockfd, (struct sockaddr *)&addr, sizeof( struct sockaddr_in ) );
-			flag = 100;
-		}
+// 		if(flag != 100){
+// 			std::cout << "socket open" << std::endl;
+// 			struct sockaddr_in addr;
+// 			if( (sockfd = socket( AF_INET, SOCK_STREAM, 0) ) < 0 ) perror( "socket" ); 
+// 			addr.sin_family = AF_INET;
+// 			addr.sin_port = htons( 23457 );
+// 			addr.sin_addr.s_addr = inet_addr( "192.168.1.2" );
+// 			connect( sockfd, (struct sockaddr *)&addr, sizeof( struct sockaddr_in ) );
+// 			flag = 100;
+// 		}
 
-		ss << buf;
+// 		ss << buf;
 
-		boost::archive::text_iarchive archive(ss);
-		archive >> tmp_message;
-		std::cout << "received" << std::endl;
+// 		boost::archive::text_iarchive archive(ss);
+// 		archive >> tmp_message;
+// 		std::cout << "received" << std::endl;
 
-		long start, stop;
-		std::string condition;
-		start = Utils::currentTime();
-		// condition = "SELECT * FROM CAM where key > " + std::to_string(newestLdmKey);
-		condition = "SELECT * FROM CAM";
-		newestLdmKey += requestCam(condition);
-		stop = Utils::currentTime();
-		delay_output_file << start << "," << stop << "," << newestLdmKey << std::endl;
+// 		long start, stop;
+// 		std::string condition;
+// 		start = Utils::currentTime();
+// 		// condition = "SELECT * FROM CAM where key > " + std::to_string(newestLdmKey);
+// 		condition = "SELECT * FROM CAM";
+// 		newestLdmKey += requestCam(condition);
+// 		stop = Utils::currentTime();
+// 		delay_output_file << start << "," << stop << "," << newestLdmKey << std::endl;
 
-		if ( rsize == 0 ) {
-            break;
-        } else if ( rsize == -1 ) {
-            perror( "recv" );
-        }
-		// simulateData();
-		std::cout << tmp_message.timestamp << std::endl;
-		// testSender();
-		sendToAutoware(tmp_message.timestamp);
-    }
-    close( client_sockfd );
-    close( sock_fd );
-}
+// 		if ( rsize == 0 ) {
+//             break;
+//         } else if ( rsize == -1 ) {
+//             perror( "recv" );
+//         }
+// 		// simulateData();
+// 		std::cout << tmp_message.timestamp << std::endl;
+// 		// testSender();
+// 		sendToAutoware(tmp_message.timestamp);
+//     }
+//     close( client_sockfd );
+//     close( sock_fd );
+// }
 
 //requests all CAMs from LDM
 long AutowareService::requestCam(std::string condition) {
