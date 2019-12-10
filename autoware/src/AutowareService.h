@@ -138,7 +138,7 @@ public:
 	void init();
 
 	void receiveData(const boost::system::error_code &ec, SerialPort* serial);
-	void simulateSpeed();
+	
 	void simulateData();
 	void receiveFromCa();
 

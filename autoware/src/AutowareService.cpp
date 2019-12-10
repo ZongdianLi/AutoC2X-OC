@@ -38,6 +38,8 @@ INITIALIZE_EASYLOGGINGPP
 
 
 AutowareService::AutowareService(AutowareConfig &config) {
+	newestLdmKey = -1;
+	flag = -1;
 	try {
 		mGlobalConfig.loadConfig(AUTOWARE_CONFIG_NAME);
 	}
@@ -55,8 +57,8 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	mReceiverFromCa = new CommunicationReceiver("23456", "CAM", *mLogger);
 	mClientCam = new CommunicationClient("6789", *mLogger);
 	
-	// mThreadReceive = new boost::thread(&AutowareService::receiveFromCa, this);
-	mThreadReceiveFromAutoware = new boost::thread(&AutowareService::receiveSignalFromAutoware, this);
+	mThreadReceive = new boost::thread(&AutowareService::receiveFromCa, this);
+	// mThreadReceiveFromAutoware = new boost::thread(&AutowareService::receiveSignalFromAutoware, this);
 	
 
 	char cur_dir[1024];
@@ -81,10 +83,17 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	std::string filename = std::string(cur_dir) + "/../../../autoware/output/delay/" + timestamp + ".csv";
 	delay_output_file.open(filename, std::ios::out);
 
-	// while(1){
-	// 	testSender();
-	// 	sleep(1);
-	// }
+	std::cout << "socket open" << std::endl;
+	struct sockaddr_in addr;
+	if( (sockfd = socket( AF_INET, SOCK_STREAM, 0) ) < 0 ) perror( "socket" ); 
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons( 23457 );
+	addr.sin_addr.s_addr = inet_addr( "192.168.1.2" );
+	connect( sockfd, (struct sockaddr *)&addr, sizeof( struct sockaddr_in ) );
+	while(1){
+		testSender();
+		sleep(1);
+	}
 
 }
 
@@ -100,26 +109,6 @@ AutowareService::~AutowareService() {
 void AutowareService::receiveData(const boost::system::error_code &ec, SerialPort* serial) {
 }
 
-
-
-//simulates realistic vehicle speed
-void AutowareService::simulateSpeed() {
-	double pCurr = mBernoulli.p();
-	double pNew = pCurr + mUniform(mRandNumberGen);
-	pNew = min(0.15, max(0.0, pNew));		//pNew always between 0 and 0.15
-
-	mBernoulli = bernoulli_distribution(pNew);
-
-	double sum = 0;
-
-	for (int i=0; i<1000; i++) {
-		double r = mBernoulli(mRandNumberGen);
-		sum += min(1.0, max(0.0, r)) * 100;	//*100 to convert to 0-15 m/s
-	}
-	cout << to_string(sum) << endl;
-	speed = sum / 1000.0;
-	// return sum / 1000.0;					//avg to avoid rapid/drastic changes in speed
-}
 
 //simulates Autoware data, logs and sends it
 void AutowareService::simulateData() {
@@ -141,22 +130,22 @@ void AutowareService::simulateData() {
 
 //logs and sends Autoware
 void AutowareService::receiveFromCa() {
-	// string serializedCam;
-	// camPackage::CAM cam;
+	string serializedCam;
+	camPackage::CAM cam;
 
-	// while(1){
-	// 	pair<string, string> received = mReceiverFromCa->receive();
-	// 	std::cout << "receive from ca" << std::endl;
+	while(1){
+		pair<string, string> received = mReceiverFromCa->receive();
+		std::cout << "receive from ca" << std::endl;
 
-	// 	serializedCam = received.second;
-	// 	cam.ParseFromString(serializedCam);
-	// 	std::cout << "stationid:" << cam.header().stationid() << " latitude:" << cam.coop().camparameters().basiccontainer().latitude() << " longitude:" << cam.coop().camparameters().basiccontainer().longitude() << " speed:" <<  cam.coop().camparameters().highfreqcontainer().basicvehiclehighfreqcontainer().speed() << std::endl;
+		serializedCam = received.second;
+		cam.ParseFromString(serializedCam);
+		std::cout << "stationid:" << cam.header().stationid() << " latitude:" << cam.coop().camparameters().basiccontainer().latitude() << " longitude:" << cam.coop().camparameters().basiccontainer().longitude() << " speed:" <<  cam.coop().camparameters().highfreqcontainer().basicvehiclehighfreqcontainer().speed() << std::endl;
 
-	// 	s_message.latitude.push_back( cam.coop().camparameters().basiccontainer().latitude() );
-	// 	s_message.longitude.push_back( cam.coop().camparameters().basiccontainer().longitude() );
-	// 	s_message.time.push_back( cam.coop().gendeltatime() );
-	// 	s_message.speed.push_back( cam.coop().camparameters().highfreqcontainer().basicvehiclehighfreqcontainer().speed() );
-	// }
+		s_message.latitude.push_back( cam.coop().camparameters().basiccontainer().latitude() );
+		s_message.longitude.push_back( cam.coop().camparameters().basiccontainer().longitude() );
+		s_message.time.push_back( cam.coop().gendeltatime() );
+		s_message.speed.push_back( cam.coop().camparameters().highfreqcontainer().basicvehiclehighfreqcontainer().speed() );
+	}
 }
 
 
@@ -224,6 +213,7 @@ void AutowareService::receiveSignalFromAutoware(){
 		std::stringstream ss;
 		memset( buf, 0, sizeof( buf ) );
         rsize = recv( client_sockfd, buf, sizeof( buf ), 0 );
+		std::cout << "received" << std::endl;
 
 		if(flag != 100){
 			std::cout << "socket open" << std::endl;
@@ -245,7 +235,9 @@ void AutowareService::receiveSignalFromAutoware(){
 		long start, stop;
 		std::string condition;
 		start = Utils::currentTime();
-		newestLdmKey += requestCam("SELECT * FROM CAM;");
+		// condition = "SELECT * FROM CAM where key > " + std::to_string(newestLdmKey);
+		condition = "SELECT * FROM CAM";
+		newestLdmKey += requestCam(condition);
 		stop = Utils::currentTime();
 		delay_output_file << start << "," << stop << "," << newestLdmKey << std::endl;
 
@@ -256,10 +248,9 @@ void AutowareService::receiveSignalFromAutoware(){
         }
 		// simulateData();
 		std::cout << tmp_message.timestamp << std::endl;
-		testSender();
+		// testSender();
 		sendToAutoware(tmp_message.timestamp);
     }
- 
     close( client_sockfd );
     close( sock_fd );
 }
@@ -275,10 +266,7 @@ long AutowareService::requestCam(std::string condition) {
 	if (reply != "") {
 		ldmData.ParseFromString(reply);
 
-		//convert to JSON
-		std::string json = "{\"type\":\"CAM\",\"number\":" + std::to_string(ldmData.data_size()) + ",\"msgs\":[";
-		for (int i=0; i<std::min(ldmData.data_size(), 100); i++) {
-			std::string tempJson;
+		for (int i=0; i<std::min(ldmData.data_size(), 10); i++) {
 			std::string serializedCam = ldmData.data(i);
 			camPackage::CAM cam;
 			cam.ParseFromString(serializedCam);
@@ -325,7 +313,7 @@ void AutowareService::testSender(){
 	s_message.longitude.push_back(139.759819 * 10000000 + rand(mt)*0);
 	s_message.time.push_back(rand(mt)/1000.0);
 	
-	// sendToAutoware(100000);
+	sendToAutoware(100000);
 }
 
 int main(int argc,  char* argv[]) {
