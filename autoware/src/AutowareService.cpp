@@ -67,7 +67,7 @@ AutowareService::AutowareService(AutowareConfig &config, int fd) {
 	// 	sleep(1);
 	// }
 	
-	mThreadReceiveFromCaService = new boost::thread(&AutowareService::receiveFromCaService, this);
+	// mThreadReceiveFromCaService = new boost::thread(&AutowareService::receiveFromCaService, this);
 	// mThreadTestSender = new boost::thread(&AutowareService::testSender, this);
 
 	// char cur_dir[1024];
@@ -92,10 +92,10 @@ AutowareService::AutowareService(AutowareConfig &config, int fd) {
 	// std::string filename = std::string(cur_dir) + "/../../../autoware/output/delay/" + timestamp + ".csv";
 	// delay_output_file.open(filename, std::ios::out);
 
-	// while(1){
-	// 	testSender();
-	// 	sleep(1);
-	// }
+	while(1){
+		testSender();
+		sleep(1);
+	}
 }
 
 AutowareService::~AutowareService() {
@@ -151,7 +151,7 @@ void AutowareService::sendToServices(autowarePackage::AUTOWARE autoware) {
 	string serializedAutoware;
 	autoware.SerializeToString(&serializedAutoware);
 	mSender->sendData("AUTOWARE", serializedAutoware);
-	mLogger->logStats(to_string(autoware.speed()) + " (" + to_string(autoware.speed()/100*3.6) + "km/h)"); // In csv, we log speed in m/sec
+	// mLogger->logStats(to_string(autoware.speed()) + " (" + to_string(autoware.speed()/100*3.6) + "km/h)"); // In csv, we log speed in m/sec
 }
 
 
