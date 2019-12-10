@@ -22,6 +22,7 @@
 #include "projects.h"
 #include <chrono>
 #include <ctime>
+#include <random>
 #include <fstream>
 #include <iostream>
 
@@ -39,6 +40,7 @@ struct socket_message{
 	std::vector<int> latitude;
 	std::vector<int> longitude;
 	std::vector<int> time;
+	std::vector<int> stationid;
 
 private:
 	friend class boost::serialization::access;
@@ -49,6 +51,7 @@ private:
 			ar & latitude;
 			ar & longitude;
 			ar & time;
+			ar & stationid;
 		}
 };
 
@@ -83,8 +86,14 @@ boost::thread *mThreadReceiveFromRouter;
 PJ *p_proj;
 std::ofstream delay_output_file;
 std::ofstream one_two_delay_file;
+std::ofstream org_stamps_file;
+std::ofstream ret_stamps_file;
 
 int sockfd;
 
 socket_message s_message;
 
+
+std::random_device rnd;
+std::mt19937 mt;
+std::uniform_int_distribution<> rand10;

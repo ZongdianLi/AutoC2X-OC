@@ -71,6 +71,14 @@ void init(ros::NodeHandle n) {
 	std::cout << "filename:" << filename << std::endl;
 	one_two_delay_file.open(filename, std::ios::out);
 
+	filename = std::string(cur_dir) + "/../autoware/output/org_stamps/" + timestamp + ".csv";
+	std::cout << "filename:" << filename << std::endl;
+	org_stamps_file.open(filename, std::ios::out);
+	
+	filename = std::string(cur_dir) + "/../autoware/output/ret_stamps/" + timestamp + ".csv";
+	std::cout << "filename:" << filename << std::endl;
+	ret_stamps_file.open(filename, std::ios::out);
+
 	//通信モードの時は使う
 	struct sockaddr_in addr;
 	if( (sockfd = socket( AF_INET, SOCK_STREAM, 0) ) < 0 ) perror( "socket" ); 
@@ -86,17 +94,14 @@ void sendToRouter(){
 	 // データ送信
 	char send_str[10];
 	char receive_str[10];
-	message message;
-	message.speed = speed * 100;
-	message.time =  ((generationUnixTimeSec*1000 + (int)generationUnixTimeNSec/1000000 - 1072850400000)) % 65536;
-	message.longitude = longitude * 10000000;
-	message.latitude = latitude * 10000000;
 	
 	s_message.timestamp = Utils::currentTime();
 	s_message.speed.push_back(speed * 100);
 	s_message.time.push_back(((generationUnixTimeSec*1000 + (int)generationUnixTimeNSec/1000000 - 1072850400000)) % 65536);
 	s_message.longitude.push_back(longitude * 10000000);
 	s_message.latitude.push_back(latitude * 10000000);
+	s_message.stationid.push_back(0);
+	org_stamps_file << 0 << "," << s_message.timestamp << std::endl;
 
 	std::cout << "delay: " <<  s_message.timestamp << std::endl;
 
@@ -179,11 +184,6 @@ void timeCalc(){
 	// a4 = ros::WallTime::now();
 	long diffTimeSec = ((long)a1.sec - (long)a2.sec);
 	long diffTimeNSec = ((long)a1.nsec - (long)a2.nsec);
-	// float diffTimeFromRosToWall = diffTimeSec + diffTimeNSec / 1000000000.0;
-	// std::cout << std::setprecision(20) << std::endl;
-	// std::cout << "rostime: " << a1.sec << "." << a1.nsec << std::endl;
-	// std::cout << "walltime: " << a2.sec << "." << a2.nsec << std::endl;
-	// std::cout << "Sec=" << diffTimeSec << " nsec=" << diffTimeNSec << std::endl;
 
 	
 	generationUnixTimeSec = (long)newestPose.header.stamp.sec + diffTimeSec;
@@ -200,14 +200,10 @@ void timeCalc(){
 	long delaySec = a1.sec - generationUnixTimeSec;
 	long delayNSec = a1.nsec - generationUnixTimeNSec;
 	if(delayNSec < 0){
-		// std::cout << "hello" << std::endl;
-		// std::cout << "sec=" << delaySec << " nsec=" << delayNSec << std::endl;
 		delaySec -= 1;
 		delayNSec = 1000000000 + delayNSec;
 	}
 	delay_output_file <<  std::setprecision(20) <<  ros::WallTime::now() << "," << delayNSec / 1000000000.0 << std::endl;
-	// std::cout << "delay:" << delayNSec/ 1000000000.0 << " a1.nsec:" << a1.nsec << " generationNSec:" << generationUnixTimeNSec << std::endl;
-	// std::cout << "generationUnixTime:" <<  std::setprecision(20) << generationUnixTimeSec << "." << generationUnixTimeNSec << std::endl;
 }
 
 void callback(const geometry_msgs::PoseStamped msg){
@@ -219,12 +215,13 @@ void callback(const geometry_msgs::PoseStamped msg){
 }
 
 void callback_objects(const autoware_msgs::DetectedObjectArray msg){
-	// std::cout << "---------" << std::endl;
 	s_message.longitude.clear();
 	s_message.latitude.clear();
 	s_message.speed.clear();
 	s_message.time.clear();
-	// s_message.data.clear();
+	s_message.stationid.clear();
+
+
 	for(int i = 0; i < msg.objects.size(); i++){
 		message s;
 		float sum_x = 0.0;
@@ -252,12 +249,9 @@ void callback_objects(const autoware_msgs::DetectedObjectArray msg){
 		s_message.speed.push_back(0);
 		s_message.time.push_back(((generationUnixTimeSec*1000 + (int)generationUnixTimeNSec/1000000 - 1072850400000)) % 65536);
 
-		// std::cout << std::setprecision(20) <<  "lat:" << result.v * 10000000 << " lon:" << result.u * 10000000 << " time:" << (((long)generationUnixTimeSec*1000 + (long)generationUnixTimeNSec/1000000 - 1072850400000)) % 65536 << std::endl;
-		// s.longitud e = result.u;
-		// s.latitude = result.v;
-		// s.speed = 0;
-		// s.time = ((generationUnixTimeSec*1000 + (int)generationUnixTimeNSec/1000000 - 1072850400000)) % 65536;
-		// s_message.data.push_back(s);
+		int stationid = rand10(mt);
+		s_message.stationid.push_back(stationid);
+		org_stamps_file << stationid << "," << Utils::currentTime() << std::endl;
 	}
 	// sendToRouter();
 }
@@ -289,30 +283,35 @@ void receiveFromRouter(){
     // 受信
     int rsize;
     while( 1 ) {
-		message message;
-		// socket_message s_message;
-		std::stringstream ss;
-		memset( buf, 0, sizeof( buf ) );
-        rsize = recv( client_sockfd, buf, sizeof( buf ), 0 );
-		ss << buf;
+			message message;
+			std::stringstream ss;
+			memset( buf, 0, sizeof( buf ) );
+					rsize = recv( client_sockfd, buf, sizeof( buf ), 0 );
+			ss << buf;
 
-		boost::archive::text_iarchive archive(ss);
-		archive >> s_message;
-		one_two_delay_file << Utils::currentTime() << "," << s_message.timestamp << std::endl;
-        if ( rsize == 0 ) {
-            break;
-        } else if ( rsize == -1 ) {
-            perror( "recv" );
-        }
+			boost::archive::text_iarchive archive(ss);
+			archive >> s_message;
+			long now = Utils::currentTime();
+			one_two_delay_file << now << "," << s_message.timestamp << std::endl;
+			for(int i = 0; i < s_message.stationid.size(); i++){
+				ret_stamps_file << s_message.stationid[i] << "," << now << std::endl;
+			}
+			if ( rsize == 0 ) {
+					break;
+			} else if ( rsize == -1 ) {
+					perror( "recv" );
+			}
     }
     close( client_sockfd );
     close( sockfd );
-
 }
 
 
 int main(int argc,  char* argv[]) {
-		mThreadReceiveFromRouter = new boost::thread(boost::ref(receiveFromRouter));
+	mThreadReceiveFromRouter = new boost::thread(boost::ref(receiveFromRouter));
+
+	mt = std::mt19937(rnd());
+	rand10 = std::uniform_int_distribution<>(1, 1000000);
 
 	ros::init(argc, argv, "listener");
 	ros::NodeHandle n,n2;
