@@ -39,7 +39,8 @@ using asio::ip::tcp;
 INITIALIZE_EASYLOGGINGPP
 
 
-AutowareService::AutowareService(AutowareConfig &config) {
+AutowareService::AutowareService(AutowareConfig &config, int fd) {
+	sock_fd = fd;
 	try {
 		mGlobalConfig.loadConfig(AUTOWARE_CONFIG_NAME);
 	}
@@ -55,11 +56,6 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	// mLogger = new LoggingUtility("AutowareService", mGlobalConfig.mExpNo, loggingConf, statisticConf);
 	mLogger->logStats("speed (m/sec)");
 	
-<<<<<<< HEAD
-	//for simulation only
-	mRandNumberGen = default_random_engine(0);
-	mBernoulli = bernoulli_distribution(0);
-	mUniform = uniform_real_distribution<double>(-0.01, 0.01);
 
 	
 
@@ -71,10 +67,8 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	// 	sleep(1);
 	// }
 	
-=======
 	mThreadReceiveFromCaService = new boost::thread(&AutowareService::receiveFromCaService, this);
 	// mThreadTestSender = new boost::thread(&AutowareService::testSender, this);
->>>>>>> fbeff70d8be58b8c0f1c02bdd8b3a96c134e2fe5
 
 	// char cur_dir[1024];
 	// getcwd(cur_dir, 1024);
@@ -98,10 +92,10 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	// std::string filename = std::string(cur_dir) + "/../../../autoware/output/delay/" + timestamp + ".csv";
 	// delay_output_file.open(filename, std::ios::out);
 
-	while(1){
-		testSender();
-		sleep(1);
-	}
+	// while(1){
+	// 	testSender();
+	// 	sleep(1);
+	// }
 }
 
 AutowareService::~AutowareService() {
@@ -124,20 +118,6 @@ void AutowareService::receiveData(const boost::system::error_code &ec, SerialPor
 
 //simulates realistic vehicle speed
 void AutowareService::simulateSpeed() {
-	double pCurr = mBernoulli.p();
-	double pNew = pCurr + mUniform(mRandNumberGen);
-	pNew = min(0.15, max(0.0, pNew));		//pNew always between 0 and 0.15
-
-	mBernoulli = bernoulli_distribution(pNew);
-
-	double sum = 0;
-
-	for (int i=0; i<1000; i++) {
-		double r = mBernoulli(mRandNumberGen);
-		sum += min(1.0, max(0.0, r)) * 100;	//*100 to convert to 0-15 m/s
-	}
-	cout << to_string(sum) << endl;
-	speed = sum / 1000.0;
 	// return sum / 1000.0;					//avg to avoid rapid/drastic changes in speed
 }
 
@@ -149,9 +129,11 @@ void AutowareService::simulateData() {
 		if(i == s_message.speed.size()-1){
 			autoware.set_id(0);
 		} else {
-			std::mt19937 mt(rnd());     //  メルセンヌ・ツイスタの32ビット版、引数は初期シード値
-			std::uniform_int_distribution<> rand10000(1, 9999);        // [0, 9999] 範囲の一様乱数
-			autoware.set_id(rand10000(mt));
+			// std::mt19937 mt(rnd());     //  メルセンヌ・ツイスタの32ビット版、引数は初期シード値
+			// std::uniform_int_distribution<> rand10000(1, 9999);        // [0, 9999] 範囲の一様乱数
+			// autoware.set_id(rand10000(mt));
+			autoware.set_id(s_message.stationid[i]);
+			std::cout << "stationid is :::" << s_message.stationid[i] << std::endl;
 		}
 		//write current speed to protocol buffer
 		autoware.set_speed(s_message.speed[i]); // standard expects speed in 0.01 m/s
@@ -288,14 +270,16 @@ void AutowareService::testSender(){
 		s_message.latitude.clear();
 		s_message.longitude.clear();
 		s_message.time.clear();
+		s_message.stationid.clear();
 		
-		for(int i = 0; i <500; i++){
+		for(int i = 0; i <10; i++){
 			std::mt19937 mt(rnd());     //  メルセンヌ・ツイスタの32ビット版、引数は初期シード値
 			std::uniform_int_distribution<> rand10000(1, 9999);        // [0, 9999] 範囲の一様乱数
 			s_message.speed.push_back(rand10000(mt));
 			s_message.time.push_back(rand10000(mt));
 			s_message.latitude.push_back(rand10000(mt));
 			s_message.longitude.push_back(rand10000(mt));
+			s_message.stationid.push_back(rand10000(mt));
 		}
 		simulateData();
 		sleep(1);
@@ -315,6 +299,16 @@ void AutowareService::receiveFromCaService(){
 		int64_t currTime = Utils::currentTime();
 		long genDeltaTime = (long)(currTime/1000000 - 10728504000) % 65536;
 		delay_output_file << std::setprecision(20) << cam.header().stationid() << "" << "," << genDeltaTime << "," << currTime << std::endl;
+
+		socket_message msg;
+		msg.timestamp = 10;
+		msg.speed.push_back(0);
+		msg.latitude.push_back(0);
+		msg.longitude.push_back(0);
+		msg.time.push_back(0);
+		msg.stationid.push_back(cam.header().stationid());
+		
+		sendBackToAutoware(msg);
 	}
 }
 
@@ -328,7 +322,7 @@ int main(int argc,  char* argv[]) {
 		cerr << "Error while loading config.xml: " << e.what() << endl << flush;
 		return EXIT_FAILURE;
 	}
-	AutowareService autoware(config);
+	AutowareService autoware(config, 0);
 
 	return 0;
 }

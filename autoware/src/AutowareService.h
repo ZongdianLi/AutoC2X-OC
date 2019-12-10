@@ -105,6 +105,7 @@ struct socket_message{
 	std::vector<int> latitude;
 	std::vector<int> longitude;
 	std::vector<int> time;
+	std::vector<int> stationid;
 
 private:
 	friend class boost::serialization::access;
@@ -115,6 +116,7 @@ private:
 			ar & latitude;
 			ar & longitude;
 			ar & time;
+			ar & stationid;
 		}
 };
 
@@ -128,7 +130,7 @@ private:
 class AutowareService {
 public:
 	// AutowareService(AutowareConfig &config, std::string globalConfig, std::string loggingConf, std::string statisticConf);
-	AutowareService(AutowareConfig &config);
+	AutowareService(AutowareConfig &config, int fd);
 	~AutowareService();
 	void init();
 
