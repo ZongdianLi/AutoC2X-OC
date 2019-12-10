@@ -31,7 +31,9 @@ tmux split-window -v
 
 
 #tmux send-keys "rm ../db/ldm-*.db" C-m
-tmux send-keys "ldm" C-m
+# tmux send-keys "ldm" C-m
+tmux send-keys "cd $BUILD_DIR/ldm/src" C-m
+tmux send-keys "./ldm" C-m
 tmux split-window -v
 
 

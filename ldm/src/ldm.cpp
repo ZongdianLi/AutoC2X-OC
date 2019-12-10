@@ -53,7 +53,8 @@ LDM::LDM() {
 	mReceiverCamInfo = new CommunicationReceiver("8888", "camInfo", *mLogger);
 	mServer = new CommunicationServer("6789", *mLogger);
 	
-	std::string db_path = get_openc2x_path(config.mLogBasePath, config.mExpName, config.mExpNo) + "ldm.db";
+	// std::string db_path = get_openc2x_path(config.mLogBasePath, config.mExpName, config.mExpNo) + "ldm.db";
+	std::string db_path = get_openc2x_path(config.mLogBasePath, config.mExpName, 1) + "ldm.db";
 
 	//open SQLite database
 	if(sqlite3_open_v2((db_path).c_str(), &mDb, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, NULL)) {

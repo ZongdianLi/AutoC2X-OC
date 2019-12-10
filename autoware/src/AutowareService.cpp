@@ -53,38 +53,33 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	mLogger->logStats("speed (m/sec)");
 
 	mReceiverFromCa = new CommunicationReceiver("23456", "CAM", *mLogger);
+	mClientCam = new CommunicationClient("6789", *mLogger);
 	
-	mThreadReceive = new boost::thread(&AutowareService::receiveFromCa, this);
+	// mThreadReceive = new boost::thread(&AutowareService::receiveFromCa, this);
+	mThreadReceiveFromAutoware = new boost::thread(&AutowareService::receiveSignalFromAutoware, this);
 	
 
-	// char cur_dir[1024];
-	// getcwd(cur_dir, 1024);
-	// time_t t = time(nullptr);
-	// const tm* lt = localtime(&t);
-	// std::stringstream s;
-	// s<<"20";
-	// s<<lt->tm_year-100; //100を引くことで20xxのxxの部分になる
-	// s<<"-";
-	// s<<lt->tm_mon+1; //月を0からカウントしているため
-	// s<<"-";
-	// s<<lt->tm_mday; //そのまま
-	// s<<"_";
-	// s<<lt->tm_hour;
-	// s<<":";
-	// s<<lt->tm_min;
-	// s<<":";
-	// s<<lt->tm_sec;
-	// std::string timestamp = s.str();
+	char cur_dir[1024];
+	getcwd(cur_dir, 1024);
+	time_t t = time(nullptr);
+	const tm* lt = localtime(&t);
+	std::stringstream s;
+	s<<"20";
+	s<<lt->tm_year-100; //100を引くことで20xxのxxの部分になる
+	s<<"-";
+	s<<lt->tm_mon+1; //月を0からカウントしているため
+	s<<"-";
+	s<<lt->tm_mday; //そのまま
+	s<<"_";
+	s<<lt->tm_hour;
+	s<<":";
+	s<<lt->tm_min;
+	s<<":";
+	s<<lt->tm_sec;
+	std::string timestamp = s.str();
 
-	// std::string filename = std::string(cur_dir) + "/../../../autoware/output/delay/" + timestamp + ".csv";
-	// delay_output_file.open(filename, std::ios::out);
-
-	struct sockaddr_in addr;
-	if( (sockfd = socket( AF_INET, SOCK_STREAM, 0) ) < 0 ) perror( "socket" ); 
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons( 23457 );
-	addr.sin_addr.s_addr = inet_addr( "192.168.1.2" );
-	connect( sockfd, (struct sockaddr *)&addr, sizeof( struct sockaddr_in ) );
+	std::string filename = std::string(cur_dir) + "/../../../autoware/output/delay/" + timestamp + ".csv";
+	delay_output_file.open(filename, std::ios::out);
 
 	// while(1){
 	// 	testSender();
@@ -146,22 +141,22 @@ void AutowareService::simulateData() {
 
 //logs and sends Autoware
 void AutowareService::receiveFromCa() {
-	string serializedCam;
-	camPackage::CAM cam;
+	// string serializedCam;
+	// camPackage::CAM cam;
 
-	while(1){
-		pair<string, string> received = mReceiverFromCa->receive();
-		std::cout << "receive from ca" << std::endl;
+	// while(1){
+	// 	pair<string, string> received = mReceiverFromCa->receive();
+	// 	std::cout << "receive from ca" << std::endl;
 
-		serializedCam = received.second;
-		cam.ParseFromString(serializedCam);
-		std::cout << "stationid:" << cam.header().stationid() << " latitude:" << cam.coop().camparameters().basiccontainer().latitude() << " longitude:" << cam.coop().camparameters().basiccontainer().longitude() << " speed:" <<  cam.coop().camparameters().highfreqcontainer().basicvehiclehighfreqcontainer().speed() << std::endl;
+	// 	serializedCam = received.second;
+	// 	cam.ParseFromString(serializedCam);
+	// 	std::cout << "stationid:" << cam.header().stationid() << " latitude:" << cam.coop().camparameters().basiccontainer().latitude() << " longitude:" << cam.coop().camparameters().basiccontainer().longitude() << " speed:" <<  cam.coop().camparameters().highfreqcontainer().basicvehiclehighfreqcontainer().speed() << std::endl;
 
-		s_message.latitude.push_back( cam.coop().camparameters().basiccontainer().latitude() );
-		s_message.longitude.push_back( cam.coop().camparameters().basiccontainer().longitude() );
-		s_message.time.push_back( cam.coop().gendeltatime() );
-		s_message.speed.push_back( cam.coop().camparameters().highfreqcontainer().basicvehiclehighfreqcontainer().speed() );
-	}
+	// 	s_message.latitude.push_back( cam.coop().camparameters().basiccontainer().latitude() );
+	// 	s_message.longitude.push_back( cam.coop().camparameters().basiccontainer().longitude() );
+	// 	s_message.time.push_back( cam.coop().gendeltatime() );
+	// 	s_message.speed.push_back( cam.coop().camparameters().highfreqcontainer().basicvehiclehighfreqcontainer().speed() );
+	// }
 }
 
 
@@ -178,62 +173,132 @@ double AutowareService::calcSpeed(){
 void AutowareService::timeCalc(){
 }
 
-void AutowareService::sendToAutoware(){
+void AutowareService::sendToAutoware(long timestamp){
 
-	for(int i=0; i<s_message.speed.size(); i++){
-		std::cout  <<  "latitude:" << std::setprecision(20) << s_message.latitude[i] << " longitude:" << s_message.longitude[i] << std::endl;
-	}
+	// std::cout << timestamp << std::endl;
+	// for(int i=0; i<s_message.speed.size(); i++){
+	// 	std::cout  <<  "latitude:" << std::setprecision(20) << s_message.latitude[i] << " longitude:" << s_message.longitude[i] << std::endl;
+	// }
 
+	s_message.timestamp = timestamp;
 	std::stringstream ss;
 	boost::archive::text_oarchive archive(ss);
 	archive << s_message;
 
 	std::cout << ss.str() << std::endl;
-
-
 	ss.seekg(0, ios::end);
 	if( send( sockfd, ss.str().c_str(), ss.tellp(), 0 ) < 0 ) {
 			perror( "send" );
 	} else {
-		
 	}
+
 	s_message.speed.clear();
 	s_message.latitude.clear();
 	s_message.longitude.clear();
 	s_message.time.clear();
 }
 
-void AutowareService::testSender(){
-	// int sockfd;
-    // struct sockaddr_in addr;
-    // if( (sockfd = socket( AF_INET, SOCK_STREAM, 0) ) < 0 ) perror( "socket" ); 
-    // addr.sin_family = AF_INET;
-    // addr.sin_port = htons( 23457 );
-    // addr.sin_addr.s_addr = inet_addr( "127.0.0.1" );
-    // connect( sockfd, (struct sockaddr *)&addr, sizeof( struct sockaddr_in ) );
+void AutowareService::receiveSignalFromAutoware(){
+	std::cout << "*****receive setup" << std::endl;
+	int sock_fd;
+    int client_sockfd;
+    struct sockaddr_in addr;
+    socklen_t len = sizeof( struct sockaddr_in );
+    struct sockaddr_in from_addr;
+    char buf[4096];
  
-    // // データ送信
-    // char send_str[10];
-    // char receive_str[10];
-	// message message;
-    // for ( int i = 0; i < 10; i++ ){
-    //     sprintf( send_str, "%d", i );
-	// 	message.speed = i + 10000;
-	// 	message.time = i * 2;
-	// 	message.longitude = i * 5;
-	// 	message.latitude = i * 3;
-	// 	char* my_s_bytes = static_cast<char*>(static_cast<void*>(&message));
-    //     if( send( sockfd, my_s_bytes, sizeof(message), 0 ) < 0 ) {
-    //         perror( "send" );
-    //     } else {
-    //     }
-    //     sleep( 1 );
-    // }
-    // close( sockfd );
+    memset( buf, 0, sizeof( buf ) );
+    if( ( sock_fd = socket( AF_INET, SOCK_STREAM, 0 ) ) < 0 ) {
+        perror( "socket" );
+    }
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons( 23458 );
+    addr.sin_addr.s_addr = INADDR_ANY;
+    if( bind( sock_fd, (struct sockaddr *)&addr, sizeof( addr ) ) < 0 ) perror( "bind" );
+    if( listen( sock_fd, SOMAXCONN ) < 0 ) perror( "listen" );
+    if( ( client_sockfd = accept( sock_fd, (struct sockaddr *)&from_addr, &len ) ) < 0 ) perror( "accept" );
+ 
+    // 受信
+    int rsize;
+    while( 1 ) {
+		std::stringstream ss;
+		memset( buf, 0, sizeof( buf ) );
+        rsize = recv( client_sockfd, buf, sizeof( buf ), 0 );
+
+		if(flag != 100){
+			std::cout << "socket open" << std::endl;
+			struct sockaddr_in addr;
+			if( (sockfd = socket( AF_INET, SOCK_STREAM, 0) ) < 0 ) perror( "socket" ); 
+			addr.sin_family = AF_INET;
+			addr.sin_port = htons( 23457 );
+			addr.sin_addr.s_addr = inet_addr( "192.168.1.2" );
+			connect( sockfd, (struct sockaddr *)&addr, sizeof( struct sockaddr_in ) );
+			flag = 100;
+		}
+
+		ss << buf;
+
+		boost::archive::text_iarchive archive(ss);
+		archive >> tmp_message;
+		std::cout << "received" << std::endl;
+
+		long start, stop;
+		std::string condition;
+		start = Utils::currentTime();
+		newestLdmKey += requestCam("SELECT * FROM CAM;");
+		stop = Utils::currentTime();
+		delay_output_file << start << "," << stop << "," << newestLdmKey << std::endl;
+
+		if ( rsize == 0 ) {
+            break;
+        } else if ( rsize == -1 ) {
+            perror( "recv" );
+        }
+		// simulateData();
+		std::cout << tmp_message.timestamp << std::endl;
+		testSender();
+		sendToAutoware(tmp_message.timestamp);
+    }
+ 
+    close( client_sockfd );
+    close( sock_fd );
+}
+
+//requests all CAMs from LDM
+long AutowareService::requestCam(std::string condition) {
+	// mMutexCam.lock();
+	std::string request, reply;
+	std::string serializedData;
+	dataPackage::LdmData ldmData;
+	//get all CAMs from LDM
+	reply = mClientCam->sendRequest("CAM", condition, 1000);
+	if (reply != "") {
+		ldmData.ParseFromString(reply);
+
+		//convert to JSON
+		std::string json = "{\"type\":\"CAM\",\"number\":" + std::to_string(ldmData.data_size()) + ",\"msgs\":[";
+		for (int i=0; i<std::min(ldmData.data_size(), 100); i++) {
+			std::string tempJson;
+			std::string serializedCam = ldmData.data(i);
+			camPackage::CAM cam;
+			cam.ParseFromString(serializedCam);
+			s_message.latitude.push_back( cam.coop().camparameters().basiccontainer().latitude() );
+			s_message.longitude.push_back( cam.coop().camparameters().basiccontainer().longitude() );
+			s_message.time.push_back( cam.coop().gendeltatime() );
+			s_message.speed.push_back( cam.coop().camparameters().highfreqcontainer().basicvehiclehighfreqcontainer().speed());
+		}
+		// mMutexCam.unlock();
+		return ldmData.data_size();
+	}
+	// mMutexCam.unlock();
+	return 0;
+}
+
+void AutowareService::testSender(){
 
 	std::mt19937 mt(rnd());
 	std::uniform_int_distribution<> rand(0, 100);
-	std::cout << std::setprecision(20) << rand(mt) / 1000000.0 << std::endl;
+	// std::cout << std::setprecision(20) << rand(mt) / 1000000.0 << std::endl;
 
 	s_message.speed.push_back(rand(mt)/1000.0);
 	s_message.latitude.push_back(35.714464 * 10000000);
@@ -260,7 +325,7 @@ void AutowareService::testSender(){
 	s_message.longitude.push_back(139.759819 * 10000000 + rand(mt)*0);
 	s_message.time.push_back(rand(mt)/1000.0);
 	
-	sendToAutoware();
+	// sendToAutoware(100000);
 }
 
 int main(int argc,  char* argv[]) {
@@ -274,8 +339,6 @@ int main(int argc,  char* argv[]) {
 		return EXIT_FAILURE;
 	}
 	AutowareService autoware(config);
-
-	
 
 	return 0;
 }
