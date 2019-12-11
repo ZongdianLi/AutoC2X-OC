@@ -62,14 +62,12 @@ CaService::CaService(CaServiceConfig &config, ptree& configTree) {
 	mReceiverGps = new CommunicationReceiver( "3333", "GPS", *mLogger);
 	mReceiverObd2 = new CommunicationReceiver("2222", "OBD2", *mLogger);
 	mReceiverAutoware = new CommunicationReceiver("25000", "AUTOWARE",*mLogger);
-	// mReceiverPingApp = new CommunicationReceiver("34567", "PINGAPP", *mLogger);
 
 	mThreadReceive = new boost::thread(&CaService::receive, this);
 	mThreadGpsDataReceive = new boost::thread(&CaService::receiveGpsData, this);
 	mThreadObd2DataReceive = new boost::thread(&CaService::receiveObd2Data, this);
 	mThreadAutowareDataReceive = new boost::thread(&CaService::receiveAutowareData, this);
 	
-	// mThreadPingAppDataReceive = new boost::thread(&CaService::receivePingAppData, this);
 
 	mIdCounter = 0;
 
@@ -125,7 +123,6 @@ CaService::~CaService() {
 	delete mReceiverFromDcc;
 	delete mSenderToDcc;
 	delete mSenderToLdm;
-	// delete mSenderToPingApp;
 
 	delete mReceiverGps;
 	delete mReceiverObd2;
@@ -162,7 +159,7 @@ void CaService::receive() {
 		camProto.SerializeToString(&serializedProtoCam);
 
 		mLogger->logInfo("Forward incoming CAM " + to_string(cam->header.stationID) + " to LDM");
-		// mSenderToLdm->send(envelope, serdializedProtoCam);	//send serialized CAM to LDM
+		mSenderToLdm->send(envelope, serializedProtoCam);	//send serialized CAM to LDM
 
 		mSenderToAutoware->send(envelope, serializedProtoCam);
 	}
@@ -208,9 +205,6 @@ void CaService::receiveAutowareData() { //実装
 		mLatestAutoware = newAutoware;
 		waiting_data.push_back(newAutoware);
 		mMutexLatestAutoware.unlock();
-		// std::cout << "now time:" << Utils::currentTime() << std::endl;
-		// std::cout << "generationUnixTime" << newAutoware.time() << std::endl;
-		// std::cout << "time delta:" << (Utils::currentTime() - newAutoware.time()) / 1000000.0 << std::endl;
 		atoc_delay_output_file << Utils::currentTime() << "," << (Utils::currentTime() - newAutoware.time()) / 1000000.0 << std::endl;
 	}
 }
@@ -466,9 +460,6 @@ void CaService::send(bool isAutoware) {
 		string serializedProtoCam;
 		camProto.SerializeToString(&serializedProtoCam);
 		mSenderToLdm->send("CAM", serializedProtoCam); //send serialized CAM to LDM
-
-		// mSenderToPingApp->send("CAM", serializedProtoCam); //本来ここではpingAppに送信しなくて良い（自身の車両情報なので)
-
 		asn_DEF_CAM.free_struct(&asn_DEF_CAM, cam, 0);
 	}
 	waiting_data.clear();

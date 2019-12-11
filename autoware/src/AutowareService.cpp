@@ -55,9 +55,6 @@ AutowareService::AutowareService(AutowareConfig &config, int fd) {
 	mReceiverFromCaService = new CommunicationReceiver("23456", "CAM", *mLogger);
 	// mLogger = new LoggingUtility("AutowareService", mGlobalConfig.mExpNo, loggingConf, statisticConf);
 	mLogger->logStats("speed (m/sec)");
-	
-
-	
 
 	mThreadReceive = new boost::thread(&AutowareService::receiveFromAutoware, this);
 	// mThreadReceiveFromCaService = new boost::thread(&AutowareService::receiveFromCaService, this);
@@ -66,36 +63,7 @@ AutowareService::AutowareService(AutowareConfig &config, int fd) {
 	// 	testSender();
 	// 	sleep(1);
 	// }
-	
-	// mThreadReceiveFromCaService = new boost::thread(&AutowareService::receiveFromCaService, this);
-	// mThreadTestSender = new boost::thread(&AutowareService::testSender, this);
 
-	// char cur_dir[1024];
-	// getcwd(cur_dir, 1024);
-	// time_t t = time(nullptr);
-	// const tm* lt = localtime(&t);
-	// std::stringstream s;
-	// s<<"20";
-	// s<<lt->tm_year-100; //100を引くことで20xxのxxの部分になる
-	// s<<"-";
-	// s<<lt->tm_mon+1; //月を0からカウントしているため
-	// s<<"-";
-	// s<<lt->tm_mday; //そのまま
-	// s<<"_";
-	// s<<lt->tm_hour;
-	// s<<":";
-	// s<<lt->tm_min;
-	// s<<":";
-	// s<<lt->tm_sec;
-	// std::string timestamp = s.str();
-
-	// std::string filename = std::string(cur_dir) + "/../../../autoware/output/delay/" + timestamp + ".csv";
-	// delay_output_file.open(filename, std::ios::out);
-
-	while(1){
-		testSender();
-		sleep(1);
-	}
 }
 
 AutowareService::~AutowareService() {
@@ -107,22 +75,11 @@ AutowareService::~AutowareService() {
 	delete mThreadReceiveFromCaService;
 	delete mThreadTestSender;
 
-	mTimer->cancel();
-	delete mTimer;
 }
 
-//reads the actual vehicle data from Autoware
-void AutowareService::receiveData(const boost::system::error_code &ec, SerialPort* serial) {
-}
-
-
-//simulates realistic vehicle speed
-void AutowareService::simulateSpeed() {
-	// return sum / 1000.0;					//avg to avoid rapid/drastic changes in speed
-}
 
 //simulates Autoware data, logs and sends it
-void AutowareService::simulateData() {
+void AutowareService::setData() {
 	std::cout << "simulating....." << std::endl;
 	for(int i=0; i < s_message.speed.size(); i++){
 		autowarePackage::AUTOWARE autoware;
@@ -154,21 +111,6 @@ void AutowareService::sendToServices(autowarePackage::AUTOWARE autoware) {
 	// mLogger->logStats(to_string(autoware.speed()) + " (" + to_string(autoware.speed()/100*3.6) + "km/h)"); // In csv, we log speed in m/sec
 }
 
-
-void AutowareService::init() {
-	if (!mConfig.mSimulateData) {	//use real Autoware data
-	}
-	else {				//use simulated Autoware data
-	}
-	// ros::spin();
-}
-
-double AutowareService::calcSpeed(){
-}
-
-void AutowareService::timeCalc(){
-}
-
 void AutowareService::receiveFromAutoware(){
 	std::cout << "*****receive setup" << std::endl;
 	int sockfd;
@@ -192,8 +134,6 @@ void AutowareService::receiveFromAutoware(){
     // 受信
     int rsize;
     while( 1 ) {
-		message message;
-		// socket_message s_message;
 		std::stringstream ss;
 		memset( buf, 0, sizeof( buf ) );
         rsize = recv( client_sockfd, buf, sizeof( buf ), 0 );
@@ -202,9 +142,6 @@ void AutowareService::receiveFromAutoware(){
 		boost::archive::text_iarchive archive(ss);
 		archive >> s_message;
 		std::cout << "received" << std::endl;
-		// for(int i = 0; i < s_message.latitude.size(); i++){
-		// 	std::cout << "lat:" << s_message.latitude[i] << " lon:" << s_message.longitude[i] << " speed:" << s_message.speed[i] << " time:" << s_message.time[i] << std::endl;
-		// }
 		speed = s_message.speed[0];
 		longitude = s_message.longitude[0];
 		latitude = s_message.latitude[0];
@@ -215,7 +152,7 @@ void AutowareService::receiveFromAutoware(){
         } else if ( rsize == -1 ) {
             perror( "recv" );
         }
-		// simulateData();
+		setData();
 		std::cout << s_message.timestamp << std::endl;
 		sendBackToAutoware(s_message);
     }
@@ -223,23 +160,9 @@ void AutowareService::receiveFromAutoware(){
     close( client_sockfd );
     close( sockfd );
 
-
-	// asio::io_service io_service;
-	// tcp::socket socket(io_service);
-	// tcp::acceptor acc(io_service, tcp::endpoint(tcp::v4(), 23457));
-
-	// boost::system::error_code error;
-	// acc.accept(socket, error);
-
-	// if(error){
-	// 	std::cout << "accept failed:" << error.message() << std::endl;
-	// } else {
-	// 	std::cout << "accept correct!" << std::endl;
-	// }
 }
 
 void AutowareService::sendBackToAutoware(socket_message msg){
-	
 	if(flag != 100){
 		struct sockaddr_in addr;
 		if(( sock_fd = socket(AF_INET, SOCK_STREAM, 0) ) < 0 ) perror("socket");
@@ -281,7 +204,7 @@ void AutowareService::testSender(){
 			s_message.longitude.push_back(rand10000(mt));
 			s_message.stationid.push_back(rand10000(mt));
 		}
-		simulateData();
+		setData();
 		sleep(1);
 	}
 }
@@ -326,3 +249,28 @@ int main(int argc,  char* argv[]) {
 
 	return 0;
 }
+
+
+
+
+	// char cur_dir[1024];
+	// getcwd(cur_dir, 1024);
+	// time_t t = time(nullptr);
+	// const tm* lt = localtime(&t);
+	// std::stringstream s;
+	// s<<"20";
+	// s<<lt->tm_year-100; //100を引くことで20xxのxxの部分になる
+	// s<<"-";
+	// s<<lt->tm_mon+1; //月を0からカウントしているため
+	// s<<"-";
+	// s<<lt->tm_mday; //そのまま
+	// s<<"_";
+	// s<<lt->tm_hour;
+	// s<<":";
+	// s<<lt->tm_min;
+	// s<<":";
+	// s<<lt->tm_sec;
+	// std::string timestamp = s.str();
+
+	// std::string filename = std::string(cur_dir) + "/../../../autoware/output/delay/" + timestamp + ".csv";
+	// delay_output_file.open(filename, std::ios::out);

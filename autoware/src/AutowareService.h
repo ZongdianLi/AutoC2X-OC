@@ -120,27 +120,16 @@ private:
 		}
 };
 
-// struct socket_message{
-// 	std::vector<message> data;
-// };
 
 /**
  * Class that connects to AUTOWARE via serial port and offers its data to other modules via ZMQ.
  */
 class AutowareService {
 public:
-	// AutowareService(AutowareConfig &config, std::string globalConfig, std::string loggingConf, std::string statisticConf);
 	AutowareService(AutowareConfig &config, int fd);
 	~AutowareService();
-	void init();
 
-	void receiveData(const boost::system::error_code &ec, SerialPort* serial);
-	void simulateSpeed();
-	void simulateData();
-
-	double calcSpeed();
-
-	void timeCalc();
+	void setData();
 
 	void receiveFromAutoware();
 
@@ -152,7 +141,6 @@ public:
 
 	void sendToServices(autowarePackage::AUTOWARE autoware);
 
-
 private:
 	AutowareConfig mConfig;
 	GlobalConfig mGlobalConfig;
@@ -161,19 +149,10 @@ private:
 	CommunicationReceiver* mReceiverFromCaService;
 	LoggingUtility* mLogger;
 
-	//for simulation only
-	std::default_random_engine mRandNumberGen;
-	std::bernoulli_distribution mBernoulli;
-	std::uniform_real_distribution<double> mUniform;
-
-	boost::asio::io_service mIoService;
-	boost::asio::deadline_timer* mTimer;
-
 	boost::thread* mThreadReceive;
 	boost::thread* mThreadReceiveFromCaService;
 
 	boost::thread* mThreadTestSender;
-
 
 	double speed;
 	double longitude;
