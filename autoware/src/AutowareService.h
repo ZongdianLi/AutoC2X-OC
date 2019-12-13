@@ -102,12 +102,6 @@ struct AutowareConfig {
 	}
 };
 
-struct message {
-	int speed;
-	int latitude;
-	int longitude;
-	int time;
-};
 
 struct socket_message{
 	long timestamp;
@@ -150,9 +144,7 @@ public:
 
 	void testSender();
 
-	void receiveSignalFromAutoware();
-
-	long requestCam(std::string condition);
+	void receiveFromAutoware();
 
 
 

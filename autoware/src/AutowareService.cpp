@@ -38,7 +38,6 @@ INITIALIZE_EASYLOGGINGPP
 
 
 AutowareService::AutowareService(AutowareConfig &config) {
-	newestLdmKey = -1;
 	flag = -1;
 	try {
 		mGlobalConfig.loadConfig(AUTOWARE_CONFIG_NAME);
@@ -58,7 +57,7 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	mClientCam = new CommunicationClient("6789", *mLogger);
 	
 	mThreadReceive = new boost::thread(&AutowareService::receiveFromCa, this);
-	// mThreadReceiveFromAutoware = new boost::thread(&AutowareService::receiveSignalFromAutoware, this);
+	mThreadReceiveFromAutoware = new boost::thread(&AutowareService::receiveFromAutoware, this);
 	
 
 	char cur_dir[1024];
@@ -125,8 +124,6 @@ void AutowareService::simulateData() {
 	std::cout << std::setprecision(20) << "speed:" << autoware.speed() << " time:" << autoware.time() << " longitude:" << autoware.longitude() << " latitude:" << autoware.latitude() << std::endl;
 	// sendToServices(autoware);
 
-	// mTimer->expires_from_now(boost::posix_time::millisec(mConfig.mFrequency));
-	// mTimer->async_wait(boost::bind(&AutowareService::simulateData, this, boost::asio::placeholders::error));
 }
 
 //logs and sends Autoware
@@ -170,11 +167,10 @@ void AutowareService::sendToAutoware(long timestamp){
 	// 	std::cout  <<  "latitude:" << std::setprecision(20) << s_message.latitude[i] << " longitude:" << s_message.longitude[i] << std::endl;
 	// }
 
-	s_message.timestamp = timestamp;
+	s_message.timestamp = Utils::currentTime();
 	std::stringstream ss;
 	boost::archive::text_oarchive archive(ss);
 	archive << s_message;
-
 	std::cout << ss.str() << std::endl;
 	ss.seekg(0, ios::end);
 	if( send( sockfd, ss.str().c_str(), ss.tellp(), 0 ) < 0 ) {
@@ -187,6 +183,107 @@ void AutowareService::sendToAutoware(long timestamp){
 	s_message.longitude.clear();
 	s_message.time.clear();
 }
+
+void AutowareService::testSender(){
+
+	std::mt19937 mt(rnd());
+	std::uniform_int_distribution<> rand(0, 100);
+	// std::cout << std::setprecision(20) << rand(mt) / 1000000.0 << std::endl;
+
+	s_message.speed.push_back(rand(mt)/1000.0);
+	s_message.latitude.push_back(35.714464 * 10000000);
+	s_message.longitude.push_back(139.760606 * 10000000);
+	s_message.time.push_back(rand(mt)/1000.0);
+
+	s_message.speed.push_back(rand(mt)/1000.0);
+	s_message.latitude.push_back(35.71419722 * 10000000 + rand(mt)*0);
+	s_message.longitude.push_back(139.76148888 * 10000000 + rand(mt)*0);
+	s_message.time.push_back(rand(mt)/1000.0);
+
+	s_message.speed.push_back(rand(mt)/1000.0);
+	s_message.latitude.push_back(35.714497 * 10000000 + rand(mt)*0);
+	s_message.longitude.push_back(139.763014 * 10000000 + rand(mt)*0);
+	s_message.time.push_back(rand(mt)/1000.0);
+
+	s_message.speed.push_back(rand(mt)/1000.0);
+	s_message.latitude.push_back(35.713997 * 10000000 + rand(mt)*0);
+	s_message.longitude.push_back(139.760153 * 10000000 + rand(mt)*0);
+	s_message.time.push_back(rand(mt)/1000.0);
+
+	s_message.speed.push_back(rand(mt)/1000.0);
+	s_message.latitude.push_back(35.712992 * 10000000 + rand(mt)*0);
+	s_message.longitude.push_back(139.759819 * 10000000 + rand(mt)*0);
+	s_message.time.push_back(rand(mt)/1000.0);
+	
+	sendToAutoware(100000);
+}
+
+void AutowareService::receiveFromAutoware(){
+	std::cout << "*****receive setup" << std::endl;
+	int sock_fd;
+    int client_sockfd;
+    struct sockaddr_in addr;
+    socklen_t len = sizeof( struct sockaddr_in );
+    struct sockaddr_in from_addr;
+    char buf[4096];
+ 
+    memset( buf, 0, sizeof( buf ) );
+    if( ( sock_fd = socket( AF_INET, SOCK_STREAM, 0 ) ) < 0 ) {
+        perror( "socket" );
+    }
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons( 23458 );
+    addr.sin_addr.s_addr = INADDR_ANY;
+    if( bind( sock_fd, (struct sockaddr *)&addr, sizeof( addr ) ) < 0 ) perror( "bind" );
+    if( listen( sock_fd, SOMAXCONN ) < 0 ) perror( "listen" );
+    if( ( client_sockfd = accept( sock_fd, (struct sockaddr *)&from_addr, &len ) ) < 0 ) perror( "accept" );
+ 
+    // 受信
+    int rsize;
+    while( 1 ) {
+		std::stringstream ss;
+		memset( buf, 0, sizeof( buf ) );
+        rsize = recv( client_sockfd, buf, sizeof( buf ), 0 );
+		std::cout << "received" << std::endl;
+
+		ss << buf;
+
+		boost::archive::text_iarchive archive(ss);
+		archive >> tmp_message;
+		std::cout << "received" << std::endl;
+
+		delay_output_file << tmp_message.timestamp << "," << Utils::currentTime() << std::endl;
+
+		if ( rsize == 0 ) {
+            break;
+        } else if ( rsize == -1 ) {
+            perror( "recv" );
+        }
+		// simulateData();
+		std::cout << tmp_message.timestamp << std::endl;
+		// testSender();
+    }
+    close( client_sockfd );
+    close( sock_fd );
+}
+
+int main(int argc,  char* argv[]) {
+
+	AutowareConfig config;
+	try {
+		config.loadConfig();
+	}
+	catch (std::exception &e) {
+		cerr << "Error while loading config.xml: " << e.what() << endl << flush;
+		return EXIT_FAILURE;
+	}
+	AutowareService autoware(config);
+
+	return 0;
+}
+
+
+
 
 // void AutowareService::receiveSignalFromAutoware(){
 // 	std::cout << "*****receive setup" << std::endl;
@@ -257,77 +354,28 @@ void AutowareService::sendToAutoware(long timestamp){
 // }
 
 //requests all CAMs from LDM
-long AutowareService::requestCam(std::string condition) {
-	// mMutexCam.lock();
-	std::string request, reply;
-	std::string serializedData;
-	dataPackage::LdmData ldmData;
-	//get all CAMs from LDM
-	reply = mClientCam->sendRequest("CAM", condition, 1000);
-	if (reply != "") {
-		ldmData.ParseFromString(reply);
+// long AutowareService::requestCam(std::string condition) {
+// 	// mMutexCam.lock();
+// 	std::string request, reply;
+// 	std::string serializedData;
+// 	dataPackage::LdmData ldmData;
+// 	//get all CAMs from LDM
+// 	reply = mClientCam->sendRequest("CAM", condition, 1000);
+// 	if (reply != "") {
+// 		ldmData.ParseFromString(reply);
 
-		for (int i=0; i<std::min(ldmData.data_size(), 10); i++) {
-			std::string serializedCam = ldmData.data(i);
-			camPackage::CAM cam;
-			cam.ParseFromString(serializedCam);
-			s_message.latitude.push_back( cam.coop().camparameters().basiccontainer().latitude() );
-			s_message.longitude.push_back( cam.coop().camparameters().basiccontainer().longitude() );
-			s_message.time.push_back( cam.coop().gendeltatime() );
-			s_message.speed.push_back( cam.coop().camparameters().highfreqcontainer().basicvehiclehighfreqcontainer().speed());
-		}
-		// mMutexCam.unlock();
-		return ldmData.data_size();
-	}
-	// mMutexCam.unlock();
-	return 0;
-}
-
-void AutowareService::testSender(){
-
-	std::mt19937 mt(rnd());
-	std::uniform_int_distribution<> rand(0, 100);
-	// std::cout << std::setprecision(20) << rand(mt) / 1000000.0 << std::endl;
-
-	s_message.speed.push_back(rand(mt)/1000.0);
-	s_message.latitude.push_back(35.714464 * 10000000);
-	s_message.longitude.push_back(139.760606 * 10000000);
-	s_message.time.push_back(rand(mt)/1000.0);
-
-	s_message.speed.push_back(rand(mt)/1000.0);
-	s_message.latitude.push_back(35.71419722 * 10000000 + rand(mt)*0);
-	s_message.longitude.push_back(139.76148888 * 10000000 + rand(mt)*0);
-	s_message.time.push_back(rand(mt)/1000.0);
-
-	s_message.speed.push_back(rand(mt)/1000.0);
-	s_message.latitude.push_back(35.714497 * 10000000 + rand(mt)*0);
-	s_message.longitude.push_back(139.763014 * 10000000 + rand(mt)*0);
-	s_message.time.push_back(rand(mt)/1000.0);
-
-	s_message.speed.push_back(rand(mt)/1000.0);
-	s_message.latitude.push_back(35.713997 * 10000000 + rand(mt)*0);
-	s_message.longitude.push_back(139.760153 * 10000000 + rand(mt)*0);
-	s_message.time.push_back(rand(mt)/1000.0);
-
-	s_message.speed.push_back(rand(mt)/1000.0);
-	s_message.latitude.push_back(35.712992 * 10000000 + rand(mt)*0);
-	s_message.longitude.push_back(139.759819 * 10000000 + rand(mt)*0);
-	s_message.time.push_back(rand(mt)/1000.0);
-	
-	sendToAutoware(100000);
-}
-
-int main(int argc,  char* argv[]) {
-
-	AutowareConfig config;
-	try {
-		config.loadConfig();
-	}
-	catch (std::exception &e) {
-		cerr << "Error while loading config.xml: " << e.what() << endl << flush;
-		return EXIT_FAILURE;
-	}
-	AutowareService autoware(config);
-
-	return 0;
-}
+// 		for (int i=0; i<std::min(ldmData.data_size(), 10); i++) {
+// 			std::string serializedCam = ldmData.data(i);
+// 			camPackage::CAM cam;
+// 			cam.ParseFromString(serializedCam);
+// 			s_message.latitude.push_back( cam.coop().camparameters().basiccontainer().latitude() );
+// 			s_message.longitude.push_back( cam.coop().camparameters().basiccontainer().longitude() );
+// 			s_message.time.push_back( cam.coop().gendeltatime() );
+// 			s_message.speed.push_back( cam.coop().camparameters().highfreqcontainer().basicvehiclehighfreqcontainer().speed());
+// 		}
+// 		// mMutexCam.unlock();
+// 		return ldmData.data_size();
+// 	}
+// 	// mMutexCam.unlock();
+// 	return 0;
+// }
