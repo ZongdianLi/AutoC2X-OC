@@ -162,7 +162,7 @@ void CaService::receive() {
 		camPackage::CAM camProto = convertAsn1toProtoBuf(cam);
 		camProto.SerializeToString(&serializedProtoCam);
 
-		mLogger->logInfo("Forward incoming CAM " + to_string(cam->header.stationID) + " to LDM");
+		// mLogger->logInfo("Forward incoming CAM " + to_string(cam->header.stationID) + " to LDM");
 		mSenderToLdm->send(envelope, serializedProtoCam);	//send serialized CAM to LDM
 
 
