@@ -55,11 +55,34 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	mReceiverFromCaService = new CommunicationReceiver("23456", "CAM", *mLogger);
 	mLogger->logStats("speed (m/sec)");
 
+	//autowareとの1対1の時だけファイルアウトプットはコメントアウトする
+	char cur_dir[1024];
+	getcwd(cur_dir, 1024);
+	time_t t = time(nullptr);
+	const tm* lt = localtime(&t);
+	std::stringstream s;
+	s<<"20";
+	s<<lt->tm_year-100; //100を引くことで20xxのxxの部分になる
+	s<<"-";
+	s<<lt->tm_mon+1; //月を0からカウントしているため
+	s<<"-";
+	s<<lt->tm_mday; //そのまま
+	s<<"_";
+	s<<lt->tm_hour;
+	s<<":";
+	s<<lt->tm_min;
+	s<<":";
+	s<<lt->tm_sec;
+	std::string timestamp = s.str();
+
+	std::string filename = std::string(cur_dir) + "/../../../autoware/output/delay/" + timestamp + ".csv";
+	delay_output_file.open(filename, std::ios::out);
+
 	mThreadReceive = new boost::thread(&AutowareService::receiveFromAutoware, this);
 	mThreadReceiveFromCaService = new boost::thread(&AutowareService::receiveFromCaService, this);
 	
 	while(1){
-	// 	testSender();
+		// testSender();
 		sleep(1);
 	}
 
@@ -143,7 +166,6 @@ void AutowareService::receiveFromAutoware(){
 		std::cout << s_message.timestamp << std::endl;
 		setData();
 		sendBackToAutoware(s_message);
-
     }
  
     close( client_sockfd );
@@ -183,6 +205,12 @@ void AutowareService::testSender(){
 		s_message.longitude.clear();
 		s_message.time.clear();
 		s_message.stationid.clear();
+
+		s_message.speed.push_back(0);
+		s_message.time.push_back(0);
+		s_message.latitude.push_back(0);
+		s_message.longitude.push_back(0);
+		s_message.stationid.push_back(0);
 		
 		for(int i = 0; i <10; i++){
 			std::mt19937 mt(rnd());     //  メルセンヌ・ツイスタの32ビット版、引数は初期シード値
@@ -219,8 +247,6 @@ void AutowareService::receiveFromCaService(){
 		msg.longitude.push_back(0);
 		msg.time.push_back(0);
 		msg.stationid.push_back(cam.header().stationid());
-		
-		sendBackToAutoware(msg);
 	}
 }
 
@@ -238,28 +264,3 @@ int main(int argc,  char* argv[]) {
 
 	return 0;
 }
-
-
-
-
-	// char cur_dir[1024];
-	// getcwd(cur_dir, 1024);
-	// time_t t = time(nullptr);
-	// const tm* lt = localtime(&t);
-	// std::stringstream s;
-	// s<<"20";
-	// s<<lt->tm_year-100; //100を引くことで20xxのxxの部分になる
-	// s<<"-";
-	// s<<lt->tm_mon+1; //月を0からカウントしているため
-	// s<<"-";
-	// s<<lt->tm_mday; //そのまま
-	// s<<"_";
-	// s<<lt->tm_hour;
-	// s<<":";
-	// s<<lt->tm_min;
-	// s<<":";
-	// s<<lt->tm_sec;
-	// std::string timestamp = s.str();
-
-	// std::string filename = std::string(cur_dir) + "/../../../autoware/output/delay/" + timestamp + ".csv";
-	// delay_output_file.open(filename, std::ios::out);
