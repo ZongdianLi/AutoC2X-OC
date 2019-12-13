@@ -39,8 +39,8 @@ using asio::ip::tcp;
 INITIALIZE_EASYLOGGINGPP
 
 
-AutowareService::AutowareService(AutowareConfig &config, int fd) {
-	sock_fd = fd;
+AutowareService::AutowareService(AutowareConfig &config) {
+	flag = -1;
 	try {
 		mGlobalConfig.loadConfig(AUTOWARE_CONFIG_NAME);
 	}
@@ -53,16 +53,15 @@ AutowareService::AutowareService(AutowareConfig &config, int fd) {
 
 	mSender = new CommunicationSender("25000", *mLogger);
 	mReceiverFromCaService = new CommunicationReceiver("23456", "CAM", *mLogger);
-	// mLogger = new LoggingUtility("AutowareService", mGlobalConfig.mExpNo, loggingConf, statisticConf);
 	mLogger->logStats("speed (m/sec)");
 
 	mThreadReceive = new boost::thread(&AutowareService::receiveFromAutoware, this);
-	// mThreadReceiveFromCaService = new boost::thread(&AutowareService::receiveFromCaService, this);
-	// mThreadReceive = new boost::thread(&AutowareService::testSender, this);
-	// while(1){
+	mThreadReceiveFromCaService = new boost::thread(&AutowareService::receiveFromCaService, this);
+	
+	while(1){
 	// 	testSender();
-	// 	sleep(1);
-	// }
+		sleep(1);
+	}
 
 }
 
@@ -81,26 +80,18 @@ AutowareService::~AutowareService() {
 //simulates Autoware data, logs and sends it
 void AutowareService::setData() {
 	std::cout << "simulating....." << std::endl;
-	for(int i=0; i < s_message.speed.size(); i++){
+	for(unsigned int i=0; i < s_message.speed.size(); i++){
 		autowarePackage::AUTOWARE autoware;
-		if(i == s_message.speed.size()-1){
-			autoware.set_id(0);
-		} else {
-			// std::mt19937 mt(rnd());     //  メルセンヌ・ツイスタの32ビット版、引数は初期シード値
-			// std::uniform_int_distribution<> rand10000(1, 9999);        // [0, 9999] 範囲の一様乱数
-			// autoware.set_id(rand10000(mt));
-			autoware.set_id(s_message.stationid[i]);
-			std::cout << "stationid is :::" << s_message.stationid[i] << std::endl;
-		}
-		//write current speed to protocol buffer
+		std::cout << "stationid is :::" << s_message.stationid[i] << std::endl;
+		autoware.set_id(s_message.stationid[i]);
 		autoware.set_speed(s_message.speed[i]); // standard expects speed in 0.01 m/s
-		// autoware.set_time(Utils::currentTime());
 		autoware.set_time(s_message.time[i]);
 		autoware.set_longitude(s_message.longitude[i]);
 		autoware.set_latitude(s_message.latitude[i]);
 		sendToServices(autoware);
 	}
 }
+
 
 //logs and sends Autoware
 void AutowareService::sendToServices(autowarePackage::AUTOWARE autoware) {
@@ -137,24 +128,22 @@ void AutowareService::receiveFromAutoware(){
 		std::stringstream ss;
 		memset( buf, 0, sizeof( buf ) );
         rsize = recv( client_sockfd, buf, sizeof( buf ), 0 );
+		
 		ss << buf;
-
 		boost::archive::text_iarchive archive(ss);
 		archive >> s_message;
+
 		std::cout << "received" << std::endl;
-		speed = s_message.speed[0];
-		longitude = s_message.longitude[0];
-		latitude = s_message.latitude[0];
-		generationUnixTime = s_message.time[0];
-		std::cout << s_message.speed[0] << std::endl;
+	
         if ( rsize == 0 ) {
-            break;
+            break;	
         } else if ( rsize == -1 ) {
             perror( "recv" );
         }
-		setData();
 		std::cout << s_message.timestamp << std::endl;
+		setData();
 		sendBackToAutoware(s_message);
+
     }
  
     close( client_sockfd );
@@ -164,6 +153,7 @@ void AutowareService::receiveFromAutoware(){
 
 void AutowareService::sendBackToAutoware(socket_message msg){
 	if(flag != 100){
+		std::cout << "socket open" << std::endl;
 		struct sockaddr_in addr;
 		if(( sock_fd = socket(AF_INET, SOCK_STREAM, 0) ) < 0 ) perror("socket");
 		addr.sin_family = AF_INET;
@@ -182,7 +172,6 @@ void AutowareService::sendBackToAutoware(socket_message msg){
 	if( send( sock_fd, ss.str().c_str(), ss.tellp(), 0) < 0 ){
 		perror("send");
 	} else {
-
 	}
 }
 
@@ -245,7 +234,7 @@ int main(int argc,  char* argv[]) {
 		cerr << "Error while loading config.xml: " << e.what() << endl << flush;
 		return EXIT_FAILURE;
 	}
-	AutowareService autoware(config, 0);
+	AutowareService autoware(config);
 
 	return 0;
 }

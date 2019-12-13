@@ -36,7 +36,6 @@ add_subdirectory(gps)
 add_subdirectory(autoware)
 add_subdirectory(obd2)
 add_subdirectory(ldm)
-add_subdirectory(httpServer)
 add_subdirectory(config)
 add_subdirectory(scripts)
 

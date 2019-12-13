@@ -26,7 +26,6 @@ tmux send-keys "cd $BUILD_DIR/cam/src" C-m
 tmux send-keys "./cam" C-m
 tmux split-window -v
 
-tmux send-keys "httpServer" C-m
 tmux split-window -v
 
 
@@ -39,9 +38,6 @@ tmux kill-pane
 tmux select-pane -t 3
 
 
-# tmux send-keys "cd $BUILD_DIR/pingApp/src" C-m
-# tmux send-keys "./pingApp" C-m
-# tmux split-window -v
 
 tmux send-keys "denm" C-m
 tmux split-window -v
@@ -49,14 +45,8 @@ tmux split-window -v
 tmux send-keys "dcc" C-m
 tmux split-window -v
 
-# tmux send-keys "obd2" C-m
-# tmux split-window -v
 
 tmux send-keys "cd $BUILD_DIR/autoware/src" C-m
 tmux send-keys "./autoware" C-m
-# tmux split-window -v
-
-
-# tmux send-keys "gpsService" C-m
 
 tmux -2 attach-session -t $SESSION

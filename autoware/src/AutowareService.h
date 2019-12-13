@@ -92,12 +92,6 @@ struct AutowareConfig {
 	}
 };
 
-struct message {
-	int speed;
-	int latitude;
-	int longitude;
-	int time;
-};
 
 struct socket_message{
 	long timestamp;
@@ -126,7 +120,7 @@ private:
  */
 class AutowareService {
 public:
-	AutowareService(AutowareConfig &config, int fd);
+	AutowareService(AutowareConfig &config);
 	~AutowareService();
 
 	void setData();

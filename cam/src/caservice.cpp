@@ -166,31 +166,31 @@ void CaService::receive() {
 }
 
 void CaService::receiveGpsData() {
-	string serializedGps;
-	gpsPackage::GPS newGps;
+	// string serializedGps;
+	// gpsPackage::GPS newGps;
 
-	while (1) {
-		serializedGps = mReceiverGps->receiveData();
-		newGps.ParseFromString(serializedGps);
-		mLogger->logDebug("Received GPS with latitude: " + to_string(newGps.latitude()) + ", longitude: " + to_string(newGps.longitude()));
-		mMutexLatestGps.lock();
-		mLatestGps = newGps;
-		mMutexLatestGps.unlock();
-	}
+	// while (1) {
+	// 	serializedGps = mReceiverGps->receiveData();
+	// 	newGps.ParseFromString(serializedGps);
+	// 	mLogger->logDebug("Received GPS with latitude: " + to_string(newGps.latitude()) + ", longitude: " + to_string(newGps.longitude()));
+	// 	mMutexLatestGps.lock();
+	// 	mLatestGps = newGps;
+	// 	mMutexLatestGps.unlock();
+	// }
 }
 
 void CaService::receiveObd2Data() {
-	string serializedObd2;
-	obd2Package::OBD2 newObd2;
+	// string serializedObd2;
+	// obd2Package::OBD2 newObd2;
 
-	while (1) {
-		serializedObd2 = mReceiverObd2->receiveData();
-		newObd2.ParseFromString(serializedObd2);
-		mLogger->logDebug("Received OBD2 with speed (m/s): " + to_string(newObd2.speed()));
-		mMutexLatestObd2.lock();
-		mLatestObd2 = newObd2;
-		mMutexLatestObd2.unlock();
-	}
+	// while (1) {
+	// 	serializedObd2 = mReceiverObd2->receiveData();
+	// 	newObd2.ParseFromString(serializedObd2);
+	// 	mLogger->logDebug("Received OBD2 with speed (m/s): " + to_string(newObd2.speed()));
+	// 	mMutexLatestObd2.lock();
+	// 	mLatestObd2 = newObd2;
+	// 	mMutexLatestObd2.unlock();
+	// }
 }
 
 void CaService::receiveAutowareData() { //実装
@@ -203,6 +203,9 @@ void CaService::receiveAutowareData() { //実装
 		mLogger->logDebug("Received AUTOWARE with speed (m/s): " + to_string(10));
 		mMutexLatestAutoware.lock();
 		mLatestAutoware = newAutoware;
+		if(newAutoware.id() == 0){
+			waiting_data.clear();
+		}
 		waiting_data.push_back(newAutoware);
 		mMutexLatestAutoware.unlock();
 		atoc_delay_output_file << Utils::currentTime() << "," << (Utils::currentTime() - newAutoware.time()) / 1000000.0 << std::endl;
