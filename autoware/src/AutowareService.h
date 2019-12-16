@@ -59,9 +59,9 @@
 #include <common/buffers/camInfo.pb.h>
 #include <common/buffers/ldmData.pb.h>
 
-#include <cereal/cereal.hpp>
-#include <cereal/types/vector.hpp>
-#include <cereal/archives/binary.hpp>
+// #include <cereal/cereal.hpp>
+// #include <cereal/types/vector.hpp>
+// #include <cereal/archives/binary.hpp>
 
 
 /** Struct that holds the configuration for AutowareService.
@@ -114,8 +114,8 @@ struct socket_message{
 	std::vector<int> longitude;
 	std::vector<int> time;
 private:
-	// friend class boost::serialization::access;
-	friend class cereal::access;
+	friend class boost::serialization::access;
+	// friend class cereal::access;
 	template<class Archive>
 		void serialize( Archive& ar, std::uint32_t version){
 			ar & timestamp;

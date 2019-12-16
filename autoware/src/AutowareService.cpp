@@ -169,8 +169,8 @@ void AutowareService::sendToAutoware(long timestamp){
 
 	s_message.timestamp = Utils::currentTime();
 	std::stringstream ss;
-	// boost::archive::text_oarchive archive(ss);
-	cereal::BinaryOutputArchive archive(ss);
+	boost::archive::text_oarchive archive(ss);
+	// cereal::BinaryOutputArchive archive(ss);
 	archive << s_message;
 	std::cout << ss.str() << std::endl;
 	ss.seekg(0, ios::end);
@@ -249,8 +249,8 @@ void AutowareService::receiveFromAutoware(){
 
 		ss << buf;
 
-		// boost::archive::text_iarchive archive(ss);
-		cereal::BinaryInputArchive archive(ss);
+		boost::archive::text_iarchive archive(ss);
+		// cereal::BinaryInputArchive archive(ss);
 		archive >> tmp_message;
 		std::cout << "received" << std::endl;
 
