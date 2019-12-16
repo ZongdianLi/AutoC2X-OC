@@ -206,21 +206,30 @@ void AutowareService::testSender(){
 		s_message.time.clear();
 		s_message.stationid.clear();
 
-		s_message.speed.push_back(0);
-		s_message.time.push_back(0);
-		s_message.latitude.push_back(0);
-		s_message.longitude.push_back(0);
-		s_message.stationid.push_back(0);
-		
-		for(int i = 0; i <10; i++){
-			std::mt19937 mt(rnd());     //  メルセンヌ・ツイスタの32ビット版、引数は初期シード値
-			std::uniform_int_distribution<> rand10000(1, 9999);        // [0, 9999] 範囲の一様乱数
-			s_message.speed.push_back(rand10000(mt));
-			s_message.time.push_back(rand10000(mt));
-			s_message.latitude.push_back(rand10000(mt));
-			s_message.longitude.push_back(rand10000(mt));
-			s_message.stationid.push_back(rand10000(mt));
-		}
+		s_message.speed.push_back(1919);
+		s_message.latitude.push_back(35.714464 * 10000000);
+		s_message.longitude.push_back(139.760606 * 10000000);
+		s_message.time.push_back(1919);
+
+		s_message.speed.push_back(1919);
+		s_message.latitude.push_back(35.71419722 * 10000000 + rand(mt)*0);
+		s_message.longitude.push_back(139.76148888 * 10000000 + rand(mt)*0);
+		s_message.time.push_back(1919);
+
+		s_message.speed.push_back(1919);
+		s_message.latitude.push_back(35.714497 * 10000000 + rand(mt)*0);
+		s_message.longitude.push_back(139.763014 * 10000000 + rand(mt)*0);
+		s_message.time.push_back(1919);
+
+		s_message.speed.push_back(1919);
+		s_message.latitude.push_back(35.713997 * 10000000 + rand(mt)*0);
+		s_message.longitude.push_back(139.760153 * 10000000 + rand(mt)*0);
+		s_message.time.push_back(1919);
+
+		s_message.speed.push_back(1919);
+		s_message.latitude.push_back(35.712992 * 10000000 + rand(mt)*0);
+		s_message.longitude.push_back(139.759819 * 10000000 + rand(mt)*0);
+		s_message.time.push_back(1919);
 		setData();
 		sleep(1);
 	}
