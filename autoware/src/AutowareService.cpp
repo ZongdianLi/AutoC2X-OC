@@ -78,11 +78,11 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	std::string filename = std::string(cur_dir) + "/../../../autoware/output/delay/" + timestamp + ".csv";
 	delay_output_file.open(filename, std::ios::out);
 
-	mThreadReceive = new boost::thread(&AutowareService::receiveFromAutoware, this);
+	// mThreadReceive = new boost::thread(&AutowareService::receiveFromAutoware, this);
 	mThreadReceiveFromCaService = new boost::thread(&AutowareService::receiveFromCaService, this);
 	
 	while(1){
-		// testSender();
+		testSender();
 		sleep(1);
 	}
 
@@ -206,29 +206,34 @@ void AutowareService::testSender(){
 		s_message.time.clear();
 		s_message.stationid.clear();
 
+		s_message.stationid.push_back(100);
 		s_message.speed.push_back(1919);
 		s_message.latitude.push_back(35.714464 * 10000000);
 		s_message.longitude.push_back(139.760606 * 10000000);
 		s_message.time.push_back(1919);
 
+		s_message.stationid.push_back(101);
 		s_message.speed.push_back(1919);
-		s_message.latitude.push_back(35.71419722 * 10000000 + rand(mt)*0);
-		s_message.longitude.push_back(139.76148888 * 10000000 + rand(mt)*0);
+		s_message.latitude.push_back(35.71419722 * 10000000);
+		s_message.longitude.push_back(139.76148888 * 10000000);
 		s_message.time.push_back(1919);
 
+		s_message.stationid.push_back(102);
 		s_message.speed.push_back(1919);
-		s_message.latitude.push_back(35.714497 * 10000000 + rand(mt)*0);
-		s_message.longitude.push_back(139.763014 * 10000000 + rand(mt)*0);
+		s_message.latitude.push_back(35.714497 * 10000000);
+		s_message.longitude.push_back(139.763014 * 10000000);
 		s_message.time.push_back(1919);
 
+		s_message.stationid.push_back(103);
 		s_message.speed.push_back(1919);
-		s_message.latitude.push_back(35.713997 * 10000000 + rand(mt)*0);
-		s_message.longitude.push_back(139.760153 * 10000000 + rand(mt)*0);
+		s_message.latitude.push_back(35.713997 * 10000000);
+		s_message.longitude.push_back(139.760153 * 10000000);
 		s_message.time.push_back(1919);
 
+		s_message.stationid.push_back(104);
 		s_message.speed.push_back(1919);
-		s_message.latitude.push_back(35.712992 * 10000000 + rand(mt)*0);
-		s_message.longitude.push_back(139.759819 * 10000000 + rand(mt)*0);
+		s_message.latitude.push_back(35.712992 * 10000000);
+		s_message.longitude.push_back(139.759819 * 10000000);
 		s_message.time.push_back(1919);
 		setData();
 		sleep(1);
