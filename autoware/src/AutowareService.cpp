@@ -181,6 +181,7 @@ void AutowareService::sendBackToAutoware(socket_message msg){
 		addr.sin_family = AF_INET;
 		addr.sin_port = htons(23458);
 		addr.sin_addr.s_addr = inet_addr("192.168.1.2");
+		//addr.sin_addr.s_addr = inet_addr("10.0.0.2");
 		connect( sock_fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in) );
 		flag = 100;
 	}

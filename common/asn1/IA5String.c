@@ -8,7 +8,7 @@
 /*
  * IA5String basic type description.
  */
-static ber_tlv_tag_t asn_DEF_IA5String_tags[] = {
+static const ber_tlv_tag_t asn_DEF_IA5String_tags[] = {
 	(ASN_TAG_CLASS_UNIVERSAL | (22 << 2)),	/* [UNIVERSAL 22] IMPLICIT ...*/
 	(ASN_TAG_CLASS_UNIVERSAL | (4 << 2))	/* ... OCTET STRING */
 };
@@ -55,7 +55,7 @@ IA5String_constraint(asn_TYPE_descriptor_t *td, const void *sptr,
 		 */
 		for(; buf < end; buf++) {
 			if(*buf > 0x7F) {
-				_ASN_CTFAIL(app_key, td, sptr,
+				ASN__CTFAIL(app_key, td, sptr,
 					"%s: value byte %ld out of range: "
 					"%d > 127 (%s:%d)",
 					td->name,
@@ -66,7 +66,7 @@ IA5String_constraint(asn_TYPE_descriptor_t *td, const void *sptr,
 			}
 		}
 	} else {
-		_ASN_CTFAIL(app_key, td, sptr,
+		ASN__CTFAIL(app_key, td, sptr,
 			"%s: value not given (%s:%d)",
 			td->name, __FILE__, __LINE__);
 		return -1;
