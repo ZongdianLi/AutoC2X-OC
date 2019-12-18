@@ -252,12 +252,13 @@ void AutowareService::receiveFromCaService(){
 		long genDeltaTime = (long)(currTime/1000000 - 10728504000) % 65536;
 
 		socket_message msg;
-		msg.timestamp = 10;
+		msg.timestamp = cam.header().stationid();
 		msg.speed.push_back(0);
 		msg.latitude.push_back(0);
 		msg.longitude.push_back(0);
 		msg.time.push_back(0);
 		msg.stationid.push_back(cam.header().stationid());
+		sendBackToAutoware(msg);
 	}
 }
 
