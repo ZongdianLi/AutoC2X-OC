@@ -277,6 +277,10 @@ void AutowareService::sendToCaService(socket_message msg){
 		autoware.set_time(msg.time[i]);
 		autoware.set_longitude(msg.longitude[i]);
 		autoware.set_latitude(msg.latitude[i]);
+
+		string serializedAutoware;
+		autoware.SerializeToString(&serializedAutoware);
+		mSender->sendData("AUTOWARE", serializedAutoware);
 	}
 }
 

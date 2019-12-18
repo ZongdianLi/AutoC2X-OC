@@ -201,8 +201,8 @@ void CaService::receiveAutowareData() {
 	autowarePackage::AUTOWARE newAutoware;
 	while (1) {
 		serializedAutoware = mReceiverAutoware->receiveData();
+		std::cout << "now receiving autoware ******" << std::endl;	
 		newAutoware.ParseFromString(serializedAutoware);
-		mLogger->logDebug("Received AUTOWARE with speed (m/s): " + to_string(10));
 		mMutexLatestAutoware.lock();
 		mLatestAutoware = newAutoware;
 		waiting_data.push_back(newAutoware);
