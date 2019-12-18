@@ -151,6 +151,8 @@ public:
 
 	void receiveFromAutoware();
 
+	void sendToCaService(socket_message msg);
+
 
 
 

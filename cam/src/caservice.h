@@ -210,8 +210,6 @@ private:
 	 * @return True if GPS data is valid, false otherwise.
 	 */
 	bool isGPSdataValid();
-
-	void reflect(CAM_t* cam);
 	
 
 	GlobalConfig mGlobalConfig;
@@ -276,7 +274,7 @@ private:
 	};
 	LastSentCamInfo mLastSentCamInfo;
 
-	std::ofstream atoc_delay_output_file;
+	std::vector<autowarePackage::AUTOWARE> waiting_data;
 };
 
 /** @} */ //end group

@@ -96,9 +96,6 @@ CaService::CaService(CaServiceConfig &config, ptree& configTree) {
 	s<<lt->tm_sec;
 	std::string timestamp = s.str();
 
-	std::string filename = std::string(cur_dir) + "/../../../cam/output/delay/atoc" + timestamp + ".csv";
-	atoc_delay_output_file.open(filename, std::ios::out);
-
 	if (mConfig.mGenerateMsgs) {
 		mTimer = new boost::asio::deadline_timer(mIoService, boost::posix_time::millisec(100));
 		mTimer->async_wait(boost::bind(&CaService::alarm, this, boost::asio::placeholders::error));
@@ -140,7 +137,7 @@ CaService::~CaService() {
 	delete mTimer;
 }
 
-//receive CAM from DCC and forward to LDM and autoware and reflect
+//receive CAM from DCC and forward to LDM and autoware
 void CaService::receive() {
 	string envelope;		//envelope
 	string serializedAsnCam;	//byte string (serialized)
@@ -164,9 +161,6 @@ void CaService::receive() {
 
 		// mLogger->logInfo("Forward incoming CAM " + to_string(cam->header.stationID) + " to LDM");
 		mSenderToLdm->send(envelope, serializedProtoCam);	//send serialized CAM to LDM
-
-
-		reflect(cam);
 
 		//autowareモジュールにもここで送ってあげる
 		mSenderToAutoware->send(envelope, serializedProtoCam);
@@ -202,22 +196,18 @@ void CaService::receiveObd2Data() {
 	}
 }
 
-//これいらなくね？
 void CaService::receiveAutowareData() {
 	string serializedAutoware;
 	autowarePackage::AUTOWARE newAutoware;
-
 	while (1) {
 		serializedAutoware = mReceiverAutoware->receiveData();
 		newAutoware.ParseFromString(serializedAutoware);
 		mLogger->logDebug("Received AUTOWARE with speed (m/s): " + to_string(10));
 		mMutexLatestAutoware.lock();
 		mLatestAutoware = newAutoware;
+		waiting_data.push_back(newAutoware);
 		mMutexLatestAutoware.unlock();
-		// std::cout << "now time:" << Utils::currentTime() << std::endl;
-		// std::cout << "generationUnixTime" << newAutoware.time() << std::endl;
-		// std::cout << "time delta:" << (Utils::currentTime() - newAutoware.time()) / 1000000.0 << std::endl;
-		atoc_delay_output_file << Utils::currentTime() << "," << (Utils::currentTime() - newAutoware.time()) / 1000000.0 << std::endl;
+		send(true);
 	}
 }
 
@@ -417,21 +407,6 @@ void CaService::scheduleNextAlarm() {
 	mTimer->async_wait(boost::bind(&CaService::alarm, this, boost::asio::placeholders::error));
 }
 
-void CaService::reflect(CAM_t *c){
-	std::cout << " ****** reflecting *******" << std::endl;
-	
-	string serializedData;
-	dataPackage::DATA data;
-
-	mLatestPingApp.set_time(c->cam.generationDeltaTime);
-	mLatestPingApp.set_speed(c->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue);
-	mLatestPingApp.set_latitude(c->cam.camParameters.basicContainer.referencePosition.latitude);
-	mLatestPingApp.set_longitude(c->cam.camParameters.basicContainer.referencePosition.longitude);
-	mLatestPingApp.set_stationid(c->header.stationID);
-
-	send(true);
-}
-
 //generate CAM and send to LDM and DCC
 void CaService::send(bool isPingApp) {
 	string serializedData;
@@ -462,7 +437,7 @@ void CaService::send(bool isPingApp) {
 	camProto.SerializeToString(&serializedProtoCam);
 	mSenderToLdm->send("CAM", serializedProtoCam); //send serialized CAM to LDM
 
-	mSenderToAutoware->send("CAM", serializedProtoCam);//本来ここではpingAppに送信しなくて良い（自身の車両情報なので)
+	// mSenderToAutoware->send("CAM", serializedProtoCam);//本来ここではpingAppに送信しなくて良い（自身の車両情報なので)
 
     asn_DEF_CAM.free_struct(&asn_DEF_CAM, cam, 0);
 }
@@ -476,7 +451,7 @@ CAM_t* CaService::generateCam(bool isPingApp) {
 	}
 	// ITS pdu header
 	if (isPingApp){
-		cam->header.stationID = mLatestPingApp.stationid();
+		cam->header.stationID = mLatestAutoware.id();
 	} else {
 		cam->header.stationID = mGlobalConfig.mStationID;// mIdCounter; //
 	}
@@ -485,16 +460,14 @@ CAM_t* CaService::generateCam(bool isPingApp) {
 
 	// generation delta time
 	int64_t currTime = Utils::currentTime();
-	if (isPingApp){
-		cam->cam.generationDeltaTime = mLatestPingApp.time();
+	
+	if (mLastSentCamInfo.timestamp) {
+		// cam->cam.generationDeltaTime = (currTime - mLastSentCamInfo.timestamp) / (100000260);
+		cam->cam.generationDeltaTime = (currTime/1000000 - 10728504000) % 65536;
 	} else {
-		if (mLastSentCamInfo.timestamp) {
-			// cam->cam.generationDeltaTime = (currTime - mLastSentCamInfo.timestamp) / (100000260);
-			cam->cam.generationDeltaTime = (currTime/1000000 - 10728504000) % 65536;
-		} else {
-			cam->cam.generationDeltaTime = 0;
-		}
+		cam->cam.generationDeltaTime = 0;
 	}
+	
 	mLastSentCamInfo.timestamp = currTime;
 
 	// Basic container

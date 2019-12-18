@@ -254,8 +254,8 @@ void AutowareService::receiveFromAutoware(){
 		archive >> tmp_message;
 		std::cout << "received" << std::endl;
 
-		delay_output_file << tmp_message.timestamp << "," << Utils::currentTime() << std::endl;
-
+		// delay_output_file << tmp_message.timestamp << "," << Utils::currentTime() << std::endl;
+		sendToCaService(tmp_message);
 		if ( rsize == 0 ) {
             break;
         } else if ( rsize == -1 ) {
@@ -267,6 +267,17 @@ void AutowareService::receiveFromAutoware(){
     }
     close( client_sockfd );
     close( sock_fd );
+}
+
+void AutowareService::sendToCaService(socket_message msg){
+	for(unsigned int i = 0; i < msg.latitude.size(); i++){
+		autowarePackage::AUTOWARE autoware;
+		autoware.set_id(msg.timestamp);
+		autoware.set_speed(msg.speed[i]); // standard expects speed in 0.01 m/s
+		autoware.set_time(msg.time[i]);
+		autoware.set_longitude(msg.longitude[i]);
+		autoware.set_latitude(msg.latitude[i]);
+	}
 }
 
 int main(int argc,  char* argv[]) {
