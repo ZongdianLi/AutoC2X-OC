@@ -12,7 +12,7 @@
 /*
  * OBJECT IDENTIFIER basic type description.
  */
-static const ber_tlv_tag_t asn_DEF_OBJECT_IDENTIFIER_tags[] = {
+static ber_tlv_tag_t asn_DEF_OBJECT_IDENTIFIER_tags[] = {
 	(ASN_TAG_CLASS_UNIVERSAL | (6 << 2))
 };
 asn_TYPE_descriptor_t asn_DEF_OBJECT_IDENTIFIER = {
@@ -47,14 +47,14 @@ OBJECT_IDENTIFIER_constraint(asn_TYPE_descriptor_t *td, const void *sptr,
 
 	if(st && st->buf) {
 		if(st->size < 1) {
-			ASN__CTFAIL(app_key, td, sptr,
+			_ASN_CTFAIL(app_key, td, sptr,
 				"%s: at least one numerical value "
 				"expected (%s:%d)",
 				td->name, __FILE__, __LINE__);
 			return -1;
 		}
 	} else {
-		ASN__CTFAIL(app_key, td, sptr,
+		_ASN_CTFAIL(app_key, td, sptr,
 			"%s: value not given (%s:%d)",
 			td->name, __FILE__, __LINE__);
 		return -1;
@@ -65,9 +65,9 @@ OBJECT_IDENTIFIER_constraint(asn_TYPE_descriptor_t *td, const void *sptr,
 
 
 int
-OBJECT_IDENTIFIER_get_single_arc(const uint8_t *arcbuf, unsigned int arclen, signed int add, void *rvbufp, unsigned int rvsize) {
+OBJECT_IDENTIFIER_get_single_arc(uint8_t *arcbuf, unsigned int arclen, signed int add, void *rvbufp, unsigned int rvsize) {
 	unsigned LE GCC_NOTUSED = 1; /* Little endian (x86) */
-	const uint8_t *arcend = arcbuf + arclen;	/* End of arc */
+	uint8_t *arcend = arcbuf + arclen;	/* End of arc */
 	unsigned int cache = 0;	/* No more than 14 significant bits */
 	unsigned char *rvbuf = (unsigned char *)rvbufp;
 	unsigned char *rvstart = rvbuf;	/* Original start of the value buffer */
@@ -120,7 +120,7 @@ OBJECT_IDENTIFIER_get_single_arc(const uint8_t *arcbuf, unsigned int arclen, sig
 			errno = ERANGE;	/* Overflow */
 			return -1;
 		}
-		*(unsigned long *)(void *)rvbuf = accum + add;	/* alignment OK! */
+		*(unsigned long *)rvbuf = accum + add;	/* alignment OK! */
 		return 0;
 	}
 
@@ -162,7 +162,7 @@ OBJECT_IDENTIFIER_get_single_arc(const uint8_t *arcbuf, unsigned int arclen, sig
 	if(add) {
 		for(rvbuf -= inc; rvbuf != rvstart; rvbuf -= inc) {
 			int v = add + *rvbuf;
-			if(v & ((unsigned)~0 << CHAR_BIT)) {
+			if(v & (-1 << CHAR_BIT)) {
 				*rvbuf = (unsigned char)(v + (1 << CHAR_BIT));
 				add = -1;
 			} else {
@@ -181,7 +181,7 @@ OBJECT_IDENTIFIER_get_single_arc(const uint8_t *arcbuf, unsigned int arclen, sig
 }
 
 ssize_t
-OBJECT_IDENTIFIER__dump_arc(const uint8_t *arcbuf, int arclen, int add,
+OBJECT_IDENTIFIER__dump_arc(uint8_t *arcbuf, int arclen, int add,
 		asn_app_consume_bytes_f *cb, void *app_key) {
 	char scratch[64];	/* Conservative estimate */
 	unsigned long accum;	/* Bits accumulator */
@@ -212,7 +212,7 @@ OBJECT_IDENTIFIER__dump_arc(const uint8_t *arcbuf, int arclen, int add,
 }
 
 int
-OBJECT_IDENTIFIER_print_arc(const uint8_t *arcbuf, int arclen, int add,
+OBJECT_IDENTIFIER_print_arc(uint8_t *arcbuf, int arclen, int add,
 		asn_app_consume_bytes_f *cb, void *app_key) {
 
 	if(OBJECT_IDENTIFIER__dump_arc(arcbuf, arclen, add, cb, app_key) < 0)
@@ -330,12 +330,12 @@ OBJECT_IDENTIFIER_encode_xer(asn_TYPE_descriptor_t *td, void *sptr,
 	(void)flags;
 
 	if(!st || !st->buf)
-		ASN__ENCODE_FAILED;
+		_ASN_ENCODE_FAILED;
 
 	er.encoded = OBJECT_IDENTIFIER__dump_body(st, cb, app_key);
-	if(er.encoded < 0) ASN__ENCODE_FAILED;
+	if(er.encoded < 0) _ASN_ENCODE_FAILED;
 
-	ASN__ENCODED_OK(er);
+	_ASN_ENCODED_OK(er);
 }
 
 int
@@ -360,7 +360,7 @@ OBJECT_IDENTIFIER_print(asn_TYPE_descriptor_t *td, const void *sptr,
 }
 
 int
-OBJECT_IDENTIFIER_get_arcs(const OBJECT_IDENTIFIER_t *oid, void *arcs,
+OBJECT_IDENTIFIER_get_arcs(OBJECT_IDENTIFIER_t *oid, void *arcs,
 		unsigned int arc_type_size, unsigned int arc_slots) {
 	void *arcs_end = (char *)arcs + (arc_type_size * arc_slots);
 	int num_arcs = 0;
@@ -652,7 +652,7 @@ OBJECT_IDENTIFIER_parse_arcs(const char *oid_text, ssize_t oid_txt_length,
 		ST_LEADSPACE,
 		ST_TAILSPACE,
 		ST_AFTERVALUE,	/* Next character ought to be '.' or a space */
-		ST_WAITDIGITS 	/* Next character is expected to be a digit */
+		ST_WAITDIGITS,	/* Next character is expected to be a digit */
 	} state = ST_LEADSPACE;
 
 	if(!oid_text || oid_txt_length < -1 || (arcs_slots && !arcs)) {

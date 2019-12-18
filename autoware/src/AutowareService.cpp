@@ -75,8 +75,6 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	s<<lt->tm_sec;
 	std::string timestamp = s.str();
 
-	std::string filename = std::string(cur_dir) + "/../../../autoware/output/delay/" + timestamp + ".csv";
-	delay_output_file.open(filename, std::ios::out);
 
 	mThreadReceive = new boost::thread(&AutowareService::receiveFromAutoware, this);
 	mThreadReceiveFromCaService = new boost::thread(&AutowareService::receiveFromCaService, this);
@@ -106,7 +104,7 @@ void AutowareService::setData() {
 	for(unsigned int i=0; i < s_message.speed.size(); i++){
 		autowarePackage::AUTOWARE autoware;
 		std::cout << "stationid is :::" << s_message.stationid[i] << std::endl;
-		autoware.set_id(s_message.stationid[i]);
+		autoware.set_id(s_message.timestamp);
 		autoware.set_speed(s_message.speed[i]); // standard expects speed in 0.01 m/s
 		autoware.set_time(s_message.time[i]);
 		autoware.set_longitude(s_message.longitude[i]);
@@ -165,7 +163,6 @@ void AutowareService::receiveFromAutoware(){
         }
 		std::cout << s_message.timestamp << std::endl;
 		setData();
-		sendBackToAutoware(s_message);
     }
  
     close( client_sockfd );
@@ -253,7 +250,6 @@ void AutowareService::receiveFromCaService(){
 		cam.ParseFromString(serializedAutoware);
 		int64_t currTime = Utils::currentTime();
 		long genDeltaTime = (long)(currTime/1000000 - 10728504000) % 65536;
-		delay_output_file << std::setprecision(20) << cam.header().stationid() << "" << "," << genDeltaTime << "," << currTime << std::endl;
 
 		socket_message msg;
 		msg.timestamp = 10;

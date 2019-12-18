@@ -23,18 +23,18 @@ xer_encode(asn_TYPE_descriptor_t *td, void *sptr,
 	mname = td->xml_tag;
 	mlen = strlen(mname);
 
-	ASN__CALLBACK3("<", 1, mname, mlen, ">", 1);
+	_ASN_CALLBACK3("<", 1, mname, mlen, ">", 1);
 
 	tmper = td->xer_encoder(td, sptr, 1, xer_flags, cb, app_key);
 	if(tmper.encoded == -1) return tmper;
 
-	ASN__CALLBACK3("</", 2, mname, mlen, ">\n", xcan);
+	_ASN_CALLBACK3("</", 2, mname, mlen, ">\n", xcan);
 
 	er.encoded = 4 + xcan + (2 * mlen) + tmper.encoded;
 
-	ASN__ENCODED_OK(er);
+	_ASN_ENCODED_OK(er);
 cb_failed:
-	ASN__ENCODE_FAILED;
+	_ASN_ENCODE_FAILED;
 }
 
 /*

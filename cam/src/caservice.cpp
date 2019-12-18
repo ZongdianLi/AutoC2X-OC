@@ -196,19 +196,20 @@ void CaService::receiveObd2Data() {
 void CaService::receiveAutowareData() { //実装
 	string serializedAutoware;
 	autowarePackage::AUTOWARE newAutoware;
-
+	int lastId = 0;
 	while (1) {
 		serializedAutoware = mReceiverAutoware->receiveData();
 		newAutoware.ParseFromString(serializedAutoware);
 		mLogger->logDebug("Received AUTOWARE with speed (m/s): " + to_string(10));
 		mMutexLatestAutoware.lock();
 		mLatestAutoware = newAutoware;
-		if(newAutoware.id() == 0){
+		if(newAutoware.id() != lastId){
 			waiting_data.clear();
 		}
 		waiting_data.push_back(newAutoware);
 		mMutexLatestAutoware.unlock();
-		atoc_delay_output_file << Utils::currentTime() << "," << (Utils::currentTime() - newAutoware.time()) / 1000000.0 << std::endl;
+		// atoc_delay_output_file << Utils::currentTime() << "," << (Utils::currentTime() - newAutoware.time()) / 1000000.0 << std::endl;
+		lastId = newAutoware.id();
 	}
 }
 
