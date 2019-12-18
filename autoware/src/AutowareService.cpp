@@ -78,11 +78,11 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	std::string filename = std::string(cur_dir) + "/../../../autoware/output/delay/" + timestamp + ".csv";
 	delay_output_file.open(filename, std::ios::out);
 
-	// mThreadReceive = new boost::thread(&AutowareService::receiveFromAutoware, this);
+	mThreadReceive = new boost::thread(&AutowareService::receiveFromAutoware, this);
 	mThreadReceiveFromCaService = new boost::thread(&AutowareService::receiveFromCaService, this);
 	
 	while(1){
-		testSender();
+//		testSender();
 		sleep(1);
 	}
 
