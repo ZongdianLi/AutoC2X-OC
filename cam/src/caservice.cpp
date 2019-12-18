@@ -201,11 +201,10 @@ void CaService::receiveAutowareData() {
 	autowarePackage::AUTOWARE newAutoware;
 	while (1) {
 		serializedAutoware = mReceiverAutoware->receiveData();
-		std::cout << "now receiving autoware ******" << std::endl;	
 		newAutoware.ParseFromString(serializedAutoware);
 		mMutexLatestAutoware.lock();
 		mLatestAutoware = newAutoware;
-		waiting_data.push_back(newAutoware);
+		std::cout << "now receiving autoware *******" << newAutoware.id() << std::endl;
 		mMutexLatestAutoware.unlock();
 		send(true);
 	}

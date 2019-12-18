@@ -137,6 +137,7 @@ void AutowareService::receiveFromCa() {
 
 		serializedCam = received.second;
 		cam.ParseFromString(serializedCam);
+		s_message.timestamp = cam.header().stationid();
 		std::cout << "stationid:" << cam.header().stationid() << " latitude:" << cam.coop().camparameters().basiccontainer().latitude() << " longitude:" << cam.coop().camparameters().basiccontainer().longitude() << " speed:" <<  cam.coop().camparameters().highfreqcontainer().basicvehiclehighfreqcontainer().speed() << std::endl;
 
 		s_message.latitude.push_back( cam.coop().camparameters().basiccontainer().latitude() );
@@ -167,7 +168,7 @@ void AutowareService::sendToAutoware(long timestamp){
 	// 	std::cout  <<  "latitude:" << std::setprecision(20) << s_message.latitude[i] << " longitude:" << s_message.longitude[i] << std::endl;
 	// }
 
-	s_message.timestamp = Utils::currentTime();
+	//s_message.timestamp = ;
 	std::stringstream ss;
 	boost::archive::text_oarchive archive(ss);
 	// cereal::BinaryOutputArchive archive(ss);
@@ -270,6 +271,7 @@ void AutowareService::receiveFromAutoware(){
 }
 
 void AutowareService::sendToCaService(socket_message msg){
+	std::cout << "sendToCaService:::::" << msg.latitude.size() << std::endl;
 	for(unsigned int i = 0; i < msg.latitude.size(); i++){
 		autowarePackage::AUTOWARE autoware;
 		autoware.set_id(msg.timestamp);

@@ -13,7 +13,7 @@
 /*
  * RELATIVE-OID basic type description.
  */
-static ber_tlv_tag_t asn_DEF_RELATIVE_OID_tags[] = {
+static const ber_tlv_tag_t asn_DEF_RELATIVE_OID_tags[] = {
 	(ASN_TAG_CLASS_UNIVERSAL | (13 << 2))
 };
 asn_TYPE_descriptor_t asn_DEF_RELATIVE_OID = {
@@ -153,16 +153,16 @@ RELATIVE_OID_encode_xer(asn_TYPE_descriptor_t *td, void *sptr,
 	(void)flags;	/* Unused argument */
 
 	if(!st || !st->buf)
-		_ASN_ENCODE_FAILED;
+		ASN__ENCODE_FAILED;
 
 	er.encoded = RELATIVE_OID__dump_body(st, cb, app_key);
-	if(er.encoded < 0) _ASN_ENCODE_FAILED;
+	if(er.encoded < 0) ASN__ENCODE_FAILED;
 
-	_ASN_ENCODED_OK(er);
+	ASN__ENCODED_OK(er);
 }
 
 int
-RELATIVE_OID_get_arcs(RELATIVE_OID_t *roid,
+RELATIVE_OID_get_arcs(const RELATIVE_OID_t *roid,
 	void *arcs, unsigned int arc_type_size, unsigned int arc_slots) {
 	void *arcs_end = (char *)arcs + (arc_slots * arc_type_size);
 	int num_arcs = 0;
