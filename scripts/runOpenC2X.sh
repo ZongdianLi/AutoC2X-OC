@@ -21,7 +21,6 @@ tmux send-keys "mkdir -p $OPENC2X/pingApp/output/delay" C-m
 tmux send-keys "mkdir -p $OPENC2X/autoware/output/delay" C-m
 tmux send-keys "mkdir -p $OPENC2X/cam/output/delay" C-m
 
-#tmux send-keys "cam" C-m
 tmux send-keys "cd $BUILD_DIR/cam/src" C-m
 tmux send-keys "./cam" C-m
 tmux split-window -v

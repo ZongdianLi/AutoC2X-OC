@@ -275,7 +275,7 @@ private:
 	};
 	LastSentCamInfo mLastSentCamInfo;
 
-	std::ofstream atoc_delay_output_file;
+	std::ofstream sent_file;
 
 	std::vector<autowarePackage::AUTOWARE> waiting_data;
 };

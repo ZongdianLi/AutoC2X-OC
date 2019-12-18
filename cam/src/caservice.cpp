@@ -95,8 +95,9 @@ CaService::CaService(CaServiceConfig &config, ptree& configTree) {
 	s<<lt->tm_sec;
 	std::string timestamp = s.str();
 
-	std::string filename = std::string(cur_dir) + "/../../../cam/output/delay/atoc" + timestamp + ".csv";
-	atoc_delay_output_file.open(filename, std::ios::out);
+	std::string filename = std::string(cur_dir) + "/../../../cam/output/sent_packet/" + timestamp + ".csv";
+	// std::string filename = std::string(cur_dir) + "/../cam/output/sent_packet/" + timestamp + ".csv";
+	sent_file.open(filename, std::ios::out);
 
 	if (mConfig.mGenerateMsgs) {
 		mTimer = new boost::asio::deadline_timer(mIoService, boost::posix_time::millisec(100));
@@ -208,7 +209,6 @@ void CaService::receiveAutowareData() { //実装
 		}
 		waiting_data.push_back(newAutoware);
 		mMutexLatestAutoware.unlock();
-		// atoc_delay_output_file << Utils::currentTime() << "," << (Utils::currentTime() - newAutoware.time()) / 1000000.0 << std::endl;
 		lastId = newAutoware.id();
 	}
 }
@@ -466,6 +466,7 @@ void CaService::send(bool isAutoware) {
 		mSenderToLdm->send("CAM", serializedProtoCam); //send serialized CAM to LDM
 		asn_DEF_CAM.free_struct(&asn_DEF_CAM, cam, 0);
 	}
+	sent_file << mLatestAutoware.id() << "," << waiting_data.size() << std::endl;
 	waiting_data.clear();
 	end = std::chrono::system_clock::now();
 	std::cout << "******* time elapsed*********" << std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << std::endl;
