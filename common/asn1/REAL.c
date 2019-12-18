@@ -1,10 +1,10 @@
 /*-
- * Copyright (c) 2004, 2006 Lev Walkin <vlm@lionet.info>. All rights reserved.
+ * Copyright (c) 2004-2013 Lev Walkin <vlm@lionet.info>. All rights reserved.
  * Redistribution and modifications are permitted subject to BSD license.
  */
-#if	defined(__alpha)
-#define	_ISOC99_SOURCE		/* For quiet NAN, through bits/nan.h */
+#define	_ISOC99_SOURCE		/* For ilogb() and quiet NAN */
 #define	_BSD_SOURCE		/* To reintroduce finite(3) */
+#if	defined(__alpha)
 #include <sys/resource.h>	/* For INFINITY */
 #endif
 #include <asn_internal.h>
@@ -27,10 +27,16 @@ static volatile double real_zero GCC_NOTUSED = 0.0;
 #define	INFINITY	(1.0/real_zero)
 #endif
 
+#ifdef isfinite
+#define _asn_isfinite(d)   isfinite(d)  /* ISO C99 */
+#else
+#define _asn_isfinite(d)   finite(d)    /* Deprecated on Mac OS X 10.9 */
+#endif
+
 /*
  * REAL basic type description.
  */
-static ber_tlv_tag_t asn_DEF_REAL_tags[] = {
+static const ber_tlv_tag_t asn_DEF_REAL_tags[] = {
 	(ASN_TAG_CLASS_UNIVERSAL | (9 << 2))
 };
 asn_TYPE_descriptor_t asn_DEF_REAL = {
@@ -88,7 +94,7 @@ REAL__dump(double d, int canonical, asn_app_consume_bytes_f *cb, void *app_key) 
 		buf = specialRealValue[SRV__NOT_A_NUMBER].string;
 		buflen = specialRealValue[SRV__NOT_A_NUMBER].length;
 		return (cb(buf, buflen, app_key) < 0) ? -1 : buflen;
-	} else if(!finite(d)) {
+	} else if(!_asn_isfinite(d)) {
 		if(copysign(1.0, d) < 0.0) {
 			buf = specialRealValue[SRV__MINUS_INFINITY].string;
 			buflen = specialRealValue[SRV__MINUS_INFINITY].length;
@@ -131,9 +137,16 @@ REAL__dump(double d, int canonical, asn_app_consume_bytes_f *cb, void *app_key) 
 		 * Transform the "[-]d.dddE+-dd" output into "[-]d.dddE[-]d"
 		 * Check that snprintf() constructed the output correctly.
 		 */
-		char *dot, *E;
+		char *dot;
 		char *end = buf + buflen;
 		char *last_zero;
+		char *prev_zero;
+        char *s;
+
+        enum {
+            LZSTATE_NOTHING,
+            LZSTATE_SEEN_ZERO
+        } lz_state = LZSTATE_NOTHING;
 
 		dot = (buf[0] == 0x2d /* '-' */) ? (buf + 2) : (buf + 1);
 		if(*dot >= 0x30) {
@@ -143,51 +156,67 @@ REAL__dump(double d, int canonical, asn_app_consume_bytes_f *cb, void *app_key) 
 		}
 		*dot = 0x2e;		/* Replace possible comma */
 
-		for(last_zero = dot + 2, E = dot; dot < end; E++) {
-			if(*E == 0x45) {
-				char *expptr = ++E;
-				char *s = expptr;
-				int sign;
-				if(*expptr == 0x2b /* '+' */) {
-					/* Skip the "+" */
-					buflen -= 1;
-					sign = 0;
-				} else {
-					sign = 1;
-					s++;
-				}
-				expptr++;
-				if(expptr > end) {
-					if(buf != local_buf) FREEMEM(buf);
-					errno = EINVAL;
-					return -1;
-				}
-				if(*expptr == 0x30) {
-					buflen--;
-					expptr++;
-				}
-				if(*last_zero == 0x30) {
-					*last_zero = 0x45;	/* E */
-					buflen -= s - (last_zero + 1);
-					s = last_zero + 1;
-					if(sign) {
-						*s++ = 0x2d /* '-' */;
-						buflen++;
-					}
-				}
-				for(; expptr <= end; s++, expptr++)
-					*s = *expptr;
-				break;
-			} else if(*E == 0x30) {
-				if(*last_zero != 0x30)
-					last_zero = E;
-			}
-		}
-		if(E == end) {
+		for(prev_zero = last_zero = s = dot + 2; s < end; s++) {
+            switch(*s) {
+            case 0x45: /* 'E' */
+                if(lz_state == LZSTATE_SEEN_ZERO)
+                    last_zero = prev_zero;
+                break;
+            case 0x30:  /* '0' */
+                if(lz_state == LZSTATE_NOTHING)
+                    prev_zero = s;
+                lz_state = LZSTATE_SEEN_ZERO;
+                continue;
+            default:
+                lz_state = LZSTATE_NOTHING;
+                continue;
+            }
+            break;
+        }
+
+		if(s == end) {
 			if(buf != local_buf) FREEMEM(buf);
 			errno = EINVAL;
 			return -1;		/* No promised E */
 		}
+
+        assert(*s == 0x45);
+        {
+            char *E = s;
+            char *expptr = ++E;
+            char *s = expptr;
+            int sign;
+
+            if(*expptr == 0x2b /* '+' */) {
+                /* Skip the "+" */
+                buflen -= 1;
+                sign = 0;
+            } else {
+                sign = 1;
+                s++;
+            }
+            expptr++;
+            if(expptr > end) {
+                if(buf != local_buf) FREEMEM(buf);
+                errno = EINVAL;
+                return -1;
+            }
+            if(*expptr == 0x30) {
+                buflen--;
+                expptr++;
+            }
+            if(*last_zero == 0x30) {
+                *last_zero = 0x45;	/* E */
+                buflen -= s - (last_zero + 1);
+                s = last_zero + 1;
+                if(sign) {
+                    *s++ = 0x2d /* '-' */;
+                    buflen++;
+                }
+            }
+            for(; expptr <= end; s++, expptr++)
+                *s = *expptr;
+        }
 	} else {
 		/*
 		 * Remove trailing zeros.
@@ -259,12 +288,12 @@ REAL_encode_xer(asn_TYPE_descriptor_t *td, void *sptr,
 	(void)ilevel;
 
 	if(!st || !st->buf || asn_REAL2double(st, &d))
-		_ASN_ENCODE_FAILED;
+		ASN__ENCODE_FAILED;
 
 	er.encoded = REAL__dump(d, flags & XER_F_CANONICAL, cb, app_key);
-	if(er.encoded < 0) _ASN_ENCODE_FAILED;
+	if(er.encoded < 0) ASN__ENCODE_FAILED;
 
-	_ASN_ENCODED_OK(er);
+	ASN__ENCODED_OK(er);
 }
 
 
@@ -458,7 +487,7 @@ asn_REAL2double(const REAL_t *st, double *dbl_value) {
 			return -1;
 		}
 		if(used_malloc) FREEMEM(buf);
-		if(finite(d)) {
+		if(_asn_isfinite(d)) {
 			*dbl_value = d;
 			return 0;
 		} else {
@@ -538,7 +567,7 @@ asn_REAL2double(const REAL_t *st, double *dbl_value) {
 	m = ldexp(m, scaleF) * pow(pow(2, base), expval);
 	 */
 	m = ldexp(m, expval * baseF + scaleF);
-	if(finite(m)) {
+	if(_asn_isfinite(m)) {
 		*dbl_value = sign ? -m : m;
 	} else {
 		errno = ERANGE;
@@ -599,7 +628,7 @@ asn_double2REAL(REAL_t *st, double dbl_value) {
 			st->buf[0] = 0x42;	/* NaN */
 			st->buf[1] = 0;
 			st->size = 1;
-		} else if(!finite(dbl_value)) {
+		} else if(!_asn_isfinite(dbl_value)) {
 			if(copysign(1.0, dbl_value) < 0.0) {
 				st->buf[0] = 0x41;	/* MINUS-INFINITY */
 			} else {

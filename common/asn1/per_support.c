@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005, 2006, 2007 Lev Walkin <vlm@lionet.info>.
+ * Copyright (c) 2005-2014 Lev Walkin <vlm@lionet.info>.
  * All rights reserved.
  * Redistribution and modifications are permitted subject to BSD license.
  */
@@ -12,7 +12,7 @@ per_data_string(asn_per_data_t *pd) {
 	static char buf[2][32];
 	static int n;
 	n = (n+1) % 2;
-	snprintf(buf[n], sizeof(buf),
+	snprintf(buf[n], sizeof(buf[n]),
 		"{m=%ld span %+ld[%d..%d] (%d)}",
 		(long)pd->moved,
 		(((long)pd->buffer) & 0xf),
@@ -109,7 +109,7 @@ per_get_few_bits(asn_per_data_t *pd, int nbits) {
 		(int)pd->moved,
 		(((long)pd->buffer) & 0xf),
 		(int)pd->nboff, (int)pd->nbits,
-		pd->buffer[0],
+		((pd->buffer != NULL)?pd->buffer[0]:0),
 		(int)(pd->nbits - pd->nboff),
 		(int)accum);
 
@@ -238,8 +238,8 @@ uper_get_nsnnwn(asn_per_data_t *pd) {
 }
 
 /*
- * Put the normally small non-negative whole number.
- * X.691, #10.6
+ * X.691-11/2008, #11.6
+ * Encoding of a normally small non-negative whole number
  */
 int
 uper_put_nsnnwn(asn_per_outp_t *po, int n) {
@@ -263,6 +263,58 @@ uper_put_nsnnwn(asn_per_outp_t *po, int n) {
 	return per_put_few_bits(po, n, 8 * bytes);
 }
 
+
+/* X.691-2008/11, #11.5.6 -> #11.3 */
+int uper_get_constrained_whole_number(asn_per_data_t *pd, unsigned long *out_value, int nbits) {
+	unsigned long lhalf;    /* Lower half of the number*/
+	long half;
+
+	if(nbits <= 31) {
+		half = per_get_few_bits(pd, nbits);
+		if(half < 0) return -1;
+		*out_value = half;
+		return 0;
+	}
+
+	if((size_t)nbits > 8 * sizeof(*out_value))
+		return -1;  /* RANGE */
+
+	half = per_get_few_bits(pd, 31);
+	if(half < 0) return -1;
+
+	if(uper_get_constrained_whole_number(pd, &lhalf, nbits - 31))
+		return -1;
+
+	*out_value = ((unsigned long)half << (nbits - 31)) | lhalf;
+	return 0;
+}
+
+
+/* X.691-2008/11, #11.5.6 -> #11.3 */
+int uper_put_constrained_whole_number_s(asn_per_outp_t *po, long v, int nbits) {
+	/*
+	 * Assume signed number can be safely coerced into
+	 * unsigned of the same range.
+	 * The following testing code will likely be optimized out
+	 * by compiler if it is true.
+	 */
+	unsigned long uvalue1 = ULONG_MAX;
+	         long svalue  = uvalue1;
+	unsigned long uvalue2 = svalue;
+	assert(uvalue1 == uvalue2);
+	return uper_put_constrained_whole_number_u(po, v, nbits);
+}
+
+int uper_put_constrained_whole_number_u(asn_per_outp_t *po, unsigned long v, int nbits) {
+	if(nbits <= 31) {
+		return per_put_few_bits(po, v, nbits);
+	} else {
+		/* Put higher portion first, followed by lower 31-bit */
+		if(uper_put_constrained_whole_number_u(po, v >> 31, nbits - 31))
+			return -1;
+		return per_put_few_bits(po, v, 31);
+	}
+}
 
 /*
  * Put a small number of bits (<= 31).
