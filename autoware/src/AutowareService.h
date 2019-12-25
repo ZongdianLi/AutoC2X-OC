@@ -185,7 +185,7 @@ private:
 	int flag;
 
 	std::ofstream delay_output_file;
-
+        std::ofstream timestamp_record_file;
 	socket_message s_message;	
 	socket_message tmp_message;	
 

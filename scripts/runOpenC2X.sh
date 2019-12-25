@@ -62,3 +62,4 @@ tmux send-keys "./autoware" C-m
 # tmux send-keys "gpsService" C-m
 
 tmux -2 attach-session -t $SESSION
+

@@ -79,8 +79,12 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	s<<lt->tm_sec;
 	std::string timestamp = s.str();
 
-	std::string filename = std::string(cur_dir) + "/../../../autoware/output/delay/" + timestamp + ".csv";
+	std::string filename = std::string(cur_dir) + "/../../../autoware/output/delay/receiver_delay_" + timestamp + ".csv";
 	delay_output_file.open(filename, std::ios::out);
+
+	filename = std::string(cur_dir) + "/../../../autoware/output/timestamp_record/receiver_timestamp_" + timestamp + ".csv";
+        timestamp_record_file.open(filename, std::ios::out);
+
 
 	std::cout << "socket open" << std::endl;
 	struct sockaddr_in addr;
@@ -173,6 +177,7 @@ void AutowareService::sendToAutoware(long timestamp){
 	// cereal::BinaryOutputArchive archive(ss);
 	archive << s_message;
 	std::cout << ss.str() << std::endl;
+	timestamp_record_file << s_message.timestamp << std::endl;
 	ss.seekg(0, ios::end);
 	if( send( sockfd, ss.str().c_str(), ss.tellp(), 0 ) < 0 ) {
 			perror( "send" );

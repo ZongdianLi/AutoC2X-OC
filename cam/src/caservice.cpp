@@ -163,13 +163,13 @@ void CaService::receive() {
 		camProto.SerializeToString(&serializedProtoCam);
 
 		// mLogger->logInfo("Forward incoming CAM " + to_string(cam->header.stationID) + " to LDM");
-		mSenderToLdm->send(envelope, serializedProtoCam);	//send serialized CAM to LDM
+		//mSenderToLdm->send(envelope, serializedProtoCam);	//send serialized CAM to LDM
 
 
 		reflect(cam);
 
 		//autowareモジュールにもここで送ってあげる
-		mSenderToAutoware->send(envelope, serializedProtoCam);
+		//mSenderToAutoware->send(envelope, serializedProtoCam);
 
 	}
 }
@@ -460,10 +460,11 @@ void CaService::send(bool isPingApp) {
 	camPackage::CAM camProto = convertAsn1toProtoBuf(cam);
 	string serializedProtoCam;
 	camProto.SerializeToString(&serializedProtoCam);
+	
 	mSenderToLdm->send("CAM", serializedProtoCam); //send serialized CAM to LDM
 
 	mSenderToAutoware->send("CAM", serializedProtoCam);//本来ここではpingAppに送信しなくて良い（自身の車両情報なので)
-
+	
     asn_DEF_CAM.free_struct(&asn_DEF_CAM, cam, 0);
 }
 
