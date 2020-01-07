@@ -91,12 +91,13 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	if( (sockfd = socket( AF_INET, SOCK_STREAM, 0) ) < 0 ) perror( "socket" ); 
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons( 23457 );
-	addr.sin_addr.s_addr = inet_addr( "192.168.1.2" );
+	addr.sin_addr.s_addr = inet_addr( "192.168.10.2" );
 	connect( sockfd, (struct sockaddr *)&addr, sizeof( struct sockaddr_in ) );
 	while(1){
 		//testSender();
 		sendToAutoware(100000);
-		sleep(1);
+		//sleep(1);
+		usleep(100000);
 	}
 
 }
