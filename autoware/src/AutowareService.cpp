@@ -112,6 +112,10 @@ void AutowareService::setData() {
 		autoware.set_longitude(s_message.longitude[i]);
 		autoware.set_latitude(s_message.latitude[i]);
 		sendToServices(autoware);
+		if(s_message.stationid[i] == 0){
+			latitude = s_message.latitude[i];
+			longitude = s_message.longitude[i];
+		}
 	}
 }
 
@@ -180,7 +184,7 @@ void AutowareService::sendBackToAutoware(socket_message msg){
 		if(( sock_fd = socket(AF_INET, SOCK_STREAM, 0) ) < 0 ) perror("socket");
 		addr.sin_family = AF_INET;
 		addr.sin_port = htons(23458);
-		addr.sin_addr.s_addr = inet_addr("192.168.1.2");
+		addr.sin_addr.s_addr = inet_addr("192.168.10.2");
 		//addr.sin_addr.s_addr = inet_addr("10.0.0.2");
 		connect( sock_fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in) );
 		flag = 100;
@@ -237,7 +241,7 @@ void AutowareService::testSender(){
 		s_message.longitude.push_back(139.759819 * 10000000);
 		s_message.time.push_back(1919);
 		setData();
-		sleep(1);
+		usleep(90000);
 	}
 }
 
@@ -253,7 +257,7 @@ void AutowareService::receiveFromCaService(){
 		cam.ParseFromString(serializedAutoware);
 		int64_t currTime = Utils::currentTime();
 		long genDeltaTime = (long)(currTime/1000000 - 10728504000) % 65536;
-		delay_output_file << std::setprecision(20) << cam.header().stationid() << "" << "," << genDeltaTime << "," << currTime << std::endl;
+		delay_output_file << std::setprecision(20) << cam.header().stationid() << "" << "," << genDeltaTime << "," << currTime << "," << latitude << "," << longitude << std::endl;
 
 		socket_message msg;
 		msg.timestamp = 10;

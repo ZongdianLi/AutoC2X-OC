@@ -277,7 +277,8 @@ private:
 
 	std::ofstream atoc_delay_output_file;
 
-	std::vector<autowarePackage::AUTOWARE> waiting_data;
+	//std::vector<autowarePackage::AUTOWARE> waiting_data;
+	std::list<autowarePackage::AUTOWARE> waiting_data;
 };
 
 /** @} */ //end group

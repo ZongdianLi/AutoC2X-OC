@@ -200,14 +200,17 @@ void CaService::receiveAutowareData() { //実装
 	while (1) {
 		serializedAutoware = mReceiverAutoware->receiveData();
 		newAutoware.ParseFromString(serializedAutoware);
-		mLogger->logDebug("Received AUTOWARE with speed (m/s): " + to_string(10));
-		mMutexLatestAutoware.lock();
-		mLatestAutoware = newAutoware;
-		if(newAutoware.id() == 0){
+		//mLogger->logDebug("Received AUTOWARE with speed (m/s): " + to_string(10));
+		//mMutexLatestAutoware.lock();
+		//mLatestAutoware = newAutoware;
+		//mMutexLatestAutoware.lock();
+		if(newAutoware.id() == 0 && waiting_data.size() == 0){
 			waiting_data.clear();
+			std::cout << "clear because 0" << std::endl;
+			//waiting_data.shrink_to_fit();
 		}
 		waiting_data.push_back(newAutoware);
-		mMutexLatestAutoware.unlock();
+		//mMutexLatestAutoware.unlock();
 		atoc_delay_output_file << Utils::currentTime() << "," << (Utils::currentTime() - newAutoware.time()) / 1000000.0 << std::endl;
 	}
 }
@@ -410,9 +413,9 @@ bool CaService::isTimeToTriggerCAM() {
 	//max. time interval 1s
 	int64_t currentTime = Utils::currentTime();
 	int64_t deltaTime = currentTime - mLastSentCamInfo.timestamp;
-	if(deltaTime >= 1*1000*1000*1000) {
+	if(deltaTime >= 1*100*1000*1000) {
 		sendCamInfo("time", deltaTime);
-		mLogger->logInfo("deltaTime: " + to_string(deltaTime));
+		//mLogger->logInfo("deltaTime: " + to_string(deltaTime));
 		return true;
 	}
 	return false;
@@ -428,13 +431,20 @@ void CaService::scheduleNextAlarm() {
 void CaService::send(bool isAutoware) {
 	std::chrono::system_clock::time_point start, end;
 	start = std::chrono::system_clock::now();
-	std::cout << "*********lets send CAM:" << waiting_data.size() << std::endl;
-	for(int i = 0; i< waiting_data.size(); i++){
+	std::cout << "*********lets send CAM:" << waiting_data.size() << "," << std::endl;
+	//mMutexLatestAutoware.lock();
+	std::list<autowarePackage::AUTOWARE>::iterator itr;
+	//for(int i = 0; i< waiting_data.size(); i++){
+        for(itr = waiting_data.begin(); itr != waiting_data.end(); itr++){	
 	// while(waiting_data.size() > 0){
 		// mLatestAutoware = waiting_data.back();
-		mLatestAutoware = waiting_data[i];
+		//mLatestAutoware = waiting_data[i];
+		if(waiting_data.size() == 0){
+			break;
+		}
+	        mLatestAutoware = *itr;	
 		// waiting_data.pop_back();
-
+		std::cout << "send****" << std::endl;
 		string serializedData;
 		dataPackage::DATA data;
 
@@ -442,7 +452,7 @@ void CaService::send(bool isAutoware) {
 		CAM_t* cam = generateCam(isAutoware);
 		vector<uint8_t> encodedCam = mMsgUtils->encodeMessage(&asn_DEF_CAM, cam);
 		string strCam(encodedCam.begin(), encodedCam.end());
-		mLogger->logDebug("Encoded CAM size: " + to_string(strCam.length()));
+		//mLogger->logDebug("Encoded CAM size: " + to_string(strCam.length()));
 
 		// data.set_id(messageID_cam);
 		data.set_id(messageID_cam);
@@ -455,7 +465,7 @@ void CaService::send(bool isAutoware) {
 		data.set_content(strCam);
 
 		data.SerializeToString(&serializedData);
-		mLogger->logInfo("Send new CAM to DCC and LDM\n");
+		//mLogger->logInfo("Send new CAM to DCC and LDM\n");
 
 		mSenderToDcc->send("CAM", serializedData);	//send serialized DATA to DCC
 
@@ -466,13 +476,16 @@ void CaService::send(bool isAutoware) {
 		asn_DEF_CAM.free_struct(&asn_DEF_CAM, cam, 0);
 	}
 	waiting_data.clear();
+	std::cout << "clear because queue" << std::endl;
+	//mMutexLatestAutoware.unlock();
+	//waiting_data.shrink_to_fit();
 	end = std::chrono::system_clock::now();
 	std::cout << "******* time elapsed*********" << std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << std::endl;
 }
 
 //generate new CAM with latest gps and obd2 data
 CAM_t* CaService::generateCam(bool isAutoware) {
-	mLogger->logDebug("Generating CAM as per UPER");
+	//mLogger->logDebug("Generating CAM as per UPER");
 	CAM_t* cam = static_cast<CAM_t*>(calloc(1, sizeof(CAM_t)));
 	if (!cam) {
 		throw runtime_error("could not allocate CAM_t");
