@@ -109,6 +109,8 @@ struct AutowareConfig {
 
 struct socket_message{
 	long timestamp;
+	float lat;
+	float lon;
 	std::vector<int> speed;
 	std::vector<int> latitude;
 	std::vector<int> longitude;
@@ -119,6 +121,8 @@ private:
 	template<class Archive>
 		void serialize( Archive& ar, std::uint32_t version){
 			ar & timestamp;
+			ar & lat;
+			ar & lon;
 			ar & speed;
 			ar & latitude;
 			ar & longitude;

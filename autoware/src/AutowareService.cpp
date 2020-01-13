@@ -260,7 +260,7 @@ void AutowareService::receiveFromAutoware(){
 		archive >> tmp_message;
 		std::cout << "received" << std::endl;
 
-		delay_output_file << tmp_message.timestamp << "," << Utils::currentTime() << std::endl;
+		delay_output_file << std::setprecision(20) << tmp_message.timestamp << "," << Utils::currentTime() << "," << tmp_message.lat << "," << tmp_message.lon << std::endl;
 
 		if ( rsize == 0 ) {
             break;
