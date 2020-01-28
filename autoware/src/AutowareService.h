@@ -120,7 +120,7 @@ private:
  */
 class AutowareService {
 public:
-	AutowareService(AutowareConfig &config);
+	AutowareService(AutowareConfig &config, int argc, char* argv[]	);
 	~AutowareService();
 
 	void setData();
@@ -134,6 +134,10 @@ public:
 	void sendBackToAutoware(socket_message msg);
 
 	void sendToServices(autowarePackage::AUTOWARE autoware);
+
+	 void loadOpt(int argc, char* argv[]);
+
+	 void fileConfigure();
 
 private:
 	AutowareConfig mConfig;
@@ -161,6 +165,8 @@ private:
 
 	int sock_fd;
 	int flag;
+	std::string host_addr;
+	bool isSender;
 };
 
 /** @} */ //end group

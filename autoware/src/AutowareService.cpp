@@ -39,7 +39,10 @@ using asio::ip::tcp;
 INITIALIZE_EASYLOGGINGPP
 
 
-AutowareService::AutowareService(AutowareConfig &config) {
+AutowareService::AutowareService(AutowareConfig &config, int argc, char* argv[]) {
+	loadOpt(argc, argv);
+
+
 	flag = -1;
 	try {
 		mGlobalConfig.loadConfig(AUTOWARE_CONFIG_NAME);
@@ -55,6 +58,31 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	mReceiverFromCaService = new CommunicationReceiver("23456", "CAM", *mLogger);
 	mLogger->logStats("speed (m/sec)");
 
+	fileConfigure();
+
+	mThreadReceive = new boost::thread(&AutowareService::receiveFromAutoware, this);
+	mThreadReceiveFromCaService = new boost::thread(&AutowareService::receiveFromCaService, this);
+
+	while(1){
+//		testSender();
+		sleep(1);
+	}
+
+}
+
+AutowareService::~AutowareService() {
+	delete mSender;
+	delete mLogger;
+
+	delete mReceiverFromCaService;
+	delete mThreadReceive;
+	delete mThreadReceiveFromCaService;
+	delete mThreadTestSender;
+
+}
+
+
+void AutowareService::fileConfigure(){
 	//autowareとの1対1の時だけファイルアウトプットはコメントアウトする
 	char cur_dir[1024];
 	getcwd(cur_dir, 1024);
@@ -78,27 +106,7 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	std::string filename = std::string(cur_dir) + "/../../../autoware/output/delay/" + timestamp + ".csv";
 	delay_output_file.open(filename, std::ios::out);
 
-	mThreadReceive = new boost::thread(&AutowareService::receiveFromAutoware, this);
-	mThreadReceiveFromCaService = new boost::thread(&AutowareService::receiveFromCaService, this);
-	
-	while(1){
-//		testSender();
-		sleep(1);
-	}
-
 }
-
-AutowareService::~AutowareService() {
-	delete mSender;
-	delete mLogger;
-
-	delete mReceiverFromCaService;
-	delete mThreadReceive;
-	delete mThreadReceiveFromCaService;
-	delete mThreadTestSender;
-
-}
-
 
 //simulates Autoware data, logs and sends it
 void AutowareService::setData() {
@@ -184,7 +192,7 @@ void AutowareService::sendBackToAutoware(socket_message msg){
 		if(( sock_fd = socket(AF_INET, SOCK_STREAM, 0) ) < 0 ) perror("socket");
 		addr.sin_family = AF_INET;
 		addr.sin_port = htons(23458);
-		addr.sin_addr.s_addr = inet_addr("192.168.10.2");
+		addr.sin_addr.s_addr = inet_addr(host_addr.c_str());
 		//addr.sin_addr.s_addr = inet_addr("10.0.0.2");
 		connect( sock_fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in) );
 		flag = 100;
@@ -269,8 +277,42 @@ void AutowareService::receiveFromCaService(){
 	}
 }
 
-int main(int argc,  char* argv[]) {
+void AutowareService::loadOpt(int argc, char* argv[]){
+	int i, opt;
+	bool isSender = false;
+    opterr = 0; //getopt()のエラーメッセージを無効にする。
+    while ((opt = getopt(argc, argv, "sra:")) != -1) {
+        //コマンドライン引数のオプションがなくなるまで繰り返す
+        switch (opt) {
+            case 's':
+				isSender = true;
+                break;
 
+            case 'r':
+				isSender = false;
+                break;
+
+            default: /* '?' */
+                //指定していないオプションが渡された場合
+                printf("Usage: %s [-s] [-r] ip_addr ...\n", argv[0]);
+                break;
+        }
+    }
+
+    //オプション以外の引数を出力する
+    for (i = optind; i < argc; i++) {
+		host_addr = std::string(argv[2]);
+		break;
+    }
+	if(host_addr.length() < 5){
+		printf("ip_addr needed: Usage: %s [-s] [-r] ip_addr ...\n run as router's ip_addr = 192.168.10.1", argv[0]);
+		host_addr = "192.168.10.1";
+	}
+
+	std::cout << "isSender:" << isSender << " ip:" << host_addr << std::endl;
+}
+
+int main(int argc,  char* argv[]) {
 	AutowareConfig config;
 	try {
 		config.loadConfig();
@@ -279,7 +321,7 @@ int main(int argc,  char* argv[]) {
 		cerr << "Error while loading config.xml: " << e.what() << endl << flush;
 		return EXIT_FAILURE;
 	}
-	AutowareService autoware(config);
+	AutowareService autoware(config, argc, argv);
 
 	return 0;
 }

@@ -11,15 +11,15 @@
 /*
  * OCTET STRING basic type description.
  */
-static const ber_tlv_tag_t asn_DEF_OCTET_STRING_tags[] = {
+static ber_tlv_tag_t asn_DEF_OCTET_STRING_tags[] = {
 	(ASN_TAG_CLASS_UNIVERSAL | (4 << 2))
 };
-static const asn_OCTET_STRING_specifics_t asn_DEF_OCTET_STRING_specs = {
+static asn_OCTET_STRING_specifics_t asn_DEF_OCTET_STRING_specs = {
 	sizeof(OCTET_STRING_t),
 	offsetof(OCTET_STRING_t, _asn_ctx),
 	ASN_OSUBV_STR
 };
-static const asn_per_constraints_t asn_DEF_OCTET_STRING_constraints = {
+static asn_per_constraints_t asn_DEF_OCTET_STRING_constraints = {
 	{ APC_CONSTRAINED, 8, 8, 0, 255 },
 	{ APC_SEMI_CONSTRAINED, -1, -1, 0, 0 },
 	0, 0
@@ -548,7 +548,7 @@ OCTET_STRING_encode_der(asn_TYPE_descriptor_t *td, void *sptr,
 
 	if(!cb) {
 		er.encoded += (type_variant == ASN_OSUBV_BIT) + st->size;
-		ASN__ENCODED_OK(er);
+		_ASN_ENCODED_OK(er);
 	}
 
 	/*
@@ -557,30 +557,30 @@ OCTET_STRING_encode_der(asn_TYPE_descriptor_t *td, void *sptr,
 	if(type_variant == ASN_OSUBV_BIT) {
 		uint8_t b = st->bits_unused & 0x07;
 		if(b && st->size) fix_last_byte = 1;
-		ASN__CALLBACK(&b, 1);
+		_ASN_CALLBACK(&b, 1);
 		er.encoded++;
 	}
 
 	/* Invoke callback for the main part of the buffer */
-	ASN__CALLBACK(st->buf, st->size - fix_last_byte);
+	_ASN_CALLBACK(st->buf, st->size - fix_last_byte);
 
 	/* The last octet should be stripped off the unused bits */
 	if(fix_last_byte) {
 		uint8_t b = st->buf[st->size-1] & (0xff << st->bits_unused);
-		ASN__CALLBACK(&b, 1);
+		_ASN_CALLBACK(&b, 1);
 	}
 
 	er.encoded += st->size;
-	ASN__ENCODED_OK(er);
+	_ASN_ENCODED_OK(er);
 cb_failed:
-	ASN__ENCODE_FAILED;
+	_ASN_ENCODE_FAILED;
 }
 
 asn_enc_rval_t
 OCTET_STRING_encode_xer(asn_TYPE_descriptor_t *td, void *sptr,
 	int ilevel, enum xer_encoder_flags_e flags,
 		asn_app_consume_bytes_f *cb, void *app_key) {
-	const char * const h2c = "0123456789ABCDEF";
+	static const char *h2c = "0123456789ABCDEF";
 	const OCTET_STRING_t *st = (const OCTET_STRING_t *)sptr;
 	asn_enc_rval_t er;
 	char scratch[16 * 3 + 4];
@@ -590,7 +590,7 @@ OCTET_STRING_encode_xer(asn_TYPE_descriptor_t *td, void *sptr,
 	size_t i;
 
 	if(!st || (!st->buf && st->size))
-		ASN__ENCODE_FAILED;
+		_ASN_ENCODE_FAILED;
 
 	er.encoded = 0;
 
@@ -603,7 +603,7 @@ OCTET_STRING_encode_xer(asn_TYPE_descriptor_t *td, void *sptr,
 		char *scend = scratch + (sizeof(scratch) - 2);
 		for(; buf < end; buf++) {
 			if(p >= scend) {
-				ASN__CALLBACK(scratch, p - scratch);
+				_ASN_CALLBACK(scratch, p - scratch);
 				er.encoded += p - scratch;
 				p = scratch;
 			}
@@ -611,15 +611,15 @@ OCTET_STRING_encode_xer(asn_TYPE_descriptor_t *td, void *sptr,
 			*p++ = h2c[*buf & 0x0F];
 		}
 
-		ASN__CALLBACK(scratch, p-scratch);	/* Dump the rest */
+		_ASN_CALLBACK(scratch, p-scratch);	/* Dump the rest */
 		er.encoded += p - scratch;
 	} else {
 		for(i = 0; buf < end; buf++, i++) {
 			if(!(i % 16) && (i || st->size > 16)) {
-				ASN__CALLBACK(scratch, p-scratch);
+				_ASN_CALLBACK(scratch, p-scratch);
 				er.encoded += (p-scratch);
 				p = scratch;
-				ASN__TEXT_INDENT(1, ilevel);
+				_i_ASN_TEXT_INDENT(1, ilevel);
 			}
 			*p++ = h2c[(*buf >> 4) & 0x0F];
 			*p++ = h2c[*buf & 0x0F];
@@ -627,20 +627,20 @@ OCTET_STRING_encode_xer(asn_TYPE_descriptor_t *td, void *sptr,
 		}
 		if(p - scratch) {
 			p--;	/* Remove the tail space */
-			ASN__CALLBACK(scratch, p-scratch); /* Dump the rest */
+			_ASN_CALLBACK(scratch, p-scratch); /* Dump the rest */
 			er.encoded += p - scratch;
 			if(st->size > 16)
-				ASN__TEXT_INDENT(1, ilevel-1);
+				_i_ASN_TEXT_INDENT(1, ilevel-1);
 		}
 	}
 
-	ASN__ENCODED_OK(er);
+	_ASN_ENCODED_OK(er);
 cb_failed:
-	ASN__ENCODE_FAILED;
+	_ASN_ENCODE_FAILED;
 }
 
-static const struct OCTET_STRING__xer_escape_table_s {
-	const char *string;
+static struct OCTET_STRING__xer_escape_table_s {
+	char *string;
 	int size;
 } OCTET_STRING__xer_escape_table[] = {
 #define	OSXET(s)	{ s, sizeof(s) - 1 }
@@ -702,7 +702,7 @@ OS__check_escaped_control_char(const void *buf, int size) {
 	 * nested table lookups).
 	 */
 	for(i = 0; i < 32 /* Don't spend time on the bottom half */; i++) {
-		const struct OCTET_STRING__xer_escape_table_s *el;
+		struct OCTET_STRING__xer_escape_table_s *el;
 		el = &OCTET_STRING__xer_escape_table[i];
 		if(el->size == size && memcmp(buf, el->string, size) == 0)
 			return i;
@@ -746,7 +746,7 @@ OCTET_STRING_encode_xer_utf8(asn_TYPE_descriptor_t *td, void *sptr,
 	(void)flags;	/* Unused argument */
 
 	if(!st || (!st->buf && st->size))
-		ASN__ENCODE_FAILED;
+		_ASN_ENCODE_FAILED;
 
 	buf = st->buf;
 	end = buf + st->size;
@@ -763,7 +763,7 @@ OCTET_STRING_encode_xer_utf8(asn_TYPE_descriptor_t *td, void *sptr,
 			if(((buf - ss) && cb(ss, buf - ss, app_key) < 0)
 			|| cb(OCTET_STRING__xer_escape_table[ch].string, s_len,
 					app_key) < 0)
-				ASN__ENCODE_FAILED;
+				_ASN_ENCODE_FAILED;
 			encoded_len += (buf - ss) + s_len;
 			ss = buf + 1;
 		}
@@ -771,10 +771,10 @@ OCTET_STRING_encode_xer_utf8(asn_TYPE_descriptor_t *td, void *sptr,
 
 	encoded_len += (buf - ss);
 	if((buf - ss) && cb(ss, buf - ss, app_key) < 0)
-		ASN__ENCODE_FAILED;
+		_ASN_ENCODE_FAILED;
 
 	er.encoded = encoded_len;
-	ASN__ENCODED_OK(er);
+	_ASN_ENCODED_OK(er);
 }
 
 /*
@@ -1520,7 +1520,7 @@ OCTET_STRING_encode_uper(asn_TYPE_descriptor_t *td,
 	int ct_extensible;
 
 	if(!st || (!st->buf && st->size))
-		ASN__ENCODE_FAILED;
+		_ASN_ENCODE_FAILED;
 
 	if(pc) {
 		cval = &pc->value;
@@ -1534,7 +1534,7 @@ OCTET_STRING_encode_uper(asn_TYPE_descriptor_t *td,
 	switch(specs->subvariant) {
 	default:
 	case ASN_OSUBV_ANY:
-		ASN__ENCODE_FAILED;
+		_ASN_ENCODE_FAILED;
 	case ASN_OSUBV_BIT:
 		canonical_unit_bits = unit_bits = 1;
 		bpc = OS__BPC_BIT;
@@ -1571,7 +1571,7 @@ OCTET_STRING_encode_uper(asn_TYPE_descriptor_t *td,
 		csiz->lower_bound, csiz->upper_bound,
 		csiz->effective_bits, ct_extensible ? " EXT" : "");
 
-	/* Figure out whether size lies within PER visible constraint */
+	/* Figure out wheter size lies within PER visible constraint */
 
 	if(csiz->effective_bits >= 0) {
 		if((int)sizeinunits < csiz->lower_bound
@@ -1582,7 +1582,7 @@ OCTET_STRING_encode_uper(asn_TYPE_descriptor_t *td,
 				unit_bits = canonical_unit_bits;
 				inext = 1;
 			} else
-				ASN__ENCODE_FAILED;
+				_ASN_ENCODE_FAILED;
 		}
 	} else {
 		inext = 0;
@@ -1591,7 +1591,7 @@ OCTET_STRING_encode_uper(asn_TYPE_descriptor_t *td,
 	if(ct_extensible) {
 		/* Declare whether length is [not] within extension root */
 		if(per_put_few_bits(po, inext, 1))
-			ASN__ENCODE_FAILED;
+			_ASN_ENCODE_FAILED;
 	}
 
 	/* X.691, #16.5: zero-length encoding */
@@ -1603,7 +1603,7 @@ OCTET_STRING_encode_uper(asn_TYPE_descriptor_t *td,
 				csiz->effective_bits);
 		ret = per_put_few_bits(po, sizeinunits - csiz->lower_bound,
 				csiz->effective_bits);
-		if(ret) ASN__ENCODE_FAILED;
+		if(ret) _ASN_ENCODE_FAILED;
 		if(bpc) {
 			ret = OCTET_STRING_per_put_characters(po, st->buf,
 				sizeinunits, bpc, unit_bits,
@@ -1612,22 +1612,22 @@ OCTET_STRING_encode_uper(asn_TYPE_descriptor_t *td,
 			ret = per_put_many_bits(po, st->buf,
 				sizeinunits * unit_bits);
 		}
-		if(ret) ASN__ENCODE_FAILED;
-		ASN__ENCODED_OK(er);
+		if(ret) _ASN_ENCODE_FAILED;
+		_ASN_ENCODED_OK(er);
 	}
 
 	ASN_DEBUG("Encoding %d bytes", st->size);
 
 	if(sizeinunits == 0) {
 		if(uper_put_length(po, 0))
-			ASN__ENCODE_FAILED;
-		ASN__ENCODED_OK(er);
+			_ASN_ENCODE_FAILED;
+		_ASN_ENCODED_OK(er);
 	}
 
 	buf = st->buf;
 	while(sizeinunits) {
 		ssize_t maySave = uper_put_length(po, sizeinunits);
-		if(maySave < 0) ASN__ENCODE_FAILED;
+		if(maySave < 0) _ASN_ENCODE_FAILED;
 
 		ASN_DEBUG("Encoding %ld of %ld",
 			(long)maySave, (long)sizeinunits);
@@ -1639,7 +1639,7 @@ OCTET_STRING_encode_uper(asn_TYPE_descriptor_t *td,
 		} else {
 			ret = per_put_many_bits(po, buf, maySave * unit_bits);
 		}
-		if(ret) ASN__ENCODE_FAILED;
+		if(ret) _ASN_ENCODE_FAILED;
 
 		if(bpc)
 			buf += maySave * bpc;
@@ -1649,13 +1649,13 @@ OCTET_STRING_encode_uper(asn_TYPE_descriptor_t *td,
 		assert(!(maySave & 0x07) || !sizeinunits);
 	}
 
-	ASN__ENCODED_OK(er);
+	_ASN_ENCODED_OK(er);
 }
 
 int
 OCTET_STRING_print(asn_TYPE_descriptor_t *td, const void *sptr, int ilevel,
 	asn_app_consume_bytes_f *cb, void *app_key) {
-	const char * const h2c = "0123456789ABCDEF";
+	static const char *h2c = "0123456789ABCDEF";
 	const OCTET_STRING_t *st = (const OCTET_STRING_t *)sptr;
 	char scratch[16 * 3 + 4];
 	char *p = scratch;
@@ -1712,17 +1712,15 @@ OCTET_STRING_print_utf8(asn_TYPE_descriptor_t *td, const void *sptr,
 void
 OCTET_STRING_free(asn_TYPE_descriptor_t *td, void *sptr, int contents_only) {
 	OCTET_STRING_t *st = (OCTET_STRING_t *)sptr;
-	asn_OCTET_STRING_specifics_t *specs;
-	asn_struct_ctx_t *ctx;
+	asn_OCTET_STRING_specifics_t *specs = td->specifics
+				? (asn_OCTET_STRING_specifics_t *)td->specifics
+				: &asn_DEF_OCTET_STRING_specs;
+	asn_struct_ctx_t *ctx = (asn_struct_ctx_t *)
+					((char *)st + specs->ctx_offset);
 	struct _stack *stck;
 
 	if(!td || !st)
 		return;
-
-	specs = td->specifics
-		    ? (asn_OCTET_STRING_specifics_t *)td->specifics
-		    : &asn_DEF_OCTET_STRING_specs;
-	ctx = (asn_struct_ctx_t *)((char *)st + specs->ctx_offset);
 
 	ASN_DEBUG("Freeing %s as OCTET STRING", td->name);
 

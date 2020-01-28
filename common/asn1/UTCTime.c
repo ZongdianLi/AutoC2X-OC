@@ -13,12 +13,12 @@
 #include <time.h>
 #endif	/* __CYGWIN__ */
 
-#ifndef	ASN___INTERNAL_TEST_MODE
+#ifndef	__ASN_INTERNAL_TEST_MODE__
 
 /*
  * UTCTime basic type description.
  */
-static const ber_tlv_tag_t asn_DEF_UTCTime_tags[] = {
+static ber_tlv_tag_t asn_DEF_UTCTime_tags[] = {
 	(ASN_TAG_CLASS_UNIVERSAL | (23 << 2)),	/* [UNIVERSAL 23] IMPLICIT ...*/
 	(ASN_TAG_CLASS_UNIVERSAL | (26 << 2)),  /* [UNIVERSAL 26] IMPLICIT ...*/
 	(ASN_TAG_CLASS_UNIVERSAL | (4 << 2))    /* ... OCTET STRING */
@@ -52,7 +52,7 @@ asn_TYPE_descriptor_t asn_DEF_UTCTime = {
 	0	/* No specifics */
 };
 
-#endif	/* ASN___INTERNAL_TEST_MODE */
+#endif	/* __ASN_INTERNAL_TEST_MODE__ */
 
 /*
  * Check that the time looks like the time.
@@ -66,7 +66,7 @@ UTCTime_constraint(asn_TYPE_descriptor_t *td, const void *sptr,
 	errno = EPERM;			/* Just an unlikely error code */
 	tloc = asn_UT2time(st, 0, 0);
 	if(tloc == -1 && errno != EPERM) {
-		ASN__CTFAIL(app_key, td, sptr,
+		_ASN_CTFAIL(app_key, td, sptr,
 			"%s: Invalid time format: %s (%s:%d)",
 			td->name, strerror(errno), __FILE__, __LINE__);
 		return -1;
@@ -75,7 +75,7 @@ UTCTime_constraint(asn_TYPE_descriptor_t *td, const void *sptr,
 	return 0;
 }
 
-#ifndef	ASN___INTERNAL_TEST_MODE
+#ifndef	__ASN_INTERNAL_TEST_MODE__
 
 asn_enc_rval_t
 UTCTime_encode_xer(asn_TYPE_descriptor_t *td, void *sptr,
@@ -90,11 +90,11 @@ UTCTime_encode_xer(asn_TYPE_descriptor_t *td, void *sptr,
 		errno = EPERM;
 		if(asn_UT2time((UTCTime_t *)sptr, &tm, 1) == -1
 				&& errno != EPERM)
-			ASN__ENCODE_FAILED;
+			_ASN_ENCODE_FAILED;
 
 		/* Fractions are not allowed in UTCTime */
 		ut = asn_time2GT(0, 0, 1);
-		if(!ut) ASN__ENCODE_FAILED;
+		if(!ut) _ASN_ENCODE_FAILED;
 
 		rv = OCTET_STRING_encode_xer_utf8(td, sptr, ilevel, flags,
 			cb, app_key);
@@ -106,7 +106,7 @@ UTCTime_encode_xer(asn_TYPE_descriptor_t *td, void *sptr,
 	}
 }
 
-#endif	/* ASN___INTERNAL_TEST_MODE */
+#endif	/* __ASN_INTERNAL_TEST_MODE__ */
 
 int
 UTCTime_print(asn_TYPE_descriptor_t *td, const void *sptr, int ilevel,
