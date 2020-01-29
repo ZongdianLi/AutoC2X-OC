@@ -281,7 +281,7 @@ void AutowareService::loadOpt(int argc, char* argv[]){
 	int i, opt;
 	bool isSender = false;
     opterr = 0; //getopt()のエラーメッセージを無効にする。
-    while ((opt = getopt(argc, argv, "sra:")) != -1) {
+    while ((opt = getopt(argc, argv, "sr")) != -1) {
         //コマンドライン引数のオプションがなくなるまで繰り返す
         switch (opt) {
             case 's':
