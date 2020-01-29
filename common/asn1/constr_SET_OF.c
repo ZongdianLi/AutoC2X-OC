@@ -359,7 +359,7 @@ SET_OF_encode_der(asn_TYPE_descriptor_t *td, void *ptr,
 
 	if(!cb || list->count == 0) {
 		erval.encoded = computed_size;
-		ASN__ENCODED_OK(erval);
+		_ASN_ENCODED_OK(erval);
 	}
 
 	/*
@@ -451,7 +451,7 @@ SET_OF_encode_der(asn_TYPE_descriptor_t *td, void *ptr,
 		erval.encoded = computed_size;
 	}
 
-	ASN__ENCODED_OK(erval);
+	_ASN_ENCODED_OK(erval);
 }
 
 #undef	XER_ADVANCE
@@ -549,12 +549,11 @@ SET_OF_decode_xer(asn_codec_ctx_t *opt_codec_ctx, asn_TYPE_descriptor_t *td,
 		 */
 		ch_size = xer_next_token(&ctx->context,
 			buf_ptr, size, &ch_type);
-		if(ch_size == -1) {
-            RETURN(RC_FAIL);
-        } else {
+		switch(ch_size) {
+		case -1: RETURN(RC_FAIL);
+		case 0:  RETURN(RC_WMORE);
+		default:
 			switch(ch_type) {
-            case PXER_WMORE:
-                RETURN(RC_WMORE);
 			case PXER_COMMENT:	/* Got XML comment */
 			case PXER_TEXT:		/* Ignore free-standing text */
 				XER_ADVANCE(ch_size);	/* Skip silently */
@@ -668,11 +667,11 @@ SET_OF_encode_xer(asn_TYPE_descriptor_t *td, void *sptr,
 	asn_app_consume_bytes_f *original_cb = cb;
 	int i;
 
-	if(!sptr) ASN__ENCODE_FAILED;
+	if(!sptr) _ASN_ENCODE_FAILED;
 
 	if(xcan) {
 		encs = (xer_tmp_enc_t *)MALLOC(list->count * sizeof(encs[0]));
-		if(!encs) ASN__ENCODE_FAILED;
+		if(!encs) _ASN_ENCODE_FAILED;
 		cb = SET_OF_encode_xer_callback;
 	}
 
@@ -691,12 +690,12 @@ SET_OF_encode_xer(asn_TYPE_descriptor_t *td, void *sptr,
 		}
 
 		if(mname) {
-			if(!xcan) ASN__TEXT_INDENT(1, ilevel);
-			ASN__CALLBACK3("<", 1, mname, mlen, ">", 1);
+			if(!xcan) _i_ASN_TEXT_INDENT(1, ilevel);
+			_ASN_CALLBACK3("<", 1, mname, mlen, ">", 1);
 		}
 
 		if(!xcan && specs->as_XMLValueList == 1)
-			ASN__TEXT_INDENT(1, ilevel + 1);
+			_i_ASN_TEXT_INDENT(1, ilevel + 1);
 		tmper = elm->type->xer_encoder(elm->type, memb_ptr,
 				ilevel + (specs->as_XMLValueList != 2),
 				flags, cb, app_key);
@@ -708,18 +707,18 @@ SET_OF_encode_xer(asn_TYPE_descriptor_t *td, void *sptr,
 		if(tmper.encoded == 0 && specs->as_XMLValueList) {
 			const char *name = elm->type->xml_tag;
 			size_t len = strlen(name);
-			ASN__CALLBACK3("<", 1, name, len, "/>", 2);
+			_ASN_CALLBACK3("<", 1, name, len, "/>", 2);
 		}
 
 		if(mname) {
-			ASN__CALLBACK3("</", 2, mname, mlen, ">", 1);
+			_ASN_CALLBACK3("</", 2, mname, mlen, ">", 1);
 			er.encoded += 5;
 		}
 
 		er.encoded += (2 * mlen) + tmper.encoded;
 	}
 
-	if(!xcan) ASN__TEXT_INDENT(1, ilevel - 1);
+	if(!xcan) _i_ASN_TEXT_INDENT(1, ilevel - 1);
 
 	if(encs) {
 		xer_tmp_enc_t *enc = encs;
@@ -731,7 +730,7 @@ SET_OF_encode_xer(asn_TYPE_descriptor_t *td, void *sptr,
 		qsort(encs, encs_count, sizeof(encs[0]), SET_OF_xer_order);
 
 		for(; enc < end; enc++) {
-			ASN__CALLBACK(enc->buffer, enc->offset);
+			_ASN_CALLBACK(enc->buffer, enc->offset);
 			FREEMEM(enc->buffer);
 			enc->buffer = 0;
 			control_size += enc->offset;
@@ -752,7 +751,7 @@ cleanup:
 		}
 		FREEMEM(encs);
 	}
-	ASN__ENCODED_OK(er);
+	_ASN_ENCODED_OK(er);
 }
 
 int
@@ -831,7 +830,7 @@ SET_OF_constraint(asn_TYPE_descriptor_t *td, const void *sptr,
 	int i;
 
 	if(!sptr) {
-		ASN__CTFAIL(app_key, td, sptr,
+		_ASN_CTFAIL(app_key, td, sptr,
 			"%s: value not given (%s:%d)",
 			td->name, __FILE__, __LINE__);
 		return -1;
@@ -876,15 +875,15 @@ SET_OF_decode_uper(asn_codec_ctx_t *opt_codec_ctx, asn_TYPE_descriptor_t *td,
 	int repeat = 0;
 	ssize_t nelems;
 
-	if(ASN__STACK_OVERFLOW_CHECK(opt_codec_ctx))
-		ASN__DECODE_FAILED;
+	if(_ASN_STACK_OVERFLOW_CHECK(opt_codec_ctx))
+		_ASN_DECODE_FAILED;
 
 	/*
 	 * Create the target structure if it is not present already.
 	 */
 	if(!st) {
 		st = *sptr = CALLOC(1, specs->struct_size);
-		if(!st) ASN__DECODE_FAILED;
+		if(!st) _ASN_DECODE_FAILED;
 	}                                                                       
 	list = _A_SET_FROM_VOID(st);
 
@@ -895,7 +894,7 @@ SET_OF_decode_uper(asn_codec_ctx_t *opt_codec_ctx, asn_TYPE_descriptor_t *td,
 
 	if(ct && ct->flags & APC_EXTENSIBLE) {
 		int value = per_get_few_bits(pd, 1);
-		if(value < 0) ASN__DECODE_STARVED;
+		if(value < 0) _ASN_DECODE_STARVED;
 		if(value) ct = 0;	/* Not restricted! */
 	}
 
@@ -904,7 +903,7 @@ SET_OF_decode_uper(asn_codec_ctx_t *opt_codec_ctx, asn_TYPE_descriptor_t *td,
 		nelems = per_get_few_bits(pd, ct->effective_bits);
 		ASN_DEBUG("Preparing to fetch %ld+%ld elements from %s",
 			(long)nelems, ct->lower_bound, td->name);
-		if(nelems < 0)  ASN__DECODE_STARVED;
+		if(nelems < 0)  _ASN_DECODE_STARVED;
 		nelems += ct->lower_bound;
 	} else {
 		nelems = -1;
@@ -917,7 +916,7 @@ SET_OF_decode_uper(asn_codec_ctx_t *opt_codec_ctx, asn_TYPE_descriptor_t *td,
 				ct ? ct->effective_bits : -1, &repeat);
 			ASN_DEBUG("Got to decode %d elements (eff %d)",
 				(int)nelems, (int)(ct ? ct->effective_bits : -1));
-			if(nelems < 0) ASN__DECODE_STARVED;
+			if(nelems < 0) _ASN_DECODE_STARVED;
 		}
 
 		for(i = 0; i < nelems; i++) {

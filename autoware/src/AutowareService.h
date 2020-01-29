@@ -136,9 +136,8 @@ private:
 class AutowareService {
 public:
 	// AutowareService(AutowareConfig &config, std::string globalConfig, std::string loggingConf, std::string statisticConf);
-	AutowareService(AutowareConfig &config);
+	AutowareService(AutowareConfig &config, int argc, char* argv[]);
 	~AutowareService();
-	void init();
 
 	void receiveData(const boost::system::error_code &ec, SerialPort* serial);
 	
@@ -149,12 +148,17 @@ public:
 
 	void timeCalc();
 
-	void sendToAutoware(long timestamp);
+	void sendToAutoware();
 
 	void testSender();
 
 	void receiveFromAutoware();
 
+	void fileConfigure();
+
+	void loadOpt(int argc, char* argv[]);
+
+	void createSocket();
 
 
 
@@ -189,7 +193,7 @@ private:
 	int flag;
 
 	std::ofstream delay_output_file;
-        std::ofstream timestamp_record_file;
+	std::ofstream timestamp_record_file;
 	socket_message s_message;	
 	socket_message tmp_message;	
 
@@ -198,6 +202,9 @@ private:
 	CommunicationClient* mClientCam;
 
 	long newestLdmKey;
+
+	std::string host_addr;
+	bool isSender;
 
 };
 

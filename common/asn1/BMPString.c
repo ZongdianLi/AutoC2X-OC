@@ -9,7 +9,7 @@
 /*
  * BMPString basic type description.
  */
-static const ber_tlv_tag_t asn_DEF_BMPString_tags[] = {
+static ber_tlv_tag_t asn_DEF_BMPString_tags[] = {
 	(ASN_TAG_CLASS_UNIVERSAL | (30 << 2)),	/* [UNIVERSAL 30] IMPLICIT ...*/
 	(ASN_TAG_CLASS_UNIVERSAL | (4 << 2))	/* ... OCTET STRING */
 };
@@ -143,7 +143,7 @@ BMPString_decode_xer(asn_codec_ctx_t *opt_codec_ctx,
 				return rc;
 			} else {
 				dstwc[wcs_len] = 0;	/* nul-terminate */
-				wcs = (uint32_t *)(void *)dstwc; /* Alignment OK */
+				wcs = (uint32_t *)dstwc;
 			}
 		}
 
@@ -165,12 +165,12 @@ BMPString_encode_xer(asn_TYPE_descriptor_t *td, void *sptr,
 	(void)flags;
 
 	if(!st || !st->buf)
-		ASN__ENCODE_FAILED;
+		_ASN_ENCODE_FAILED;
 
 	er.encoded = BMPString__dump(st, cb, app_key);
-	if(er.encoded < 0) ASN__ENCODE_FAILED;
+	if(er.encoded < 0) _ASN_ENCODE_FAILED;
 
-	ASN__ENCODED_OK(er);
+	_ASN_ENCODED_OK(er);
 }
 
 int

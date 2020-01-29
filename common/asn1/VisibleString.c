@@ -8,7 +8,7 @@
 /*
  * VisibleString basic type description.
  */
-static const ber_tlv_tag_t asn_DEF_VisibleString_tags[] = {
+static ber_tlv_tag_t asn_DEF_VisibleString_tags[] = {
 	(ASN_TAG_CLASS_UNIVERSAL | (26 << 2)),	/* [UNIVERSAL 26] IMPLICIT ...*/
 	(ASN_TAG_CLASS_UNIVERSAL | (4 << 2))	/* ... OCTET STRING */
 };
@@ -58,7 +58,7 @@ VisibleString_constraint(asn_TYPE_descriptor_t *td, const void *sptr,
 		 */
 		for(; buf < end; buf++) {
 			if(*buf < 0x20 || *buf > 0x7e) {
-				ASN__CTFAIL(app_key, td, sptr,
+				_ASN_CTFAIL(app_key, td, sptr,
 					"%s: value byte %ld (%d) "
 					"not in VisibleString alphabet (%s:%d)",
 					td->name,
@@ -69,7 +69,7 @@ VisibleString_constraint(asn_TYPE_descriptor_t *td, const void *sptr,
 			}
 		}
 	} else {
-		ASN__CTFAIL(app_key, td, sptr,
+		_ASN_CTFAIL(app_key, td, sptr,
 			"%s: value not given (%s:%d)",
 			td->name, __FILE__, __LINE__);
 		return -1;

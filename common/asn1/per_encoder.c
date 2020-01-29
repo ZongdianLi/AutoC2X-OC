@@ -124,7 +124,7 @@ uper_encode_internal(asn_TYPE_descriptor_t *td, asn_per_constraints_t *constrain
 	 * Invoke type-specific encoder.
 	 */
 	if(!td || !td->uper_encoder)
-		ASN__ENCODE_FAILED;	/* PER is not compiled in */
+		_ASN_ENCODE_FAILED;	/* PER is not compiled in */
 
 	po.buffer = po.tmpspace;
 	po.nboff = 0;
@@ -143,7 +143,7 @@ uper_encode_internal(asn_TYPE_descriptor_t *td, asn_per_constraints_t *constrain
 		er.encoded = (po.flushed_bytes << 3) + bits_to_flush;
 
 		if(_uper_encode_flush_outp(&po))
-			ASN__ENCODE_FAILED;
+			_ASN_ENCODE_FAILED;
 	}
 
 	return er;
