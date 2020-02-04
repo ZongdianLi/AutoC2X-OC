@@ -97,7 +97,7 @@ struct CaServiceConfig {
  */
 class CaService {
 public:
-	CaService(CaServiceConfig &config, ptree& configTree);
+	CaService(CaServiceConfig &config, ptree& configTree, int argc, char* argv[]);
 	~CaService();
 
 	/** Sends a new CAM to LDM and DCC.	 */
@@ -212,6 +212,10 @@ private:
 	 * @return True if GPS data is valid, false otherwise.
 	 */
 	bool isGPSdataValid();
+
+	void loadOpt(int argc, char* argv[]);
+
+	void output_file_config();
 	
 
 	GlobalConfig mGlobalConfig;
@@ -276,6 +280,9 @@ private:
 	LastSentCamInfo mLastSentCamInfo;
 
 	std::ofstream atoc_delay_output_file;
+
+	std::string host_addr;
+	bool isSender;
 
 	//std::vector<autowarePackage::AUTOWARE> waiting_data;
 	std::list<autowarePackage::AUTOWARE> waiting_data;

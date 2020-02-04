@@ -33,15 +33,12 @@
 #include <math.h>
 
 using namespace std;
-namespace asio = boost::asio;
-using asio::ip::tcp;
 
 INITIALIZE_EASYLOGGINGPP
 
 
 AutowareService::AutowareService(AutowareConfig &config, int argc, char* argv[]) {
 	loadOpt(argc, argv);
-
 
 	flag = -1;
 	try {
@@ -60,13 +57,18 @@ AutowareService::AutowareService(AutowareConfig &config, int argc, char* argv[])
 
 	fileConfigure();
 
-	mThreadReceive = new boost::thread(&AutowareService::receiveFromAutoware, this);
-	mThreadReceiveFromCaService = new boost::thread(&AutowareService::receiveFromCaService, this);
-
-	while(1){
-//		testSender();
-		sleep(1);
+	if (isSender == true) {
+		mThreadReceive = new boost::thread(&AutowareService::receiveFromAutowareAtSenderRouter, this);
+		mThreadReceiveFromCaService = new boost::thread(&AutowareService::receiveFromCaService, this);
+		while(1){
+			// testSender();
+			sleep(1);
+		}
+	} else {
+		
 	}
+
+	
 
 }
 
@@ -137,7 +139,7 @@ void AutowareService::sendToServices(autowarePackage::AUTOWARE autoware) {
 	// mLogger->logStats(to_string(autoware.speed()) + " (" + to_string(autoware.speed()/100*3.6) + "km/h)"); // In csv, we log speed in m/sec
 }
 
-void AutowareService::receiveFromAutoware(){
+void AutowareService::receiveFromAutowareAtSenderRouter(){
 	std::cout << "*****receive setup" << std::endl;
 	int sockfd;
     int client_sockfd;
@@ -185,16 +187,19 @@ void AutowareService::receiveFromAutoware(){
 
 }
 
+void AutowareService::createSocket(){
+	std::cout << "socket open to:" << host_addr << std::endl;
+	struct sockaddr_in addr;
+	if( (sock_fd = socket( AF_INET, SOCK_STREAM, 0) ) < 0 ) perror( "socket" ); 
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons( 23457 );
+	addr.sin_addr.s_addr = inet_addr( host_addr.c_str() );
+	connect( sock_fd, (struct sockaddr *)&addr, sizeof( struct sockaddr_in ) );
+}
+
 void AutowareService::sendBackToAutoware(socket_message msg){
 	if(flag != 100){
-		std::cout << "socket open" << std::endl;
-		struct sockaddr_in addr;
-		if(( sock_fd = socket(AF_INET, SOCK_STREAM, 0) ) < 0 ) perror("socket");
-		addr.sin_family = AF_INET;
-		addr.sin_port = htons(23458);
-		addr.sin_addr.s_addr = inet_addr(host_addr.c_str());
-		//addr.sin_addr.s_addr = inet_addr("10.0.0.2");
-		connect( sock_fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in) );
+		createSocket();
 		flag = 100;
 	}
 	

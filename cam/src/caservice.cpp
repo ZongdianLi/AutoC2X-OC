@@ -39,7 +39,7 @@ using namespace std;
 
 INITIALIZE_EASYLOGGINGPP
 
-CaService::CaService(CaServiceConfig &config, ptree& configTree) {
+CaService::CaService(CaServiceConfig &config, ptree& configTree, int argc, char* argv[]) {
 	
 	try {
 		mGlobalConfig.loadConfig(CAM_CONFIG_NAME);
@@ -68,35 +68,13 @@ CaService::CaService(CaServiceConfig &config, ptree& configTree) {
 	mThreadObd2DataReceive = new boost::thread(&CaService::receiveObd2Data, this);
 	mThreadAutowareDataReceive = new boost::thread(&CaService::receiveAutowareData, this);
 	
+	loadOpt(argc, argv);
 
 	mIdCounter = 0;
 
 	mGpsValid = false;	//initially no data is available => not valid
 	mObd2Valid = false;
 	mAutowareValid = false;
-
-	char cur_dir[1024];
-	getcwd(cur_dir, 1024);
-
-	time_t t = time(nullptr);
-	const tm* lt = localtime(&t);
-	std::stringstream s;
-	s<<"20";
-	s<<lt->tm_year-100; //100を引くことで20xxのxxの部分になる
-	s<<"-";
-	s<<lt->tm_mon+1; //月を0からカウントしているため
-	s<<"-";
-	s<<lt->tm_mday; //そのまま
-	s<<"_";
-	s<<lt->tm_hour;
-	s<<":";
-	s<<lt->tm_min;
-	s<<":";
-	s<<lt->tm_sec;
-	std::string timestamp = s.str();
-
-	std::string filename = std::string(cur_dir) + "/../../../cam/output/delay/atoc" + timestamp + ".csv";
-	atoc_delay_output_file.open(filename, std::ios::out);
 
 	if (mConfig.mGenerateMsgs) {
 		mTimer = new boost::asio::deadline_timer(mIoService, boost::posix_time::millisec(100));
@@ -134,6 +112,66 @@ CaService::~CaService() {
 
 	mTimer->cancel();
 	delete mTimer;
+}
+
+void CaService::output_file_config(){
+	char cur_dir[1024];
+	getcwd(cur_dir, 1024);
+
+	time_t t = time(nullptr);
+	const tm* lt = localtime(&t);
+	std::stringstream s;
+	s<<"20";
+	s<<lt->tm_year-100; //100を引くことで20xxのxxの部分になる
+	s<<"-";
+	s<<lt->tm_mon+1; //月を0からカウントしているため
+	s<<"-";
+	s<<lt->tm_mday; //そのまま
+	s<<"_";
+	s<<lt->tm_hour;
+	s<<":";
+	s<<lt->tm_min;
+	s<<":";
+	s<<lt->tm_sec;
+	std::string timestamp = s.str();
+
+	std::string filename = std::string(cur_dir) + "/../../../cam/output/delay/atoc" + timestamp + ".csv";
+	atoc_delay_output_file.open(filename, std::ios::out);
+}
+
+void CaService::loadOpt(int argc, char* argv[]){
+	int i, opt;
+	bool isSender = false;
+    opterr = 0; //getopt()のエラーメッセージを無効にする。
+    while ((opt = getopt(argc, argv, "sr")) != -1) {
+        //コマンドライン引数のオプションがなくなるまで繰り返す
+        switch (opt) {
+            case 's':
+				isSender = true;
+                break;
+
+            case 'r':
+				isSender = false;
+                break;
+
+            default: /* '?' */
+                //指定していないオプションが渡された場合
+                printf("Usage: %s [-s] [-r] ip_addr ...\n", argv[0]);
+                break;
+        }
+    }
+
+    //オプション以外の引数を出力する
+    for (i = optind; i < argc; i++) {
+		host_addr = std::string(argv[2]);
+		break;
+    }
+	if(host_addr.length() < 5){
+		printf("ip_addr needed: Usage: %s [-s] [-r] ip_addr ...\n run as router's ip_addr = 192.168.10.1", argv[0]);
+		host_addr = "192.168.10.1";
+	}
+
+	std::cout << "isSender:" << isSender << " ip:" << host_addr << std::endl;
 }
 
 //receive CAM from DCC and forward to LDM and autoware?
@@ -432,19 +470,12 @@ void CaService::send(bool isAutoware) {
 	std::chrono::system_clock::time_point start, end;
 	start = std::chrono::system_clock::now();
 	std::cout << "*********lets send CAM:" << waiting_data.size() << "," << std::endl;
-	//mMutexLatestAutoware.lock();
 	std::list<autowarePackage::AUTOWARE>::iterator itr;
-	//for(int i = 0; i< waiting_data.size(); i++){
         for(itr = waiting_data.begin(); itr != waiting_data.end(); itr++){	
-	// while(waiting_data.size() > 0){
-		// mLatestAutoware = waiting_data.back();
-		//mLatestAutoware = waiting_data[i];
 		if(waiting_data.size() == 0){
 			break;
 		}
-	        mLatestAutoware = *itr;	
-		// waiting_data.pop_back();
-		std::cout << "send****" << std::endl;
+		mLatestAutoware = *itr;	
 		string serializedData;
 		dataPackage::DATA data;
 
@@ -454,7 +485,6 @@ void CaService::send(bool isAutoware) {
 		string strCam(encodedCam.begin(), encodedCam.end());
 		//mLogger->logDebug("Encoded CAM size: " + to_string(strCam.length()));
 
-		// data.set_id(messageID_cam);
 		data.set_id(messageID_cam);
 		data.set_type(dataPackage::DATA_Type_CAM);
 		data.set_priority(dataPackage::DATA_Priority_BE);
@@ -465,7 +495,6 @@ void CaService::send(bool isAutoware) {
 		data.set_content(strCam);
 
 		data.SerializeToString(&serializedData);
-		//mLogger->logInfo("Send new CAM to DCC and LDM\n");
 
 		mSenderToDcc->send("CAM", serializedData);	//send serialized DATA to DCC
 
@@ -477,8 +506,6 @@ void CaService::send(bool isAutoware) {
 	}
 	waiting_data.clear();
 	std::cout << "clear because queue" << std::endl;
-	//mMutexLatestAutoware.unlock();
-	//waiting_data.shrink_to_fit();
 	end = std::chrono::system_clock::now();
 	std::cout << "******* time elapsed*********" << std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << std::endl;
 }
@@ -725,7 +752,7 @@ camPackage::CAM CaService::convertAsn1toProtoBuf(CAM_t* cam) {
 	return camProto;
 }
 
-int main(int argc, const char* argv[]) {
+int main(int argc, char* argv[]) {
 	
 	ptree configTree = load_config_tree();
 	CaServiceConfig caConfig;
@@ -736,7 +763,7 @@ int main(int argc, const char* argv[]) {
 		cerr << "Error while loading /etc/config/openc2x_cam: " << e.what() << endl << flush;
 		return EXIT_FAILURE;
 	}
-	CaService cam(caConfig, configTree);
+	CaService cam(caConfig, configTree, argc, argv);
 
 	return EXIT_SUCCESS;
 }

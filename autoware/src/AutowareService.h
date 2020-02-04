@@ -125,7 +125,7 @@ public:
 
 	void setData();
 
-	void receiveFromAutoware();
+	void receiveFromAutowareAtSenderRouter();
 
 	void testSender();
 
@@ -135,9 +135,11 @@ public:
 
 	void sendToServices(autowarePackage::AUTOWARE autoware);
 
-	 void loadOpt(int argc, char* argv[]);
+	void loadOpt(int argc, char* argv[]);
 
-	 void fileConfigure();
+	void fileConfigure();
+
+	void createSocket();
 
 private:
 	AutowareConfig mConfig;
