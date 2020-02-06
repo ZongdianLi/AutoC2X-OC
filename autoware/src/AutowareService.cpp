@@ -193,7 +193,7 @@ void AutowareService::createSocket(){
 	struct sockaddr_in addr;
 	if( (sock_fd = socket( AF_INET, SOCK_STREAM, 0) ) < 0 ) perror( "socket" ); 
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons( 23457 );
+	addr.sin_port = htons( 23458 );
 	addr.sin_addr.s_addr = inet_addr( host_addr.c_str() );
 	connect( sock_fd, (struct sockaddr *)&addr, sizeof( struct sockaddr_in ) );
 }

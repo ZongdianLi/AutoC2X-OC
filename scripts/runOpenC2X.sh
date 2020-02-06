@@ -46,7 +46,7 @@ tmux send-keys "dcc" C-m
 tmux split-window -v
 
 
-# tmux send-keys "cd $BUILD_DIR/autoware/src" C-m
-# tmux send-keys "./autoware ${1} ${2}" C-m
+tmux send-keys "cd $BUILD_DIR/autoware/src" C-m
+tmux send-keys "./autoware ${1} ${2}" C-m
 
 tmux -2 attach-session -t $SESSION
