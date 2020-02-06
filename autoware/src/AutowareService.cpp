@@ -38,7 +38,6 @@ INITIALIZE_EASYLOGGINGPP
 
 
 AutowareService::AutowareService(AutowareConfig &config, int argc, char* argv[]) {
-	loadOpt(argc, argv);
 
 	flag = -1;
 	try {
@@ -55,9 +54,11 @@ AutowareService::AutowareService(AutowareConfig &config, int argc, char* argv[])
 	mReceiverFromCaService = new CommunicationReceiver("23456", "CAM", *mLogger);
 	mLogger->logStats("speed (m/sec)");
 
-	fileConfigure();
 
-	if (isSender == true) {
+	loadOpt(argc, argv);
+	if (isSender) {
+		std::cout << "sending" << std::endl;
+		fileConfigure();
 		mThreadReceive = new boost::thread(&AutowareService::receiveFromAutowareAtSenderRouter, this);
 		mThreadReceiveFromCaService = new boost::thread(&AutowareService::receiveFromCaService, this);
 		while(1){
@@ -284,7 +285,6 @@ void AutowareService::receiveFromCaService(){
 
 void AutowareService::loadOpt(int argc, char* argv[]){
 	int i, opt;
-	bool isSender = false;
     opterr = 0; //getopt()のエラーメッセージを無効にする。
     while ((opt = getopt(argc, argv, "sr")) != -1) {
         //コマンドライン引数のオプションがなくなるまで繰り返す

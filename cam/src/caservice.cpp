@@ -141,7 +141,6 @@ void CaService::output_file_config(){
 
 void CaService::loadOpt(int argc, char* argv[]){
 	int i, opt;
-	bool isSender = false;
     opterr = 0; //getopt()のエラーメッセージを無効にする。
     while ((opt = getopt(argc, argv, "sr")) != -1) {
         //コマンドライン引数のオプションがなくなるまで繰り返す
@@ -168,7 +167,7 @@ void CaService::loadOpt(int argc, char* argv[]){
     }
 	if(host_addr.length() < 5){
 		printf("ip_addr needed: Usage: %s [-s] [-r] ip_addr ...\n run as router's ip_addr = 192.168.10.1", argv[0]);
-		host_addr = "192.168.10.1";
+		host_addr = "192.168.10.2";
 	}
 
 	std::cout << "isSender:" << isSender << " ip:" << host_addr << std::endl;
