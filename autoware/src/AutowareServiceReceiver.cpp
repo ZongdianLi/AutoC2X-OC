@@ -23,7 +23,7 @@
 #define ELPP_THREAD_SAFE
 #define ELPP_NO_DEFAULT_LOG_FILE
 
-#include "AutowareService.h"
+#include "AutowareServiceReceiver.h"
 #include <unistd.h>
 #include <iostream>
 #include <cstdlib>
@@ -110,9 +110,6 @@ AutowareService::~AutowareService() {
 	delete mTimer;
 }
 
-//reads the actual vehicle data from Autoware
-void AutowareService::receiveData(const boost::system::error_code &ec, SerialPort* serial) {
-}
 
 
 //simulates Autoware data, logs and sends it

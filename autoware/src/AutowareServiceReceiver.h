@@ -28,7 +28,6 @@
  * @{
  */
 
-#include "SerialPort.h"
 #include <common/utility/CommunicationSender.h>
 #include <common/utility/CommunicationReceiver.h>
 #include <common/utility/CommunicationClient.h>
@@ -139,8 +138,6 @@ public:
 	AutowareService(AutowareConfig &config);
 	~AutowareService();
 	void init();
-
-	void receiveData(const boost::system::error_code &ec, SerialPort* serial);
 	
 	void simulateData();
 	void receiveFromCa();
