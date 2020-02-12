@@ -114,6 +114,30 @@ private:
 		}
 };
 
+struct socket_message_receiver{
+	long timestamp;
+	float lat;
+	float lon;
+	std::vector<int> speed;
+	std::vector<int> latitude;
+	std::vector<int> longitude;
+	std::vector<int> time;
+
+private:
+	friend class boost::serialization::access;
+	template<class Archive>
+		void serialize( Archive& ar, unsigned int ver){
+			ar & timestamp;
+			ar & lat;
+			ar & lon;
+			ar & speed;
+			ar & latitude;
+			ar & longitude;
+			ar & time;
+		}
+};
+
+
 
 /**
  * Class that connects to AUTOWARE via serial port and offers its data to other modules via ZMQ.
@@ -127,8 +151,6 @@ public:
 
 	void receiveFromAutowareAtSenderRouter();
 
-	void testSender();
-
 	void receiveFromCaService();
 
 	void sendBackToAutoware(socket_message msg);
@@ -139,7 +161,22 @@ public:
 
 	void fileConfigure();
 
-	void createSocket();
+	void createSocket(int port);
+
+	void testSenderAtSender();
+
+
+	/*
+		receiver only
+	*/
+
+	void testSender();
+
+	void sendToAutoware();
+
+	void receiveFromCa();
+
+	void receiveFromAutoware();
 
 private:
 	AutowareConfig mConfig;
@@ -162,6 +199,7 @@ private:
 	std::ofstream delay_output_file;
 
 	socket_message s_message;
+	socket_message_receiver r_message;
 
 	std::random_device rnd;     // 非決定的な乱数生成器を生成
 
@@ -169,6 +207,16 @@ private:
 	int flag;
 	std::string host_addr;
 	bool isSender;
+
+	/*
+		receiver only
+	*/
+	boost::thread* mThreadReceiveFromAutoware;
+	int sockfd;
+	std::ofstream timestamp_record_file;
+	CommunicationReceiver* mReceiverFromCa;
+	socket_message_receiver tmp_message;	
+
 };
 
 /** @} */ //end group

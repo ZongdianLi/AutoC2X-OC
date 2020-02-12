@@ -66,7 +66,12 @@ AutowareService::AutowareService(AutowareConfig &config, int argc, char* argv[])
 			sleep(1);
 		}
 	} else {
-		
+		mThreadReceive = new boost::thread(&AutowareService::receiveFromCa, this);
+		mThreadReceiveFromAutoware = new boost::thread(&AutowareService::receiveFromAutoware, this);
+		while(1){
+			testSender();
+			usleep(90000);
+		}
 	}
 
 	
@@ -188,19 +193,21 @@ void AutowareService::receiveFromAutowareAtSenderRouter(){
 
 }
 
-void AutowareService::createSocket(){
+
+
+void AutowareService::createSocket(int port){
 	std::cout << "socket open to:" << host_addr << std::endl;
 	struct sockaddr_in addr;
 	if( (sock_fd = socket( AF_INET, SOCK_STREAM, 0) ) < 0 ) perror( "socket" ); 
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons( 23458 );
+	addr.sin_port = htons( port );
 	addr.sin_addr.s_addr = inet_addr( host_addr.c_str() );
 	connect( sock_fd, (struct sockaddr *)&addr, sizeof( struct sockaddr_in ) );
 }
 
 void AutowareService::sendBackToAutoware(socket_message msg){
 	if(flag != 100){
-		createSocket();
+		createSocket(23458);
 		flag = 100;
 	}
 	
@@ -217,7 +224,7 @@ void AutowareService::sendBackToAutoware(socket_message msg){
 }
 
 
-void AutowareService::testSender(){
+void AutowareService::testSenderAtSender(){
 	while(1){
 		s_message.speed.clear();
 		s_message.latitude.clear();
@@ -257,6 +264,133 @@ void AutowareService::testSender(){
 		setData();
 		usleep(90000);
 	}
+}
+
+void AutowareService::sendToAutoware(){
+	if(flag != 100){
+		createSocket(23459);
+		flag = 100;
+	}
+
+	r_message.timestamp = Utils::currentTime();
+	std::stringstream ss;
+	boost::archive::text_oarchive archive(ss);
+	archive << r_message;
+	std::cout << ss.str() << std::endl;
+	timestamp_record_file << r_message.timestamp << std::endl;
+	ss.seekg(0, ios::end);
+	if( send( sock_fd, ss.str().c_str(), ss.tellp(), 0 ) < 0 ) {
+			perror( "send" );
+	} else {
+	}
+
+	r_message.speed.clear();
+	r_message.latitude.clear();
+	r_message.longitude.clear();
+	r_message.time.clear();
+}
+
+//logs and sends Autoware
+void AutowareService::receiveFromCa() {
+	string serializedCam;
+	camPackage::CAM cam;
+
+	while(1){
+		pair<string, string> received = mReceiverFromCa->receive();
+		std::cout << "receive from ca" << std::endl;
+
+		serializedCam = received.second;
+		cam.ParseFromString(serializedCam);
+		std::cout << "stationid:" << cam.header().stationid() << " latitude:" << cam.coop().camparameters().basiccontainer().latitude() << " longitude:" << cam.coop().camparameters().basiccontainer().longitude() << " speed:" <<  cam.coop().camparameters().highfreqcontainer().basicvehiclehighfreqcontainer().speed() << std::endl;
+
+		r_message.latitude.push_back( cam.coop().camparameters().basiccontainer().latitude() );
+		r_message.longitude.push_back( cam.coop().camparameters().basiccontainer().longitude() );
+		r_message.time.push_back( cam.coop().gendeltatime() );
+		r_message.speed.push_back( cam.coop().camparameters().highfreqcontainer().basicvehiclehighfreqcontainer().speed() );
+	}
+}
+
+void AutowareService::receiveFromAutoware(){
+	std::cout << "*****receive setup" << std::endl;
+	int sock_fd;
+    int client_sockfd;
+    struct sockaddr_in addr;
+    socklen_t len = sizeof( struct sockaddr_in );
+    struct sockaddr_in from_addr;
+    char buf[4096];
+ 
+    memset( buf, 0, sizeof( buf ) );
+    if( ( sock_fd = socket( AF_INET, SOCK_STREAM, 0 ) ) < 0 ) {
+        perror( "socket" );
+    }
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons( 23460 );
+    addr.sin_addr.s_addr = INADDR_ANY;
+    if( bind( sock_fd, (struct sockaddr *)&addr, sizeof( addr ) ) < 0 ) perror( "bind" );
+    if( listen( sock_fd, SOMAXCONN ) < 0 ) perror( "listen" );
+    if( ( client_sockfd = accept( sock_fd, (struct sockaddr *)&from_addr, &len ) ) < 0 ) perror( "accept" );
+ 
+    // 受信
+    int rsize;
+    while( 1 ) {
+		std::stringstream ss;
+		memset( buf, 0, sizeof( buf ) );
+        rsize = recv( client_sockfd, buf, sizeof( buf ), 0 );
+		std::cout << "received" << std::endl;
+
+		ss << buf;
+
+		boost::archive::text_iarchive archive(ss);
+		// cereal::BinaryInputArchive archive(ss);
+		archive >> tmp_message;
+		std::cout << "received" << std::endl;
+
+		delay_output_file << std::setprecision(20) << tmp_message.timestamp << "," << Utils::currentTime() << "," << tmp_message.lat << "," << tmp_message.lon << std::endl;
+
+		if ( rsize == 0 ) {
+            break;
+        } else if ( rsize == -1 ) {
+            perror( "recv" );
+        }
+		// simulateData();
+		std::cout << tmp_message.timestamp << std::endl;
+		// testSender();
+    }
+    close( client_sockfd );
+    close( sock_fd );
+}
+
+void AutowareService::testSender(){
+
+	std::mt19937 mt(rnd());
+	std::uniform_int_distribution<> rand(0, 100);
+
+	r_message.speed.push_back(rand(mt)/1000.0);
+	r_message.latitude.push_back(35.714464 * 10000000);
+	r_message.longitude.push_back(139.760606 * 10000000);
+	r_message.time.push_back(rand(mt)/1000.0);
+
+	r_message.speed.push_back(rand(mt)/1000.0);
+	r_message.latitude.push_back(35.71419722 * 10000000 + rand(mt)*0);
+	r_message.longitude.push_back(139.76148888 * 10000000 + rand(mt)*0);
+	r_message.time.push_back(rand(mt)/1000.0);
+
+	r_message.speed.push_back(rand(mt)/1000.0);
+	r_message.latitude.push_back(35.714497 * 10000000 + rand(mt)*0);
+	r_message.longitude.push_back(139.763014 * 10000000 + rand(mt)*0);
+	r_message.time.push_back(rand(mt)/1000.0);
+
+	r_message.speed.push_back(rand(mt)/1000.0);
+	r_message.latitude.push_back(35.713997 * 10000000 + rand(mt)*0);
+	r_message.longitude.push_back(139.760153 * 10000000 + rand(mt)*0);
+	r_message.time.push_back(rand(mt)/1000.0);
+
+	r_message.speed.push_back(rand(mt)/1000.0);
+	r_message.latitude.push_back(35.712992 * 10000000 + rand(mt)*0);
+	r_message.longitude.push_back(139.759819 * 10000000 + rand(mt)*0);
+	r_message.time.push_back(rand(mt)/1000.0);
+	
+	sendToAutoware();
 }
 
 void AutowareService::receiveFromCaService(){
