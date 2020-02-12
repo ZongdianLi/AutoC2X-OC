@@ -90,13 +90,12 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	struct sockaddr_in addr;
 	if( (sockfd = socket( AF_INET, SOCK_STREAM, 0) ) < 0 ) perror( "socket" ); 
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons( 23457 );
+	addr.sin_port = htons( 23459 );
 	addr.sin_addr.s_addr = inet_addr( "192.168.10.2" );
 	connect( sockfd, (struct sockaddr *)&addr, sizeof( struct sockaddr_in ) );
 	while(1){
-		//testSender();
+		// testSender();
 		sendToAutoware(100000);
-		//sleep(1);
 		usleep(100000);
 	}
 
@@ -236,7 +235,7 @@ void AutowareService::receiveFromAutoware(){
         perror( "socket" );
     }
     addr.sin_family = AF_INET;
-    addr.sin_port = htons( 23458 );
+    addr.sin_port = htons( 23460 );
     addr.sin_addr.s_addr = INADDR_ANY;
     if( bind( sock_fd, (struct sockaddr *)&addr, sizeof( addr ) ) < 0 ) perror( "bind" );
     if( listen( sock_fd, SOMAXCONN ) < 0 ) perror( "listen" );
