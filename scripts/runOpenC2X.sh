@@ -23,14 +23,20 @@ tmux send-keys "mkdir -p $OPENC2X/cam/output/delay" C-m
 
 #tmux send-keys "cam" C-m
 tmux send-keys "cd $BUILD_DIR/cam/src" C-m
-tmux send-keys "./cam_sender" C-m
+if [ ${1} = "s" ]; then
+    tmux send-keys "./cam_sender" C-m
+else
+    tmux send-keys "./cam_receiver" C-m
+fi
 tmux split-window -v
 
 tmux split-window -v
 
 
 #tmux send-keys "rm ../db/ldm-*.db" C-m
-tmux send-keys "ldm" C-m
+# tmux send-keys "ldm" C-m
+tmux send-keys "cd $BUILD_DIR/ldm/src" C-m
+tmux send-keys "./ldm" C-m
 tmux split-window -v
 
 
@@ -47,6 +53,15 @@ tmux split-window -v
 
 
 tmux send-keys "cd $BUILD_DIR/autoware/src" C-m
-tmux send-keys "./autoware_sender" C-m
+if [ ${1} = "s" ]; then
+    tmux send-keys "./autoware_sender" C-m
+else
+    tmux send-keys "./autoware_receiver" C-m
+fi
+# tmux split-window -v
+
+
+# tmux send-keys "gpsService" C-m
 
 tmux -2 attach-session -t $SESSION
+

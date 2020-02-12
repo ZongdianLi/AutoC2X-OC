@@ -54,6 +54,7 @@ LDM::LDM() {
 	mServer = new CommunicationServer("6789", *mLogger);
 	
 	std::string db_path = get_openc2x_path(config.mLogBasePath, config.mExpName, config.mExpNo) + "ldm.db";
+	// std::string db_path = get_openc2x_path(config.mLogBasePath, config.mExpName, 1) + "ldm.db";
 
 	//open SQLite database
 	if(sqlite3_open_v2((db_path).c_str(), &mDb, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, NULL)) {
@@ -273,7 +274,8 @@ dataPackage::LdmData LDM::camSelect(string condition) {
 
 		char* errmsg = 0;
 		mCamMutex.lock();
-		if (sqlite3_prepare_v2(mDb, sqlCommand.c_str(), -1, &stmt, NULL) == SQLITE_OK) {
+		// if (sqlite3_prepare_v2(mDb, sqlCommand.c_str(), -1, &stmt, NULL) == SQLITE_OK) {
+		if (sqlite3_prepare_v2(mDb, condition.c_str(), -1, &stmt, NULL) == SQLITE_OK) {
 			while (sqlite3_step(stmt) == SQLITE_ROW) {		//iterate over result rows
 				camPackage::CAM cam;
 				// header
