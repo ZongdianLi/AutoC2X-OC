@@ -20,3 +20,6 @@
 documentation/html
 
 .vscode/
+
+common/asn1/**/*.c
+common/asn1/**/*.h
