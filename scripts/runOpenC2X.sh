@@ -23,7 +23,7 @@ tmux send-keys "mkdir -p $OPENC2X/cam/output/delay" C-m
 
 #tmux send-keys "cam" C-m
 tmux send-keys "cd $BUILD_DIR/cam/src" C-m
-tmux send-keys "./cam" C-m
+tmux send-keys "./cam_sender" C-m
 tmux split-window -v
 
 tmux split-window -v
@@ -47,6 +47,6 @@ tmux split-window -v
 
 
 tmux send-keys "cd $BUILD_DIR/autoware/src" C-m
-tmux send-keys "./autoware" C-m
+tmux send-keys "./autoware_sender" C-m
 
 tmux -2 attach-session -t $SESSION
