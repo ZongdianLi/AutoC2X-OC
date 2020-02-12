@@ -28,7 +28,6 @@
  * @{
  */
 
-#include "SerialPort.h"
 #include <common/utility/CommunicationSender.h>
 #include <common/utility/CommunicationReceiver.h>
 #include <common/utility/LoggingUtility.h>

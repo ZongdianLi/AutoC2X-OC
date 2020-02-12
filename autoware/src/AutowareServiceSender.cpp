@@ -23,7 +23,7 @@
 #define ELPP_THREAD_SAFE
 #define ELPP_NO_DEFAULT_LOG_FILE
 
-#include "AutowareService.h"
+#include "AutowareServiceSender.h"
 #include <unistd.h>
 #include <iostream>
 #include <cstdlib>
