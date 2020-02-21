@@ -94,8 +94,8 @@ AutowareService::AutowareService(AutowareConfig &config, int argc, char* argv[])
 	addr.sin_addr.s_addr = inet_addr( host_addr.c_str() );
 	connect( sockfd, (struct sockaddr *)&addr, sizeof( struct sockaddr_in ) );
 	while(1){
-		testSender();
-		// sendToAutoware(100000);
+		//testSender();
+		sendToAutoware(100000);
 		usleep(100000);
 	}
 
