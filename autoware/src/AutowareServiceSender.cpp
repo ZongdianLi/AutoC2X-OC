@@ -39,7 +39,7 @@ using asio::ip::tcp;
 INITIALIZE_EASYLOGGINGPP
 
 
-AutowareService::AutowareService(AutowareConfig &config) {
+AutowareService::AutowareService(AutowareConfig &config, int argc, char* argv[]) {
 	flag = -1;
 	try {
 		mGlobalConfig.loadConfig(AUTOWARE_CONFIG_NAME);
@@ -55,6 +55,8 @@ AutowareService::AutowareService(AutowareConfig &config) {
 	mReceiverFromCaService = new CommunicationReceiver("23456", "CAM", *mLogger);
 	mLogger->logStats("speed (m/sec)");
 
+	loadOpt(argc, argv);
+	
 	//autowareとの1対1の時だけファイルアウトプットはコメントアウトする
 	char cur_dir[1024];
 	getcwd(cur_dir, 1024);
@@ -97,6 +99,20 @@ AutowareService::~AutowareService() {
 	delete mThreadReceiveFromCaService;
 	delete mThreadTestSender;
 
+}
+
+void AutowareService::loadOpt(int argc, char* argv[]){	
+	int i, opt;
+	opterr = 0; //getopt()のエラーメッセージを無効にする。
+    //オプション以外の引数を出力する
+    for (i = optind; i < argc; i++) {
+		host_addr = std::string(argv[i]);
+		std::cout << host_addr << std::endl;
+		break;
+    }
+	if(host_addr.length() < 4){
+		printf("Usage: %s  [host_addr] ...\n", argv[0]);
+	}
 }
 
 
@@ -184,8 +200,7 @@ void AutowareService::sendBackToAutoware(socket_message msg){
 		if(( sock_fd = socket(AF_INET, SOCK_STREAM, 0) ) < 0 ) perror("socket");
 		addr.sin_family = AF_INET;
 		addr.sin_port = htons(23458);
-		addr.sin_addr.s_addr = inet_addr("192.168.10.2");
-		//addr.sin_addr.s_addr = inet_addr("10.0.0.2");
+		addr.sin_addr.s_addr = inet_addr(host_addr.c_str());
 		connect( sock_fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in) );
 		flag = 100;
 	}
@@ -279,7 +294,7 @@ int main(int argc,  char* argv[]) {
 		cerr << "Error while loading config.xml: " << e.what() << endl << flush;
 		return EXIT_FAILURE;
 	}
-	AutowareService autoware(config);
+	AutowareService autoware(config, argc, argv);
 
 	return 0;
 }

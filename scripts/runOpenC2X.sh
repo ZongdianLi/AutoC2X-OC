@@ -54,9 +54,9 @@ tmux split-window -v
 
 tmux send-keys "cd $BUILD_DIR/autoware/src" C-m
 if [ ${1} = "s" ]; then
-    tmux send-keys "./autoware_sender" C-m
+    tmux send-keys "./autoware_sender ${2}" C-m
 else
-    tmux send-keys "./autoware_receiver" C-m
+    tmux send-keys "./autoware_receiver ${2}" C-m
 fi
 # tmux split-window -v
 

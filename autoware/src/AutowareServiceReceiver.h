@@ -135,7 +135,7 @@ private:
 class AutowareService {
 public:
 	// AutowareService(AutowareConfig &config, std::string globalConfig, std::string loggingConf, std::string statisticConf);
-	AutowareService(AutowareConfig &config);
+	AutowareService(AutowareConfig &config, int argc, char* argv[]);
 	~AutowareService();
 	void init();
 	
@@ -152,6 +152,7 @@ public:
 
 	void receiveFromAutoware();
 
+	void loadOpt(int argc, char* argv[]);
 
 
 
@@ -196,6 +197,7 @@ private:
 
 	long newestLdmKey;
 
+	std::string host_addr;
 };
 
 /** @} */ //end group
