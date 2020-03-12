@@ -1,17 +1,15 @@
 # AutoC2X-OC
 
-You should install ROS besides steps below.
-
 ![movie](https://user-images.githubusercontent.com/23014935/76400182-39570c00-63c3-11ea-81cb-a6b84179406d.gif)
 
 AutoC2X is cooperative awareness driving software, extension for Autoware and OpenC2X. AutoC2X-OC is fork project from OpenC2X.
 
-# OpenC2X
-For latest updates on OpenC2X, visit http://www.ccs-labs.org/software/openc2x/
+## description
 
-On Ubuntu 16.04, follow the below mentioned steps to get OpenC2X up and running.
-For other OS users, we recommend you to setup a virtual box with Ubuntu 16.04.
+[Autoware](https://gitlab.com/autowarefoundation/autoware.ai) is open-source autonomous driving software. [OpenC2X](https://www.ccs-labs.org/software/openc2x/) is open-source cooperative ITS software, able to communicate with other vehicles following ITS-G5. AutoC2X is an extension for Autoware and OpenC2X. Using this software, you can get other vehicle information run by Autoware.
 
+## AutoC2X-AW
+AutoC2X-OC collaborate with [AutoC2X-AW](https://github.com/esakilab/AutoC2X-AW) at laptop. So you should install and run AutoC2X-AW in laptop.
 
 ## Set up the environment
 Open a terminal and run the command:
@@ -51,9 +49,18 @@ In the terminal, navigate to your project folder and configure the project:
   as per your setup.
 - For setting up OpenC2X kernel, go through 'kernel-patches/README.txt'
 
+### hardware Setup
+In AutoC2X, each vehicle is supposed to equip one laptop and one router. Autoware and AutoC2X-AW is running in laptop. AutoC2X-OC is running in router.
+
+![hardware](https://user-images.githubusercontent.com/23014935/76481753-b59a2f80-6455-11ea-9134-4b5376bf75c4.png)
+
+### network setup
+You should allocate IPv4 address to laptops and routers. Below image is example.
+
+![network](https://user-images.githubusercontent.com/23014935/76482009-50930980-6456-11ea-9155-3abf0788592b.png)
 
 
-## Start OpenC2X
+## Start AutoC2X
 You should start AutoC2X below order.
 
 1. Start AutoC2X-AW at receiver laptop
