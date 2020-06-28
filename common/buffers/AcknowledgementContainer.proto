@@ -1,0 +1,8 @@
+package its;
+
+import "PathPoint.proto";
+
+message AcknowledgementContainer {
+	required uint64 targetStaionID = 1;
+	repeated its.PathPoint followedTrajectory = 2;
+}

@@ -1,0 +1,9 @@
+package its;
+import "BasicContainer.proto";
+import "ManeuverContainer.proto";
+
+message McmParameters {
+	required its.BasicContainer basicContainer = 1;
+	required int64 controlFlag = 2;
+	required its.ManeuverContainer maneuverContainer = 3;
+}

@@ -1,0 +1,15 @@
+package mcmPackage;
+import "ItsPduHeader.proto";
+import "ManeuverCoordination.proto";
+
+message MCM {
+	required its.ItsPduHeader header = 1;
+	required its.ManeuverCoordination maneuver = 2;
+//	required string stationId = 1;
+//	required int32 id = 2;
+//	required string content = 3;
+//	optional int64 createTime = 4;
+//	optional gpsPackage.GPS gps = 5;
+//	optional obd2Package.OBD2 obd2 = 6;
+//	optional double heading = 7;
+}

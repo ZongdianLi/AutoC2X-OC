@@ -1,0 +1,8 @@
+package its;
+
+import "McmParameters.proto";
+
+message ManeuverCoordination {
+	required int64 genDeltaTime = 1;
+	required its.McmParameters mcmParameters = 2;
+}

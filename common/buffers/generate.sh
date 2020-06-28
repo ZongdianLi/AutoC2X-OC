@@ -50,3 +50,19 @@ protoc --proto_path=./ --cpp_out=build/ DENMManagementContainer.proto
 
 protoc --proto_path=./ --cpp_out=build/ denm.proto
 
+protoc --proto_path=./ --cpp_out=build/ mcm.proto
+
+protoc --proto_path=./ --cpp_out=build/ ManeuverCoordination.proto
+
+protoc --proto_path=./ --cpp_out=build/ ManeuverContainer.proto
+
+protoc --proto_path=./ --cpp_out=build/ McmPrameters.proto
+
+protoc --proto_path=./ --cpp_out=build/ IntentionRequestContainer.proto
+
+protoc --proto_path=./ --cpp_out=build/ IntentionReplyContainer.proto
+
+protoc --proto_path=./ --cpp_out=build/ PrescriptionContainer.proto
+
+protoc --proto_path=./ --cpp_out=build/ AcknowledgementContainer.proto
+

@@ -1,0 +1,8 @@
+package its;
+
+import "PathPoint.proto";
+
+message PrescriptionContainer {
+	required uint64 targetStaionID = 1;
+	repeated its.PathPoint desiredTrajectory = 2;
+}

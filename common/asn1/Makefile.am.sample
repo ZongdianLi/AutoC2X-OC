@@ -16,7 +16,6 @@ ASN_MODULE_SOURCES=	\
 	HighFrequencyContainer.c	\
 	LowFrequencyContainer.c	\
 	SpecialVehicleContainer.c	\
-	BasicContainer.c	\
 	BasicVehicleContainerHighFrequency.c	\
 	BasicVehicleContainerLowFrequency.c	\
 	PublicTransportContainer.c	\
@@ -27,9 +26,21 @@ ASN_MODULE_SOURCES=	\
 	EmergencyContainer.c	\
 	SafetyCarContainer.c	\
 	RSUContainerHighFrequency.c	\
-	GenerationDeltaTime.c	\
+	MCM.c	\
+	ManeuverCoordination.c	\
+	McmParameters.c	\
+	ManeuverContainer.c	\
+	IntentionRequestContainer.c	\
+	IntentionReplyContainer.c	\
+	PrescriptionContainer.c	\
+	AcknowledgeContainer.c	\
+	PlannedTrajectory.c	\
+	DesiredTrajectory.c	\
+	FollowedTrajectory.c	\
 	ItsPduHeader.c	\
 	StationID.c	\
+	GenerationDeltaTime.c	\
+	BasicContainer.c	\
 	ReferencePosition.c	\
 	DeltaReferencePosition.c	\
 	Longitude.c	\
@@ -179,7 +190,6 @@ ASN_MODULE_HEADERS=	\
 	HighFrequencyContainer.h	\
 	LowFrequencyContainer.h	\
 	SpecialVehicleContainer.h	\
-	BasicContainer.h	\
 	BasicVehicleContainerHighFrequency.h	\
 	BasicVehicleContainerLowFrequency.h	\
 	PublicTransportContainer.h	\
@@ -190,9 +200,21 @@ ASN_MODULE_HEADERS=	\
 	EmergencyContainer.h	\
 	SafetyCarContainer.h	\
 	RSUContainerHighFrequency.h	\
-	GenerationDeltaTime.h	\
+	MCM.h	\
+	ManeuverCoordination.h	\
+	McmParameters.h	\
+	ManeuverContainer.h	\
+	IntentionRequestContainer.h	\
+	IntentionReplyContainer.h	\
+	PrescriptionContainer.h	\
+	AcknowledgeContainer.h	\
+	PlannedTrajectory.h	\
+	DesiredTrajectory.h	\
+	FollowedTrajectory.h	\
 	ItsPduHeader.h	\
 	StationID.h	\
+	GenerationDeltaTime.h	\
+	BasicContainer.h	\
 	ReferencePosition.h	\
 	DeltaReferencePosition.h	\
 	Longitude.h	\
