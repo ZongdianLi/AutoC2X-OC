@@ -42,19 +42,20 @@
 #include <common/buffers/autoware.pb.h>
 #include <common/buffers/ManeuverCoordination.pb.h>
 #include <common/buffers/ItsPduHeader.pb.h>
+#include <common/buffers/autowareMcm.pb.h>
 #include <boost/asio.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <mutex>
 #include <common/asn1/MCM.h>
 #include <common/messages/MessageUtils.h>
-#include <common/buffers/autoware.pb.h>
+// #include <common/buffers/autoware.pb.h>
 #include <fstream>
 #include <chrono>
 #include <ctime>
 
 
-/** Struct that hold the configuration for CaService.
+/** Struct that hold the configuration for McService.
  * The configuration is defined in /etc/config/openc2x_mcm</a>
  */
 struct McServiceConfig {
@@ -215,7 +216,7 @@ private:
 	
 
 	GlobalConfig mGlobalConfig;
-	CaServiceConfig mConfig;
+	McServiceConfig mConfig;
 
 	CommunicationSender* mSenderToDcc;
 	CommunicationSender* mSenderToLdm;
@@ -256,7 +257,7 @@ private:
 	bool mObd2Valid;
 	std::mutex mMutexLatestObd2;
 
-	autowarePackage::AUTOWARE mLatestAutoware;
+	autowarePackage::AUTOWAREMCM mLatestAutoware;
 	bool mAutowareValid;
 	std::mutex mMutexLatestAutoware;
 	pingAppPackage::PINGAPP mLatestPingApp;

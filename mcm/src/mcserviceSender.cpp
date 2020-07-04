@@ -55,17 +55,17 @@ McService::McService(McServiceConfig &config, ptree& configTree) {
 	mLogger->logStats("Station Id \tMCM id \tCreate Time \tReceive Time");
 
 	mReceiverFromDcc = new CommunicationReceiver("22222", "MCM", *mLogger);
-	mSenderToDcc = new CommunicationSender("6666", *mLogger);
-	mSenderToLdm = new CommunicationSender("8888", *mLogger);
-	mSenderToAutoware = new CommunicationSender("23456", *mLogger);
+	mSenderToDcc = new CommunicationSender("23333", *mLogger);
+	mSenderToLdm = new CommunicationSender("24444", *mLogger);
+	mSenderToAutoware = new CommunicationSender("25555", *mLogger);
 
-	mReceiverGps = new CommunicationReceiver( "3333", "GPS", *mLogger);
-	mReceiverObd2 = new CommunicationReceiver("2222", "OBD2", *mLogger);
-	mReceiverAutoware = new CommunicationReceiver("25000", "AUTOWARE",*mLogger);
+	// mReceiverGps = new CommunicationReceiver( "3333", "GPS", *mLogger);
+	// mReceiverObd2 = new CommunicationReceiver("2222", "OBD2", *mLogger);
+	mReceiverAutoware = new CommunicationReceiver("26666", "AUTOWARE",*mLogger);
 
 	mThreadReceive = new boost::thread(&McService::receive, this);
-	mThreadGpsDataReceive = new boost::thread(&McService::receiveGpsData, this);
-	mThreadObd2DataReceive = new boost::thread(&McService::receiveObd2Data, this);
+	// mThreadGpsDataReceive = new boost::thread(&McService::receiveGpsData, this);
+	// mThreadObd2DataReceive = new boost::thread(&McService::receiveObd2Data, this);
 	mThreadAutowareDataReceive = new boost::thread(&McService::receiveAutowareData, this);
 	
 
@@ -75,28 +75,28 @@ McService::McService(McServiceConfig &config, ptree& configTree) {
 	mObd2Valid = false;
 	mAutowareValid = false;
 
-	char cur_dir[1024];
-	getcwd(cur_dir, 1024);
+	// char cur_dir[1024];
+	// getcwd(cur_dir, 1024);
 
-	time_t t = time(nullptr);
-	const tm* lt = localtime(&t);
-	std::stringstream s;
-	s<<"20";
-	s<<lt->tm_year-100; //100を引くことで20xxのxxの部分になる
-	s<<"-";
-	s<<lt->tm_mon+1; //月を0からカウントしているため
-	s<<"-";
-	s<<lt->tm_mday; //そのまま
-	s<<"_";
-	s<<lt->tm_hour;
-	s<<":";
-	s<<lt->tm_min;
-	s<<":";
-	s<<lt->tm_sec;
-	std::string timestamp = s.str();
+	// time_t t = time(nullptr);
+	// const tm* lt = localtime(&t);
+	// std::stringstream s;
+	// s<<"20";
+	// s<<lt->tm_year-100; //100を引くことで20xxのxxの部分になる
+	// s<<"-";
+	// s<<lt->tm_mon+1; //月を0からカウントしているため
+	// s<<"-";
+	// s<<lt->tm_mday; //そのまま
+	// s<<"_";
+	// s<<lt->tm_hour;
+	// s<<":";
+	// s<<lt->tm_min;
+	// s<<":";
+	// s<<lt->tm_sec;
+	// std::string timestamp = s.str();
 
-	std::string filename = std::string(cur_dir) + "/../../../mcm/output/delay/atoc" + timestamp + ".csv";
-	atoc_delay_output_file.open(filename, std::ios::out);
+	// std::string filename = std::string(cur_dir) + "/../../../mcm/output/delay/atoc" + timestamp + ".csv";
+	// atoc_delay_output_file.open(filename, std::ios::out);
 
 	if (mConfig.mGenerateMsgs) {
 		mTimer = new boost::asio::deadline_timer(mIoService, boost::posix_time::millisec(100));
@@ -111,21 +111,21 @@ McService::McService(McServiceConfig &config, ptree& configTree) {
 
 McService::~McService() {
 	mThreadReceive->join();
-	mThreadGpsDataReceive->join();
-	mThreadObd2DataReceive->join();
+	// mThreadGpsDataReceive->join();
+	// mThreadObd2DataReceive->join();
 	mThreadAutowareDataReceive->join();
 
 	delete mThreadReceive;
-	delete mThreadGpsDataReceive;
-	delete mThreadObd2DataReceive;
+	// delete mThreadGpsDataReceive;
+	// delete mThreadObd2DataReceive;
 	delete mThreadAutowareDataReceive;
 
 	delete mReceiverFromDcc;
 	delete mSenderToDcc;
 	delete mSenderToLdm;
 
-	delete mReceiverGps;
-	delete mReceiverObd2;
+	// delete mReceiverGps;
+	// delete mReceiverObd2;
 	delete mReceiverAutoware;
 
 	delete mLogger;
@@ -165,33 +165,33 @@ void McService::receive() {
 	}
 }
 
-void McService::receiveGpsData() {
-	// string serializedGps;
-	// gpsPackage::GPS newGps;
+// void McService::receiveGpsData() {
+// 	string serializedGps;
+// 	gpsPackage::GPS newGps;
 
-	// while (1) {
-	// 	serializedGps = mReceiverGps->receiveData();
-	// 	newGps.ParseFromString(serializedGps);
-	// 	mLogger->logDebug("Received GPS with latitude: " + to_string(newGps.latitude()) + ", longitude: " + to_string(newGps.longitude()));
-	// 	mMutexLatestGps.lock();
-	// 	mLatestGps = newGps;
-	// 	mMutexLatestGps.unlock();
-	// }
-}
+// 	while (1) {
+// 		serializedGps = mReceiverGps->receiveData();
+// 		newGps.ParseFromString(serializedGps);
+// 		mLogger->logDebug("Received GPS with latitude: " + to_string(newGps.latitude()) + ", longitude: " + to_string(newGps.longitude()));
+// 		mMutexLatestGps.lock();
+// 		mLatestGps = newGps;
+// 		mMutexLatestGps.unlock();
+// 	}
+// }
 
-void McService::receiveObd2Data() {
-	// string serializedObd2;
-	// obd2Package::OBD2 newObd2;
+// void McService::receiveObd2Data() {
+// 	string serializedObd2;
+// 	obd2Package::OBD2 newObd2;
 
-	// while (1) {
-	// 	serializedObd2 = mReceiverObd2->receiveData();
-	// 	newObd2.ParseFromString(serializedObd2);
-	// 	mLogger->logDebug("Received OBD2 with speed (m/s): " + to_string(newObd2.speed()));
-	// 	mMutexLatestObd2.lock();
-	// 	mLatestObd2 = newObd2;
-	// 	mMutexLatestObd2.unlock();
-	// }
-}
+// 	while (1) {
+// 		serializedObd2 = mReceiverObd2->receiveData();
+// 		newObd2.ParseFromString(serializedObd2);
+// 		mLogger->logDebug("Received OBD2 with speed (m/s): " + to_string(newObd2.speed()));
+// 		mMutexLatestObd2.lock();
+// 		mLatestObd2 = newObd2;
+// 		mMutexLatestObd2.unlock();
+// 	}
+// }
 
 void McService::receiveAutowareData() { //実装
 	string serializedAutoware;
@@ -215,20 +215,20 @@ void McService::receiveAutowareData() { //実装
 	}
 }
 
-void McService::receiveReflectedData() { //実装
-	string serializedPingApp;
-	pingAppPackage::PINGAPP newPingApp;
+// void McService::receiveReflectedData() { //実装
+// 	string serializedPingApp;
+// 	pingAppPackage::PINGAPP newPingApp;
 
-	while (1) {
-		serializedPingApp = mReceiverPingApp->receiveData();
-		send(true);
-		newPingApp.ParseFromString(serializedPingApp);
-		// mLogger->logDebug("Received OBD2 with speed (m/s): " + to_string(newObd.speed()));
-		mMutexLatestPingApp.lock();
-		mLatestPingApp = newPingApp;
-		mMutexLatestPingApp.unlock();
-	}
-}
+// 	while (1) {
+// 		serializedPingApp = mReceiverPingApp->receiveData();
+// 		send(true);
+// 		newPingApp.ParseFromString(serializedPingApp);
+// 		// mLogger->logDebug("Received OBD2 with speed (m/s): " + to_string(newObd.speed()));
+// 		mMutexLatestPingApp.lock();
+// 		mLatestPingApp = newPingApp;
+// 		mMutexLatestPingApp.unlock();
+// 	}
+// }
 
 
 //sends info about triggering to LDM
@@ -277,6 +277,10 @@ double McService::getHeading(double lat1, double lon1, double lat2, double lon2)
 //periodically check generation rules for sending to LDM and DCC
 void McService::alarm(const boost::system::error_code &ec) {
 	// Check heading and position conditions only if we have valid GPS data
+	if(state == 0) {
+		return;
+	}
+
 	if(isGPSdataValid()) {
 		if (!mLastSentMcmInfo.hasGPS) {
 			sendMcmInfo("First GPS data", -1);
@@ -323,17 +327,17 @@ void McService::trigger() {
 	scheduleNextAlarm();
 }
 
-bool McService::isGPSdataValid() {
-	mMutexLatestGps.lock();
-	int64_t currentTime = Utils::currentTime();
-	if (currentTime - mLatestGps.time() > (int64_t)mConfig.mMaxGpsAge * 1000*1000*1000) {	//GPS data too old
-		mGpsValid = false;
-	} else {
-		mGpsValid = true;
-	}
-	mMutexLatestGps.unlock();
-	return mGpsValid;
-}
+// bool McService::isGPSdataValid() {
+// 	mMutexLatestGps.lock();
+// 	int64_t currentTime = Utils::currentTime();
+// 	if (currentTime - mLatestGps.time() > (int64_t)mConfig.mMaxGpsAge * 1000*1000*1000) {	//GPS data too old
+// 		mGpsValid = false;
+// 	} else {
+// 		mGpsValid = true;
+// 	}
+// 	mMutexLatestGps.unlock();
+// 	return mGpsValid;
+// }
 
 bool McService::isHeadingChanged() {
 	mMutexLatestGps.lock();
@@ -435,7 +439,7 @@ void McService::send(bool isAutoware) {
 	//mMutexLatestAutoware.lock();
 	std::list<autowarePackage::AUTOWARE>::iterator itr;
 	//for(int i = 0; i< waiting_data.size(); i++){
-        for(itr = waiting_data.begin(); itr != waiting_data.end(); itr++){	
+	for(itr = waiting_data.begin(); itr != waiting_data.end(); itr++){	
 	// while(waiting_data.size() > 0){
 		// mLatestAutoware = waiting_data.back();
 		//mLatestAutoware = waiting_data[i];
@@ -543,65 +547,90 @@ MCM_t* McService::generateMcm(bool isAutoware) {
 	mcm->mcm.mcmParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorOrientation = 0;
 	mcm->mcm.mcmParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMinorConfidence = 0;
 
-	// High frequency container
-	// Could be basic vehicle or RSU and have corresponding details
-	if(mConfig.mIsRSU) {
-		mcm->mcm.mcmParameters.highFrequencyContainer.present = HighFrequencyContainer_PR_rsuContainerHighFrequency;
-		// Optional fields in MCM from RSU
-		// mcm->mcm.mcmParameters.highFrequencyContainer.choice.rsuContainerHighFrequency.protectedCommunicationZonesRSU
-	} else {
-		mcm->mcm.mcmParameters.highFrequencyContainer.present = HighFrequencyContainer_PR_basicVehicleContainerHighFrequency;
-		mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvature.curvatureValue = CurvatureValue_unavailable;
-		mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvature.curvatureConfidence = CurvatureConfidence_unavailable;
+	// Maneuver Container
 
-		mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvatureCalculationMode = CurvatureCalculationMode_unavailable;
-
-		mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.driveDirection = DriveDirection_unavailable;
-
-		mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.heading.headingValue = HeadingValue_unavailable;
-		mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.heading.headingConfidence = HeadingConfidence_unavailable;
-
-		mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationValue = LongitudinalAccelerationValue_unavailable;
-		mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationConfidence = AccelerationConfidence_unavailable;
-
-
-		mMutexLatestObd2.lock();
-		if (mObd2Valid) {
-			mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue = mLatestObd2.speed();
-			mLastSentMcmInfo.hasOBD2 = true;
-			mLastSentMcmInfo.lastObd2 = obd2Package::OBD2(mLatestObd2); //data needs to be copied to a new buffer because new obd2 data can be received before sending
-		} else {
-			mLastSentMcmInfo.hasOBD2 = false;
-			mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue = SpeedValue_unavailable;
-		}
-		mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedConfidence = SpeedConfidence_unavailable;
-		mMutexLatestObd2.unlock();
-
-		mMutexLatestAutoware.lock();
-		if (mAutowareValid) {
-			mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue = mLatestAutoware.speed();
-			mcm->mcm.mcmParameters.basicContainer.referencePosition.longitude = mLatestAutoware.longitude();
-			mcm->mcm.mcmParameters.basicContainer.referencePosition.latitude = mLatestAutoware.latitude();
-			mLastSentMcmInfo.hasAUTOWARE = true;
-			mLastSentMcmInfo.lastAutoware = autowarePackage::AUTOWARE(mLatestAutoware); //data needs to be copied to a new buffer because new autoware data can be received before sending
-			// std::cout << "autoware comes" <<  mLatestAutoware.longitude() << std::endl;
-		} else {
-			// std::cout << "autoware comes false" <<  mLatestAutoware.longitude() << std::endl;
-			mLastSentMcmInfo.hasAUTOWARE = false;
-			mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue = SpeedValue_unavailable;
-		}
-		mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedConfidence = SpeedConfidence_unavailable;
-		mMutexLatestAutoware.unlock();
-
-		mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleLength.vehicleLengthValue = VehicleLengthValue_unavailable;
-		mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleLength.vehicleLengthConfidenceIndication = VehicleLengthConfidenceIndication_unavailable;
-
-		mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleWidth = VehicleWidth_unavailable;
-
-		mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.yawRate.yawRateValue = YawRateValue_unavailable;
-		mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.yawRate.yawRateConfidence = YawRateConfidence_unavailable;
-
+	if (mAutowareValid) {
+		return;
 	}
+	switch(type) {
+		case 0:
+			mcm->mcm.mcmParameters.type = INTENTION_REQUEST;
+			mcm->mcm.mcmParameters.intentionRequestContainer.scenerio = mLatestAutoware.scenerio;
+			mcm->mcm.mcmParameters.intentionRequestContainer.plannedTrajectory = mLatestAutoware.trajectory;
+		case 1:
+			mcm->mcm.mcmParameters.type = INTENTION_REPLY;
+			mcm->mcm.mcmParameters.intentionReplyContainer.targetStationID = targetStationID;
+			mcm->mcm.mcmParameters.intentionRequestContainer.plannedTrajectory = mLatestAutoware.trajeoctory;
+		case 2:
+			mcm->mcm.mcmParameters.type = PRESCRIPTION;
+			mcm->mcm.mcmParameters.intentionReplyContainer.targetStationID = targetStationID;
+			mcm->mcm.mcmParameters.intentionRequestContainer.trajecotedTrajectory = mLatestAutoware.trajeoctory;
+		case 3:
+			mcm->mcm.mcmParameters.type = ACKNOWLEDGEMENT;
+			mcm->mcm.mcmParameters.intentionReplyContainer.targetStationID = targetStationID;
+			mcm->mcm.mcmParameters.intentionReplyContainer.adviceAccepted = mLatestAutoware.adviceAccepted;
+			mcm->mcm.mcmParameters.intentionRequestContainer.followedTrajectory = mLatestAutoware.trajeoctory;
+	}
+	
+	// // High frequency container
+	// // Could be basic vehicle or RSU and have corresponding details
+	// if(mConfig.mIsRSU) {
+	// 	mcm->mcm.mcmParameters.highFrequencyContainer.present = HighFrequencyContainer_PR_rsuContainerHighFrequency;
+	// 	// Optional fields in MCM from RSU
+	// 	// mcm->mcm.mcmParameters.highFrequencyContainer.choice.rsuContainerHighFrequency.protectedCommunicationZonesRSU
+	// } else {
+	// 	mcm->mcm.mcmParameters.highFrequencyContainer.present = HighFrequencyContainer_PR_basicVehicleContainerHighFrequency;
+	// 	mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvature.curvatureValue = CurvatureValue_unavailable;
+	// 	mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvature.curvatureConfidence = CurvatureConfidence_unavailable;
+
+	// 	mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvatureCalculationMode = CurvatureCalculationMode_unavailable;
+
+	// 	mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.driveDirection = DriveDirection_unavailable;
+
+	// 	mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.heading.headingValue = HeadingValue_unavailable;
+	// 	mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.heading.headingConfidence = HeadingConfidence_unavailable;
+
+	// 	mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationValue = LongitudinalAccelerationValue_unavailable;
+	// 	mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationConfidence = AccelerationConfidence_unavailable;
+
+
+	// 	mMutexLatestObd2.lock();
+	// 	if (mObd2Valid) {
+	// 		mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue = mLatestObd2.speed();
+	// 		mLastSentMcmInfo.hasOBD2 = true;
+	// 		mLastSentMcmInfo.lastObd2 = obd2Package::OBD2(mLatestObd2); //data needs to be copied to a new buffer because new obd2 data can be received before sending
+	// 	} else {
+	// 		mLastSentMcmInfo.hasOBD2 = false;
+	// 		mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue = SpeedValue_unavailable;
+	// 	}
+	// 	mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedConfidence = SpeedConfidence_unavailable;
+	// 	mMutexLatestObd2.unlock();
+
+	// 	mMutexLatestAutoware.lock();
+	// 	if (mAutowareValid) {
+	// 		mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue = mLatestAutoware.speed();
+	// 		mcm->mcm.mcmParameters.basicContainer.referencePosition.longitude = mLatestAutoware.longitude();
+	// 		mcm->mcm.mcmParameters.basicContainer.referencePosition.latitude = mLatestAutoware.latitude();
+	// 		mLastSentMcmInfo.hasAUTOWARE = true;
+	// 		mLastSentMcmInfo.lastAutoware = autowarePackage::AUTOWARE(mLatestAutoware); //data needs to be copied to a new buffer because new autoware data can be received before sending
+	// 		// std::cout << "autoware comes" <<  mLatestAutoware.longitude() << std::endl;
+	// 	} else {
+	// 		// std::cout << "autoware comes false" <<  mLatestAutoware.longitude() << std::endl;
+	// 		mLastSentMcmInfo.hasAUTOWARE = false;
+	// 		mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue = SpeedValue_unavailable;
+	// 	}
+	// 	mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedConfidence = SpeedConfidence_unavailable;
+	// 	mMutexLatestAutoware.unlock();
+
+	// 	mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleLength.vehicleLengthValue = VehicleLengthValue_unavailable;
+	// 	mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleLength.vehicleLengthConfidenceIndication = VehicleLengthConfidenceIndication_unavailable;
+
+	// 	mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleWidth = VehicleWidth_unavailable;
+
+	// 	mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.yawRate.yawRateValue = YawRateValue_unavailable;
+	// 	mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.yawRate.yawRateConfidence = YawRateConfidence_unavailable;
+
+	// }
 
 
 	// Optional

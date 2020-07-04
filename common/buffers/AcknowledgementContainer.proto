@@ -4,5 +4,6 @@ import "PathPoint.proto";
 
 message AcknowledgementContainer {
 	required uint64 targetStaionID = 1;
-	repeated its.PathPoint followedTrajectory = 2;
+	required int32 adviceAccepted = 2;
+	repeated its.PathPoint followedTrajectory = 3;
 }

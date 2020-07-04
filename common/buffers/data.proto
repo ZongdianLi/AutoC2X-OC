@@ -4,6 +4,7 @@ message DATA {
 	 enum Type {
 		CAM = 1;
 		DENM = 2;
+		MCM = 3;
 	 }
 	 enum Priority {
 		BK = 1;

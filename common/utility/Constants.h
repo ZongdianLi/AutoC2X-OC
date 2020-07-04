@@ -67,6 +67,8 @@ static const std::string LDM_CONFIG_NAME = "ldm";
 static const std::string HTTP_SERVER_CONFIG_NAME = "httpServer";
 /** config name for ping App. **/
 static const std::string PING_CONFIG_NAME = "pingApp";
+/** config name for ping App. **/
+static const std::string MCM_CONFIG_NAME = "mcm";
 
 /** module name for DCC **/
 static const std::string DCC_MODULE_NAME = "Dcc";
@@ -80,6 +82,9 @@ static const std::string CAM_MODULE_NAME = "CaService";
 
 /** module name for DENM **/
 static const std::string DENM_MODULE_NAME = "DenService";
+
+/** module name for DENM **/
+static const std::string MCM_MODULE_NAME = "McService";
 
 /** module name for DENM App **/
 static const std::string DENM_APP_MODULE_NAME = "DenmApp";

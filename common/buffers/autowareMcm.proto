@@ -1,0 +1,10 @@
+package autowarePackage;
+
+import "PathPoint.proto";
+
+message AUTOWAREMCM {
+	optional int64 id = 1;
+	optional int64 time = 2;
+	repeated its.PathPoint Trajectory = 3;
+	optional int32 adviceAccepted = 4;
+}
