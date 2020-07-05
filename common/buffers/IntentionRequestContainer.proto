@@ -1,8 +1,8 @@
 package its;
 
-import "PathPoint.proto";
+import "TrajectoryPoint.proto";
 
 message IntentionRequestContainer {
 	required int64 scenerio = 1;
-	repeated its.PathPoint plannedTrajectory = 2;
+	repeated its.TrajectoryPoint plannedTrajectory = 2;
 }

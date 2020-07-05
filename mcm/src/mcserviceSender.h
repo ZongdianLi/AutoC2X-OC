@@ -104,25 +104,25 @@ public:
 	/** Sends a new MCM to LDM and DCC.	 */
 	void send(bool isAutoware = false);
 
-	/** Calculates the heading towards North based on the two specified coordinates.
-	 *
-	 * @param lat1 Latitude of coordinate 1.
-	 * @param lon1 Longitude of coordinate 1.
-	 * @param lat2 Latitude of coordinate 2.
-	 * @param lon2 Longitude of coordinate 2.
-	 * @return The heading in degrees.
-	 */
-	double getHeading(double lat1, double lon1, double lat2, double lon2);
+	// /** Calculates the heading towards North based on the two specified coordinates.
+	//  *
+	//  * @param lat1 Latitude of coordinate 1.
+	//  * @param lon1 Longitude of coordinate 1.
+	//  * @param lat2 Latitude of coordinate 2.
+	//  * @param lon2 Longitude of coordinate 2.
+	//  * @return The heading in degrees.
+	//  */
+	// double getHeading(double lat1, double lon1, double lat2, double lon2);
 
-	/** Calculates the distance between the two specified coordinates
-	 *
-	 * @param lat1 Latitude of coordinate 1.
-	 * @param lon1 Longitude of coordinate 1.
-	 * @param lat2 Latitude of coordinate 2.
-	 * @param lon2 Longitude of coordinate 2.
-	 * @return The distance in meters.
-	 */
-	double getDistance(double lat1, double lon1, double lat2, double lon2);
+	// /** Calculates the distance between the two specified coordinates
+	//  *
+	//  * @param lat1 Latitude of coordinate 1.
+	//  * @param lon1 Longitude of coordinate 1.
+	//  * @param lat2 Latitude of coordinate 2.
+	//  * @param lon2 Longitude of coordinate 2.
+	//  * @return The distance in meters.
+	//  */
+	// double getDistance(double lat1, double lon1, double lat2, double lon2);
 
 private:
 	/** Receives incoming MCMs from DCC and forwards them to LDM.
@@ -163,56 +163,56 @@ private:
 	 */
 	mcmPackage::MCM convertAsn1toProtoBuf(MCM_t* mcm);
 
-	/** Receives new GPS data from the GPS module.
-	 *
-	 */
-	void receiveGpsData();
+	// /** Receives new GPS data from the GPS module.
+	//  *
+	//  */
+	// void receiveGpsData();
 
-	/** Receives new OBD2 data from the OBD2 module.
-	 *
-	 */
-	void receiveObd2Data();
+	// /** Receives new OBD2 data from the OBD2 module.
+	//  *
+	//  */
+	// void receiveObd2Data();
 
 	/** Receives new AUTOAWRE data from the AUTOWARE module.
 	 *
 	 */
 	void receiveAutowareData();
-	void receiveReflectedData();
+	// void receiveReflectedData();
 
-	/** Checks if heading has changed more than 4 degrees.
-	 * @return True if MCM needs to be triggered, false otherwise
-	 */
-	bool isHeadingChanged();
+	// /** Checks if heading has changed more than 4 degrees.
+	//  * @return True if MCM needs to be triggered, false otherwise
+	//  */
+	// bool isHeadingChanged();
 
-	/** Checks if position has changed more than 5 metres.
-	 * @return True if MCM needs to be triggered, false otherwise
-	 */
-	bool isPositionChanged();
+	// /** Checks if position has changed more than 5 metres.
+	//  * @return True if MCM needs to be triggered, false otherwise
+	//  */
+	// bool isPositionChanged();
 
-	/** Checks if speed has changed more than 1 m/sec.
-	 * @return True if MCM needs to be triggered, false otherwise
-	 */
-	bool isSpeedChanged();
+	// /** Checks if speed has changed more than 1 m/sec.
+	//  * @return True if MCM needs to be triggered, false otherwise
+	//  */
+	// bool isSpeedChanged();
 
-	/** Checks if speed has changed more than 1 m/sec.
-	 * @return True if MCM needs to be triggered, false otherwise
-	 */
-	bool isAutowareSpeedChanged();
+	// /** Checks if speed has changed more than 1 m/sec.
+	//  * @return True if MCM needs to be triggered, false otherwise
+	//  */
+	// bool isAutowareSpeedChanged();
 
-	/** Checks if time more than 1 second has past since last MCM.
-	 * @return True if MCM needs to be triggered, false otherwise
-	 */
-	bool isTimeToTriggerMCM();
+	// /** Checks if time more than 1 second has past since last MCM.
+	//  * @return True if MCM needs to be triggered, false otherwise
+	//  */
+	// bool isTimeToTriggerMCM();
 
 	/** Schedules next triggering checks for new MCM.
 	 *
 	 */
 	void scheduleNextAlarm();
 
-	/** Checks if the last received GPS data is still valid.
-	 * @return True if GPS data is valid, false otherwise.
-	 */
-	bool isGPSdataValid();
+	// /** Checks if the last received GPS data is still valid.
+	//  * @return True if GPS data is valid, false otherwise.
+	//  */
+	// bool isGPSdataValid();
 	
 
 	GlobalConfig mGlobalConfig;
@@ -223,14 +223,14 @@ private:
 	CommunicationSender* mSenderToAutoware; //反射してきたpingパケットをautowareモジュールに送るために必要
 
 	CommunicationReceiver* mReceiverFromDcc;
-	CommunicationReceiver* mReceiverGps;
-	CommunicationReceiver* mReceiverObd2;
+	// CommunicationReceiver* mReceiverGps;
+	// CommunicationReceiver* mReceiverObd2;
 	CommunicationReceiver* mReceiverAutoware;
 	CommunicationReceiver* mReceiverPingApp;
 
 	boost::thread* mThreadReceive;
-	boost::thread* mThreadGpsDataReceive;
-	boost::thread* mThreadObd2DataReceive;
+	// boost::thread* mThreadGpsDataReceive;
+	// boost::thread* mThreadObd2DataReceive;
 	boost::thread* mThreadAutowareDataReceive;
 	boost::thread* mThreadPingAppDataReceive;
 
@@ -279,7 +279,12 @@ private:
 	std::ofstream atoc_delay_output_file;
 
 	//std::vector<autowarePackage::AUTOWARE> waiting_data;
-	std::list<autowarePackage::AUTOWARE> waiting_data;
+	std::list<autowarePackage::AUTOWAREMCM> waiting_data;
+
+	/**
+	 * message type (ex. IntentionRequest, IntentionReply, ...)
+	 */
+	int type;
 };
 
 /** @} */ //end group

@@ -1,8 +1,8 @@
 package its;
 
-import "PathPoint.proto";
+import "TrajectoryPoint.proto";
 
 message PrescriptionContainer {
-	required uint64 targetStaionID = 1;
-	repeated its.PathPoint desiredTrajectory = 2;
+	required uint64 targetStationID = 1;
+	repeated its.TrajectoryPoint desiredTrajectory = 2;
 }

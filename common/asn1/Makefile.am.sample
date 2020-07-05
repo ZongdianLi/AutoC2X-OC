@@ -33,10 +33,9 @@ ASN_MODULE_SOURCES=	\
 	IntentionRequestContainer.c	\
 	IntentionReplyContainer.c	\
 	PrescriptionContainer.c	\
-	AcknowledgeContainer.c	\
-	PlannedTrajectory.c	\
-	DesiredTrajectory.c	\
-	FollowedTrajectory.c	\
+	AcknowledgementContainer.c	\
+	Trajectory.c	\
+	TrajectoryPoint.c	\
 	ItsPduHeader.c	\
 	StationID.c	\
 	GenerationDeltaTime.c	\
@@ -207,10 +206,9 @@ ASN_MODULE_HEADERS=	\
 	IntentionRequestContainer.h	\
 	IntentionReplyContainer.h	\
 	PrescriptionContainer.h	\
-	AcknowledgeContainer.h	\
-	PlannedTrajectory.h	\
-	DesiredTrajectory.h	\
-	FollowedTrajectory.h	\
+	AcknowledgementContainer.h	\
+	Trajectory.h	\
+	TrajectoryPoint.h	\
 	ItsPduHeader.h	\
 	StationID.h	\
 	GenerationDeltaTime.h	\

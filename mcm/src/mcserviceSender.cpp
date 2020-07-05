@@ -195,7 +195,7 @@ void McService::receive() {
 
 void McService::receiveAutowareData() { //実装
 	string serializedAutoware;
-	autowarePackage::AUTOWARE newAutoware;
+	autowarePackage::AUTOWAREMCM newAutoware;
 
 	while (1) {
 		serializedAutoware = mReceiverAutoware->receiveData();
@@ -244,35 +244,35 @@ void McService::sendMcmInfo(string triggerReason, double delta) {
 	mSenderToLdm->send("mcmInfo", serializedMcmInfo);
 }
 
-double McService::getDistance(double lat1, double lon1, double lat2, double lon2) {
-	double R = 6371; // km
-	double dLat = (lat2-lat1) * M_PI/180.0;		//convert to rad
-	double dLon = (lon2-lon1) * M_PI/180.0;
-	lat1 = lat1 * M_PI/180.0;
-	lat2 = lat2 * M_PI/180.0;
+// double McService::getDistance(double lat1, double lon1, double lat2, double lon2) {
+// 	double R = 6371; // km
+// 	double dLat = (lat2-lat1) * M_PI/180.0;		//convert to rad
+// 	double dLon = (lon2-lon1) * M_PI/180.0;
+// 	lat1 = lat1 * M_PI/180.0;
+// 	lat2 = lat2 * M_PI/180.0;
 
-	double a = sin(dLat/2) * sin(dLat/2) + sin(dLon/2) * sin(dLon/2) * cos(lat1) * cos(lat2);
-	double c = 2 * atan2(sqrt(a), sqrt(1-a));
-	return R * c * 1000;						//convert to m
-}
+// 	double a = sin(dLat/2) * sin(dLat/2) + sin(dLon/2) * sin(dLon/2) * cos(lat1) * cos(lat2);
+// 	double c = 2 * atan2(sqrt(a), sqrt(1-a));
+// 	return R * c * 1000;						//convert to m
+// }
 
-double McService::getHeading(double lat1, double lon1, double lat2, double lon2) {
-	if (getDistance(lat1, lon1, lat2, lon2) < mConfig.mThresholdRadiusForHeading) {
-		mLogger->logDebug("Ignore heading: not moved more than " +to_string(mConfig.mThresholdRadiusForHeading) + " meters.");
-		return -1;
-	}
+// double McService::getHeading(double lat1, double lon1, double lat2, double lon2) {
+// 	if (getDistance(lat1, lon1, lat2, lon2) < mConfig.mThresholdRadiusForHeading) {
+// 		mLogger->logDebug("Ignore heading: not moved more than " +to_string(mConfig.mThresholdRadiusForHeading) + " meters.");
+// 		return -1;
+// 	}
 
-	double dLat = (lat2-lat1) * M_PI/180.0;		//convert to rad
-	double dLon = (lon2-lon1) * M_PI/180.0;
-	lat1 = lat1 * M_PI/180.0;
+// 	double dLat = (lat2-lat1) * M_PI/180.0;		//convert to rad
+// 	double dLon = (lon2-lon1) * M_PI/180.0;
+// 	lat1 = lat1 * M_PI/180.0;
 
-	double phi = atan2(sin(lat1)*dLon, dLat);	//between -pi and +pi
-	phi = phi * 180.0/M_PI;						//convert to deg (-180, +180)
-	if(phi < 0) {
-		phi += 360;								//between 0 and 360 deg
-	}
-	return phi;
-}
+// 	double phi = atan2(sin(lat1)*dLon, dLat);	//between -pi and +pi
+// 	phi = phi * 180.0/M_PI;						//convert to deg (-180, +180)
+// 	if(phi < 0) {
+// 		phi += 360;								//between 0 and 360 deg
+// 	}
+// 	return phi;
+// }
 
 //periodically check generation rules for sending to LDM and DCC
 void McService::alarm(const boost::system::error_code &ec) {
@@ -281,43 +281,43 @@ void McService::alarm(const boost::system::error_code &ec) {
 		return;
 	}
 
-	if(isGPSdataValid()) {
-		if (!mLastSentMcmInfo.hasGPS) {
-			sendMcmInfo("First GPS data", -1);
-			mLogger->logInfo("First GPS data");
-			trigger();
-			return;
-		}
+	// if(isGPSdataValid()) {
+	// 	if (!mLastSentMcmInfo.hasGPS) {
+	// 		sendMcmInfo("First GPS data", -1);
+	// 		mLogger->logInfo("First GPS data");
+	// 		trigger();
+	// 		return;
+	// 	}
 
-		//|current position - last MCM position| > 5 m
-		if(isPositionChanged()) {
-			trigger();
-			return;
-		}
+	// 	//|current position - last MCM position| > 5 m
+	// 	if(isPositionChanged()) {
+	// 		trigger();
+	// 		return;
+	// 	}
 
-		//|current heading (towards North) - last MCM heading| > 4 deg
-		if(isHeadingChanged()) {
-			trigger();
-			return;
-		}
-	}
+	// 	//|current heading (towards North) - last MCM heading| > 4 deg
+	// 	if(isHeadingChanged()) {
+	// 		trigger();
+	// 		return;
+	// 	}
+	// }
 
-	//|current speed - last MCM speed| > 1 m/s
-	if(isSpeedChanged()) {
-		trigger();
-		return;
-	}
+	// //|current speed - last MCM speed| > 1 m/s
+	// if(isSpeedChanged()) {
+	// 	trigger();
+	// 	return;
+	// }
 
-	if(isAutowareSpeedChanged()) {
-		trigger();
-		return;
-	}
+	// if(isAutowareSpeedChanged()) {
+	// 	trigger();
+	// 	return;
+	// }
 
-	//max. time interval 1s
-	if(isTimeToTriggerMCM()) {
-		trigger();
-		return;
-	}
+	// //max. time interval 1s
+	// if(isTimeToTriggerMCM()) {
+	// 	trigger();
+	// 	return;
+	// }
 
 	scheduleNextAlarm();
 }
@@ -339,91 +339,91 @@ void McService::trigger() {
 // 	return mGpsValid;
 // }
 
-bool McService::isHeadingChanged() {
-	mMutexLatestGps.lock();
-	double currentHeading = getHeading(mLastSentMcmInfo.lastGps.latitude(), mLastSentMcmInfo.lastGps.longitude(), mLatestGps.latitude(), mLatestGps.longitude());
-	if(currentHeading != -1) {
-		double deltaHeading = currentHeading - mLastSentMcmInfo.lastHeading;
-		if (deltaHeading > 180) {
-			deltaHeading -= 360;
-		} else if (deltaHeading < -180) {
-			deltaHeading += 360;
-		}
-		if(abs(deltaHeading) > 4.0) {
-			sendMcmInfo("heading", deltaHeading);
-			mLogger->logInfo("deltaHeading: " + to_string(deltaHeading));
-			mMutexLatestGps.unlock();
-			return true;
-		}
-	}
-	mMutexLatestGps.unlock();
-	return false;
-}
+// bool McService::isHeadingChanged() {
+// 	mMutexLatestGps.lock();
+// 	double currentHeading = getHeading(mLastSentMcmInfo.lastGps.latitude(), mLastSentMcmInfo.lastGps.longitude(), mLatestGps.latitude(), mLatestGps.longitude());
+// 	if(currentHeading != -1) {
+// 		double deltaHeading = currentHeading - mLastSentMcmInfo.lastHeading;
+// 		if (deltaHeading > 180) {
+// 			deltaHeading -= 360;
+// 		} else if (deltaHeading < -180) {
+// 			deltaHeading += 360;
+// 		}
+// 		if(abs(deltaHeading) > 4.0) {
+// 			sendMcmInfo("heading", deltaHeading);
+// 			mLogger->logInfo("deltaHeading: " + to_string(deltaHeading));
+// 			mMutexLatestGps.unlock();
+// 			return true;
+// 		}
+// 	}
+// 	mMutexLatestGps.unlock();
+// 	return false;
+// }
 
-bool McService::isAutowareSpeedChanged() {
-	mMutexLatestAutoware.lock();
-	int64_t currentTime = Utils::currentTime();
-	// if (currentTime - mLatestAutoware.time() > (int64_t)mConfig.mMaxObd2Age * 1000*1000*1000) {	//AUTOWARE data too old
-	// 	mMutexLatestAutoware.unlock();
-	// 	mAutowareValid = false;
-	// 	return false;
-	// }
-	mAutowareValid = true;
-	double deltaSpeed = abs(mLatestAutoware.speed() - mLastSentMcmInfo.lastAutoware.speed());
-	if(deltaSpeed > 1.0) {
-		sendMcmInfo("speed", deltaSpeed);
-		mLogger->logInfo("autowaredeltaSpeed: " + to_string(deltaSpeed));
-		mMutexLatestAutoware.unlock();
-		return true;
-	}
-	mMutexLatestAutoware.unlock();
-	return false;
-}
+// bool McService::isAutowareSpeedChanged() {
+// 	mMutexLatestAutoware.lock();
+// 	int64_t currentTime = Utils::currentTime();
+// 	// if (currentTime - mLatestAutoware.time() > (int64_t)mConfig.mMaxObd2Age * 1000*1000*1000) {	//AUTOWARE data too old
+// 	// 	mMutexLatestAutoware.unlock();
+// 	// 	mAutowareValid = false;
+// 	// 	return false;
+// 	// }
+// 	mAutowareValid = true;
+// 	double deltaSpeed = abs(mLatestAutoware.speed() - mLastSentMcmInfo.lastAutoware.speed());
+// 	if(deltaSpeed > 1.0) {
+// 		sendMcmInfo("speed", deltaSpeed);
+// 		mLogger->logInfo("autowaredeltaSpeed: " + to_string(deltaSpeed));
+// 		mMutexLatestAutoware.unlock();
+// 		return true;
+// 	}
+// 	mMutexLatestAutoware.unlock();
+// 	return false;
+// }
 
-bool McService::isPositionChanged() {
-	mMutexLatestGps.lock();
-	double distance = getDistance(mLastSentMcmInfo.lastGps.latitude(), mLastSentMcmInfo.lastGps.longitude(), mLatestGps.latitude(), mLatestGps.longitude());
-	if(distance > 5.0) {
-		sendMcmInfo("distance", distance);
-		mLogger->logInfo("distance: " + to_string(distance));
-		mMutexLatestGps.unlock();
-		return true;
-	}
-	mMutexLatestGps.unlock();
-	return false;
-}
+// bool McService::isPositionChanged() {
+// 	mMutexLatestGps.lock();
+// 	double distance = getDistance(mLastSentMcmInfo.lastGps.latitude(), mLastSentMcmInfo.lastGps.longitude(), mLatestGps.latitude(), mLatestGps.longitude());
+// 	if(distance > 5.0) {
+// 		sendMcmInfo("distance", distance);
+// 		mLogger->logInfo("distance: " + to_string(distance));
+// 		mMutexLatestGps.unlock();
+// 		return true;
+// 	}
+// 	mMutexLatestGps.unlock();
+// 	return false;
+// }
 
-bool McService::isSpeedChanged() {
-	mMutexLatestObd2.lock();
-	int64_t currentTime = Utils::currentTime();
-	if (currentTime - mLatestObd2.time() > (int64_t)mConfig.mMaxObd2Age * 1000*1000*1000) {	//OBD2 data too old
-		mMutexLatestObd2.unlock();
-		mObd2Valid = false;
-		return false;
-	}
-	mObd2Valid = true;
-	double deltaSpeed = abs(mLatestObd2.speed() - mLastSentMcmInfo.lastObd2.speed());
-	if(deltaSpeed > 1.0) {
-		sendMcmInfo("speed", deltaSpeed);
-		mLogger->logInfo("deltaSpeed: " + to_string(deltaSpeed));
-		mMutexLatestObd2.unlock();
-		return true;
-	}
-	mMutexLatestObd2.unlock();
-	return false;
-}
+// bool McService::isSpeedChanged() {
+// 	mMutexLatestObd2.lock();
+// 	int64_t currentTime = Utils::currentTime();
+// 	if (currentTime - mLatestObd2.time() > (int64_t)mConfig.mMaxObd2Age * 1000*1000*1000) {	//OBD2 data too old
+// 		mMutexLatestObd2.unlock();
+// 		mObd2Valid = false;
+// 		return false;
+// 	}
+// 	mObd2Valid = true;
+// 	double deltaSpeed = abs(mLatestObd2.speed() - mLastSentMcmInfo.lastObd2.speed());
+// 	if(deltaSpeed > 1.0) {
+// 		sendMcmInfo("speed", deltaSpeed);
+// 		mLogger->logInfo("deltaSpeed: " + to_string(deltaSpeed));
+// 		mMutexLatestObd2.unlock();
+// 		return true;
+// 	}
+// 	mMutexLatestObd2.unlock();
+// 	return false;
+// }
 
-bool McService::isTimeToTriggerMCM() {
-	//max. time interval 1s
-	int64_t currentTime = Utils::currentTime();
-	int64_t deltaTime = currentTime - mLastSentMcmInfo.timestamp;
-	if(deltaTime >= 1*100*1000*1000) {
-		sendMcmInfo("time", deltaTime);
-		//mLogger->logInfo("deltaTime: " + to_string(deltaTime));
-		return true;
-	}
-	return false;
-}
+// bool McService::isTimeToTriggerMCM() {
+// 	//max. time interval 1s
+// 	int64_t currentTime = Utils::currentTime();
+// 	int64_t deltaTime = currentTime - mLastSentMcmInfo.timestamp;
+// 	if(deltaTime >= 1*100*1000*1000) {
+// 		sendMcmInfo("time", deltaTime);
+// 		//mLogger->logInfo("deltaTime: " + to_string(deltaTime));
+// 		return true;
+// 	}
+// 	return false;
+// }
 
 void McService::scheduleNextAlarm() {
 	//min. time interval 0.1 s
@@ -437,7 +437,7 @@ void McService::send(bool isAutoware) {
 	start = std::chrono::system_clock::now();
 	std::cout << "*********lets send MCM:" << waiting_data.size() << "," << std::endl;
 	//mMutexLatestAutoware.lock();
-	std::list<autowarePackage::AUTOWARE>::iterator itr;
+	std::list<autowarePackage::AUTOWAREMCM>::iterator itr;
 	//for(int i = 0; i< waiting_data.size(); i++){
 	for(itr = waiting_data.begin(); itr != waiting_data.end(); itr++){	
 	// while(waiting_data.size() > 0){
@@ -446,7 +446,7 @@ void McService::send(bool isAutoware) {
 		if(waiting_data.size() == 0){
 			break;
 		}
-	        mLatestAutoware = *itr;	
+		mLatestAutoware = *itr;
 		// waiting_data.pop_back();
 		std::cout << "send****" << std::endl;
 		string serializedData;
@@ -521,21 +521,25 @@ MCM_t* McService::generateMcm(bool isAutoware) {
 	mcm->mcm.mcmParameters.basicContainer.stationType = mConfig.mIsRSU ? StationType_roadSideUnit : StationType_passengerCar;
 
 	mMutexLatestGps.lock();
-	if (mGpsValid) {
-		mcm->mcm.mcmParameters.basicContainer.referencePosition.latitude = mLatestGps.latitude() * 10000000; // in one-tenth of microdegrees
-		mcm->mcm.mcmParameters.basicContainer.referencePosition.longitude = mLatestGps.longitude() * 10000000; // in one-tenth of microdegrees
-		mcm->mcm.mcmParameters.basicContainer.referencePosition.altitude.altitudeValue = mLatestGps.altitude();
-		double currentHeading = getHeading(mLastSentMcmInfo.lastGps.latitude(), mLastSentMcmInfo.lastGps.longitude(), mLatestGps.latitude(), mLatestGps.longitude());
+	// if (mGpsValid) {
+	// 	mcm->mcm.mcmParameters.basicContainer.referencePosition.latitude = mLatestGps.latitude() * 10000000; // in one-tenth of microdegrees
+	// 	mcm->mcm.mcmParameters.basicContainer.referencePosition.longitude = mLatestGps.longitude() * 10000000; // in one-tenth of microdegrees
+	// 	mcm->mcm.mcmParameters.basicContainer.referencePosition.altitude.altitudeValue = mLatestGps.altitude();
+	// 	double currentHeading = getHeading(mLastSentMcmInfo.lastGps.latitude(), mLastSentMcmInfo.lastGps.longitude(), mLatestGps.latitude(), mLatestGps.longitude());
 
-		mLastSentMcmInfo.hasGPS = true;
-		mLastSentMcmInfo.lastGps = gpsPackage::GPS(mLatestGps);		//data needs to be copied to a new buffer because new gps data can be received before sending
-		mLastSentMcmInfo.lastHeading = currentHeading;
-	} else {
-		mLastSentMcmInfo.hasGPS = false;
-		mcm->mcm.mcmParameters.basicContainer.referencePosition.latitude = Latitude_unavailable;
-		mcm->mcm.mcmParameters.basicContainer.referencePosition.longitude = Longitude_unavailable;
-		mcm->mcm.mcmParameters.basicContainer.referencePosition.altitude.altitudeValue = AltitudeValue_unavailable;
-	}
+	// 	mLastSentMcmInfo.hasGPS = true;
+	// 	mLastSentMcmInfo.lastGps = gpsPackage::GPS(mLatestGps);		//data needs to be copied to a new buffer because new gps data can be received before sending
+	// 	mLastSentMcmInfo.lastHeading = currentHeading;
+	// } else {
+	// 	mLastSentMcmInfo.hasGPS = false;
+	// 	mcm->mcm.mcmParameters.basicContainer.referencePosition.latitude = Latitude_unavailable;
+	// 	mcm->mcm.mcmParameters.basicContainer.referencePosition.longitude = Longitude_unavailable;
+	// 	mcm->mcm.mcmParameters.basicContainer.referencePosition.altitude.altitudeValue = AltitudeValue_unavailable;
+	// }
+	mLastSentMcmInfo.hasGPS = false;
+	mcm->mcm.mcmParameters.basicContainer.referencePosition.latitude = Latitude_unavailable;
+	mcm->mcm.mcmParameters.basicContainer.referencePosition.longitude = Longitude_unavailable;
+	mcm->mcm.mcmParameters.basicContainer.referencePosition.altitude.altitudeValue = AltitudeValue_unavailable;
 	mcm->mcm.mcmParameters.basicContainer.referencePosition.altitude.altitudeConfidence = AltitudeConfidence_unavailable;
 	mMutexLatestGps.unlock();
 
@@ -549,29 +553,49 @@ MCM_t* McService::generateMcm(bool isAutoware) {
 
 	// Maneuver Container
 
+	Trajectory_t* trajectory = static_cast<Trajectory_t*>(calloc(1, sizeof(Trajectory_t)));
+		
+	for (int i=0; i<mLatestAutoware.trajectory_size(); i++) {
+		TrajectoryPoint_t* trajectory_point = static_cast<TrajectoryPoint_t*>(calloc(1, sizeof(TrajectoryPoint_t)));
+		if (trajectory_point == NULL) {
+			perror("calloc() failed");
+			exit(EXIT_FAILURE);
+		}
+		trajectory_point->pathPosition.deltaLatitude = mLatestAutoware.trajectory(i).deltalat();
+		trajectory_point->pathPosition.deltaLongitude = mLatestAutoware.trajectory(i).deltalong();
+		trajectory_point->pathPosition.deltaAltitude = mLatestAutoware.trajectory(i).deltaalt();
+		trajectory_point->pathDeltaTime = mLatestAutoware.trajectory(i).pathdeltatime();
+		const int result = asn_sequence_add(trajectory, trajectory_point);
+	}
+
 	if (mAutowareValid) {
-		return;
+		switch(type) {
+			case 0:
+				mcm->mcm.mcmParameters.controlFlag = controlFlag_intentionRequest;
+				mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.scenerio = mLatestAutoware.scenerio();
+				mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory = *trajectory;
+				break;
+			case 1:
+				mcm->mcm.mcmParameters.controlFlag = controlFlag_intentionReply;
+				mcm->mcm.mcmParameters.maneuverContainer.choice.intentionReplyContainer.targetStationID = mLatestAutoware.targetstationid();
+				mcm->mcm.mcmParameters.maneuverContainer.choice.intentionReplyContainer.plannedTrajectory = *trajectory;
+				break;
+			case 2:
+				mcm->mcm.mcmParameters.controlFlag = controlFlag_prescription;
+				mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.targetStationID = mLatestAutoware.targetstationid();
+				mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory = *trajectory;
+				break;
+			case 3:
+				mcm->mcm.mcmParameters.controlFlag = controlFlag_acknowledgement;
+				mcm->mcm.mcmParameters.maneuverContainer.choice.acknowledgementContainer.targetStationID = mLatestAutoware.targetstationid();
+				mcm->mcm.mcmParameters.maneuverContainer.choice.acknowledgementContainer.adviceAccepted = mLatestAutoware.adviceaccepted();
+				mcm->mcm.mcmParameters.maneuverContainer.choice.acknowledgementContainer.followedTrajectory = *trajectory;
+				break;
+			default:
+				break;
+		}
 	}
-	switch(type) {
-		case 0:
-			mcm->mcm.mcmParameters.type = INTENTION_REQUEST;
-			mcm->mcm.mcmParameters.intentionRequestContainer.scenerio = mLatestAutoware.scenerio;
-			mcm->mcm.mcmParameters.intentionRequestContainer.plannedTrajectory = mLatestAutoware.trajectory;
-		case 1:
-			mcm->mcm.mcmParameters.type = INTENTION_REPLY;
-			mcm->mcm.mcmParameters.intentionReplyContainer.targetStationID = targetStationID;
-			mcm->mcm.mcmParameters.intentionRequestContainer.plannedTrajectory = mLatestAutoware.trajeoctory;
-		case 2:
-			mcm->mcm.mcmParameters.type = PRESCRIPTION;
-			mcm->mcm.mcmParameters.intentionReplyContainer.targetStationID = targetStationID;
-			mcm->mcm.mcmParameters.intentionRequestContainer.trajecotedTrajectory = mLatestAutoware.trajeoctory;
-		case 3:
-			mcm->mcm.mcmParameters.type = ACKNOWLEDGEMENT;
-			mcm->mcm.mcmParameters.intentionReplyContainer.targetStationID = targetStationID;
-			mcm->mcm.mcmParameters.intentionReplyContainer.adviceAccepted = mLatestAutoware.adviceAccepted;
-			mcm->mcm.mcmParameters.intentionRequestContainer.followedTrajectory = mLatestAutoware.trajeoctory;
-	}
-	
+
 	// // High frequency container
 	// // Could be basic vehicle or RSU and have corresponding details
 	// if(mConfig.mIsRSU) {
@@ -665,8 +689,8 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 	mcmProto.set_allocated_header(header);
 
 	// coop awareness
-	its::CoopAwareness* coop = new its::CoopAwareness;
-	coop->set_gendeltatime(mcm->mcm.generationDeltaTime);
+	its::ManeuverCoordination* maneuver = new its::ManeuverCoordination;
+	maneuver->set_gendeltatime(mcm->mcm.generationDeltaTime);
 	its::McmParameters* params = new its::McmParameters;
 
 	// basic container
@@ -683,73 +707,138 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 	params->set_allocated_basiccontainer(basicContainer);
 
 	// high frequency container
-	its::HighFreqContainer* highFreqContainer = new its::HighFreqContainer;
-	its::BasicVehicleHighFreqContainer* basicHighFreqContainer = 0;
-	its::RsuHighFreqContainer* rsuHighFreqContainer = 0;
-	switch (mcm->mcm.mcmParameters.highFrequencyContainer.present) {
-		case HighFrequencyContainer_PR_basicVehicleContainerHighFrequency:
-			highFreqContainer->set_type(its::HighFreqContainer_Type_BASIC_HIGH_FREQ_CONTAINER);
-			basicHighFreqContainer = new its::BasicVehicleHighFreqContainer();
-			basicHighFreqContainer->set_heading(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.heading.headingValue);
-			basicHighFreqContainer->set_headingconfidence(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.heading.headingConfidence);
-			basicHighFreqContainer->set_speed(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue);
-			basicHighFreqContainer->set_speedconfidence(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedConfidence);
-			basicHighFreqContainer->set_drivedirection(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.driveDirection);
-			basicHighFreqContainer->set_vehiclelength(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleLength.vehicleLengthValue);
-			basicHighFreqContainer->set_vehiclelengthconfidence(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleLength.vehicleLengthConfidenceIndication);
-			basicHighFreqContainer->set_vehiclewidth(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleWidth);
-			basicHighFreqContainer->set_longitudinalacceleration(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationValue);
-			basicHighFreqContainer->set_longitudinalaccelerationconfidence(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationValue);
-			basicHighFreqContainer->set_curvature(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvature.curvatureValue);
-			basicHighFreqContainer->set_curvatureconfidence(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvature.curvatureConfidence);
-			basicHighFreqContainer->set_curvaturecalcmode(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvatureCalculationMode);
-			basicHighFreqContainer->set_yawrate(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.yawRate.yawRateValue);
-			basicHighFreqContainer->set_yawrateconfidence(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.yawRate.yawRateConfidence);
+	its::ManeuverContainer* maneuverContainer = new its::ManeuverContainer;
+	its::IntentionRequestContainer* intentionRequestContainer = 0;
+	its::IntentionReplyContainer* intentionReplyContainer = 0;
+	its::PrescriptionContainer* prescriptionContainer = 0;
+	its::AcknowledgementContainer* acknowledgementContainer = 0;
 
-			// optional fields
-			//basicHighFreqContainer->set_accelerationcontrol();
-			//basicHighFreqContainer->set_laneposition();
-			//basicHighFreqContainer->set_steeringwheelangle();
-			//basicHighFreqContainer->set_steeringwheelangleconfidence();
-			//basicHighFreqContainer->set_lateralacceleration();
-			//basicHighFreqContainer->set_lateralaccelerationconfidence();
-			//basicHighFreqContainer->set_verticalacceleration();
-			//basicHighFreqContainer->set_verticalaccelerationconfidence();
-			//basicHighFreqContainer->set_performanceclass();
-			//basicHighFreqContainer->set_protectedzonelatitude();
-			//basicHighFreqContainer->set_has_protectedzonelongitude();
-			//basicHighFreqContainer->set_cendsrctollingzoneid();
-
-			highFreqContainer->set_allocated_basicvehiclehighfreqcontainer(basicHighFreqContainer);
+	switch (mcm->mcm.mcmParameters.maneuverContainer.present) {
+		case ManeuverContainer_PR_intentionRequestContainer:
+ 			maneuverContainer->set_type(its::ManeuverContainer_Type_INTENTION_REQUEST_CONTAINER);
+			intentionRequestContainer = new its::IntentionRequestContainer();
+			intentionRequestContainer->set_scenerio(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.scenerio);
+			for (int i; i<mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.count; i++) {
+				its::TrajectoryPoint* trajectory_point = new its::TrajectoryPoint();
+				trajectory_point->set_deltalat(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaLatitude);
+				trajectory_point->set_deltaalt(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaAltitude);
+				trajectory_point->set_deltalong(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaLongitude);
+				trajectory_point->set_pathdeltatime(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathDeltaTime);
+				intentionRequestContainer->add_plannedtrajectory(trajectory_point);
+			}
+			maneuverContainer->set_allocated_intentionrequestcontainer(intentionRequestContainer);
 			break;
-
-		case HighFrequencyContainer_PR_rsuContainerHighFrequency:
-			highFreqContainer->set_type(its::HighFreqContainer_Type_RSU_HIGH_FREQ_CONTAINER);
-
-			rsuHighFreqContainer = new its::RsuHighFreqContainer();
-			// optional fields
-			//rsuHighFreqContainer->
-
-			highFreqContainer->set_allocated_rsuhighfreqcontainer(rsuHighFreqContainer);
+		case ManeuverContainer_PR_intentionReplyContainer:
+			maneuverContainer->set_type(its::ManeuverContainer_Type_INTENTION_REPLY_CONTAINER);
+			intentionReplyContainer = new its::IntentionReplyContainer();
+			intentionReplyContainer->set_targetstationid(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionReplyContainer.targetStationID);
+			for (int i; i<mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.count; i++) {
+				its::TrajectoryPoint* trajectory_point = new its::TrajectoryPoint();
+				trajectory_point->set_deltalat(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaLatitude);
+				trajectory_point->set_deltaalt(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaAltitude);
+				trajectory_point->set_deltalong(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaLongitude);
+				trajectory_point->set_pathdeltatime(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathDeltaTime);
+				intentionReplyContainer->add_plannedtrajectory(trajectory_point);
+			}
+			maneuverContainer->set_allocated_intentionreplycontainer(intentionReplyContainer);
 			break;
-
+		case ManeuverContainer_PR_prescriptionContainer:
+			maneuverContainer->set_type(its::ManeuverContainer_Type_PRESCRIPTION_CONTAINER);
+			prescriptionContainer = new its::PrescritionContainer();
+			prescriptionContainer->set_targetstationid(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.targetStationID);
+			for (int i; i<mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.count; i++) {
+				its::TrajectoryPoint* trajectory_point = new its::TrajectoryPoint();
+				trajectory_point->set_deltalat(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaLatitude);
+				trajectory_point->set_deltaalt(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaAltitude);
+				trajectory_point->set_deltalong(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaLongitude);
+				trajectory_point->set_pathdeltatime(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathDeltaTime);
+				prescriptionContainer->add_desiredtrajectory(trajectory_point);
+			}
+			maneuverContainer->set_allocated_prescriptioncontainer(prescriptionContainer);
+			break;
+		case ManeuverContainer_PR_acknowledgementContainer:
+			maneuverContainer->set_type(its::ManeuverContainer_Type_ACKNOWLEDGEMENT_CONTAINER);
+			acknowledgementContainer = new its::AcknowledgementContainer();
+			acknowledgementContainer->set_targetstationid(mcm->mcm.mcmParameters.maneuverContainer.choice.acknowledgementContainer.targetStationID);
+			acknowledgementContainer->set_adviceaccepted(mcm->mcm.mcmParameters.maneuverContainer.choice.acknowledgementContainer.adviceAccepted);
+			for (int i; i<mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.count; i++) {
+				its::TrajectoryPoint* trajectory_point = new its::TrajectoryPoint();
+				trajectory_point->set_deltalat(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaLatitude);
+				trajectory_point->set_deltaalt(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaAltitude);
+				trajectory_point->set_deltalong(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaLongitude);
+				trajectory_point->set_pathdeltatime(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathDeltaTime);
+				acknowledgementContainer->add_followedtrajectory(trajectory_point);
+			}
+			maneuverContainer->set_allocated_acknowledgementcontainer(acknowledgementContainer);
+			break;
 		default:
 			break;
 	}
-	params->set_allocated_highfreqcontainer(highFreqContainer);
 
-	// low frequency container (optional)
-	if(!mcm->mcm.mcmParameters.lowFrequencyContainer) {
-		// fill in the low freq container
-	}
+	// switch (mcm->mcm.mcmParameters.highFrequencyContainer.present) {
+	// 	case HighFrequencyContainer_PR_basicVehicleContainerHighFrequency:
+	// 		highFreqContainer->set_type(its::HighFreqContainer_Type_BASIC_HIGH_FREQ_CONTAINER);
+	// 		basicHighFreqContainer = new its::BasicVehicleHighFreqContainer();
+	// 		basicHighFreqContainer->set_heading(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.heading.headingValue);
+	// 		basicHighFreqContainer->set_headingconfidence(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.heading.headingConfidence);
+	// 		basicHighFreqContainer->set_speed(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue);
+	// 		basicHighFreqContainer->set_speedconfidence(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedConfidence);
+	// 		basicHighFreqContainer->set_drivedirection(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.driveDirection);
+	// 		basicHighFreqContainer->set_vehiclelength(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleLength.vehicleLengthValue);
+	// 		basicHighFreqContainer->set_vehiclelengthconfidence(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleLength.vehicleLengthConfidenceIndication);
+	// 		basicHighFreqContainer->set_vehiclewidth(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleWidth);
+	// 		basicHighFreqContainer->set_longitudinalacceleration(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationValue);
+	// 		basicHighFreqContainer->set_longitudinalaccelerationconfidence(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationValue);
+	// 		basicHighFreqContainer->set_curvature(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvature.curvatureValue);
+	// 		basicHighFreqContainer->set_curvatureconfidence(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvature.curvatureConfidence);
+	// 		basicHighFreqContainer->set_curvaturecalcmode(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvatureCalculationMode);
+	// 		basicHighFreqContainer->set_yawrate(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.yawRate.yawRateValue);
+	// 		basicHighFreqContainer->set_yawrateconfidence(mcm->mcm.mcmParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.yawRate.yawRateConfidence);
 
-	// special vehicle container (optional)
-	if(!mcm->mcm.mcmParameters.specialVehicleContainer) {
-		// fill in the special vehicle container
-	}
+	// 		// optional fields
+	// 		//basicHighFreqContainer->set_accelerationcontrol();
+	// 		//basicHighFreqContainer->set_laneposition();
+	// 		//basicHighFreqContainer->set_steeringwheelangle();
+	// 		//basicHighFreqContainer->set_steeringwheelangleconfidence();
+	// 		//basicHighFreqContainer->set_lateralacceleration();
+	// 		//basicHighFreqContainer->set_lateralaccelerationconfidence();
+	// 		//basicHighFreqContainer->set_verticalacceleration();
+	// 		//basicHighFreqContainer->set_verticalaccelerationconfidence();
+	// 		//basicHighFreqContainer->set_performanceclass();
+	// 		//basicHighFreqContainer->set_protectedzonelatitude();
+	// 		//basicHighFreqContainer->set_has_protectedzonelongitude();
+	// 		//basicHighFreqContainer->set_cendsrctollingzoneid();
 
-	coop->set_allocated_mcmparameters(params);
-	mcmProto.set_allocated_coop(coop);
+	// 		highFreqContainer->set_allocated_basicvehiclehighfreqcontainer(basicHighFreqContainer);
+	// 		break;
+
+	// 	case HighFrequencyContainer_PR_rsuContainerHighFrequency:
+	// 		highFreqContainer->set_type(its::HighFreqContainer_Type_RSU_HIGH_FREQ_CONTAINER);
+
+	// 		rsuHighFreqContainer = new its::RsuHighFreqContainer();
+	// 		// optional fields
+	// 		//rsuHighFreqContainer->
+
+	// 		highFreqContainer->set_allocated_rsuhighfreqcontainer(rsuHighFreqContainer);
+	// 		break;
+
+	// 	default:
+	// 		break;
+	// }
+	params->set_allocated_maneuvercontainer(maneuverContainer);
+
+	// // low frequency container (optional)
+	// if(!mcm->mcm.mcmParameters.lowFrequencyContainer) {
+	// 	// fill in the low freq container
+	// }
+
+	// // special vehicle container (optional)
+	// if(!mcm->mcm.mcmParameters.specialVehicleContainer) {
+	// 	// fill in the special vehicle container
+	// }
+
+	maneuver->set_allocated_mcmparameters(params);
+	mcmProto.set_allocated_maneuver(maneuver);
 
 	return mcmProto;
 }

@@ -255,7 +255,7 @@ DEFINITIONS AUTOMATIC TAGS ::=
 BEGIN
     
     IMPORTS
-	ItsPduHeader, StationID, PathPoint, BasicContainer, GenerationDeltaTime
+	ItsPduHeader, StationID, DeltaReferencePosition, PathDeltaTime, BasicContainer, GenerationDeltaTime
 	FROM ITS-Container {itu-t(0) identified-organization(4) etsi(0)
 	    itsDomain(5) wg1(1) ts(102894) cdd(2) version(1)};
 	
@@ -295,19 +295,19 @@ BEGIN
 	laneChange(1),
 	intersection(2)
 	} (0..16),
-	plannedTrajectory	PlannedTrajectory,
+	plannedTrajectory	Trajectory,
 						...
 	}
 
 	IntentionReplyContainer ::= SEQUENCE {
 	targetStationID		StationID,
-	plannedTrajectory	PlannedTrajectory,
+	plannedTrajectory	Trajectory,
 						...
 	}
 
 	PrescriptionContainer ::= SEQUENCE {
 	targetStationID		StationID,
-	desiredTrajectory	DesiredTrajectory,
+	desiredTrajectory	Trajectory,
 						...
 	}
 
@@ -317,16 +317,17 @@ BEGIN
 		accepted(0),
 		rejected(1)
 	} (0..1),
-	fllowedTrajected	FollowedTrajectory,
+	followedTrajectory	Trajectory,
 						...
 	}
 
-	PlannedTrajectory ::= SEQUENCE OF PathPoint
+	Trajectory ::= SEQUENCE OF TrajectoryPoint
 
-	DesiredTrajectory ::= SEQUENCE OF PathPoint
+	TrajectoryPoint ::= SEQUENCE {
+	pathPosition  DeltaReferencePosition,
+	pathDeltaTime PathDeltaTime
+    }
 
-	FollowedTrajectory ::= SEQUENCE OF PathPoint
-    
 END
 
 ITS-Container {itu-t(0) identified-organization(4) etsi(0) itsDomain(5) wg1(1)

@@ -1,9 +1,9 @@
 package its;
 
-import "PathPoint.proto";
+import "TrajectoryPoint.proto";
 
 message AcknowledgementContainer {
-	required uint64 targetStaionID = 1;
-	required int32 adviceAccepted = 2;
-	repeated its.PathPoint followedTrajectory = 3;
+	required uint64 targetStationID = 1;
+	required int64 adviceAccepted = 2;
+	repeated its.TrajectoryPoint followedTrajectory = 3;
 }

@@ -38,6 +38,8 @@ protoc --proto_path=./ --cpp_out=build/ LowFreqContainer.proto
 
 protoc --proto_path=./ --cpp_out=build/ PathPoint.proto
 
+protoc --proto_path=./ --cpp_out=build/ TrajectoryPoint.proto
+
 protoc --proto_path=./ --cpp_out=build/ ProtectedCommunicationZone.proto
 
 protoc --proto_path=./ --cpp_out=build/ RsuHighFreqContainer.proto
