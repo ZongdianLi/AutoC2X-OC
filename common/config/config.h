@@ -126,6 +126,7 @@ ptree load_config_tree(){
 	lookup_config(&pt, config_name, "autoware");
 	lookup_config(&pt, config_name, "gps");
 	lookup_config(&pt, config_name, "ldm");
+	lookup_config(&pt, config_name, "mcm");
 	
 	std::cout << "End lookup" << std::endl;
 

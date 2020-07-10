@@ -285,6 +285,11 @@ private:
 	 * message type (ex. IntentionRequest, IntentionReply, ...)
 	 */
 	int type;
+
+	/**
+	 * state (ex. Waiting, Advertising, ...)
+	 */
+	int state;
 };
 
 /** @} */ //end group

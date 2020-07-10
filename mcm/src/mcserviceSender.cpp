@@ -719,12 +719,11 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 			intentionRequestContainer = new its::IntentionRequestContainer();
 			intentionRequestContainer->set_scenerio(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.scenerio);
 			for (int i; i<mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.count; i++) {
-				its::TrajectoryPoint* trajectory_point = new its::TrajectoryPoint();
+				its::TrajectoryPoint* trajectory_point = intentionRequestContainer->add_plannedtrajectory();
 				trajectory_point->set_deltalat(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaLatitude);
 				trajectory_point->set_deltaalt(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaAltitude);
 				trajectory_point->set_deltalong(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaLongitude);
 				trajectory_point->set_pathdeltatime(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathDeltaTime);
-				intentionRequestContainer->add_plannedtrajectory(trajectory_point);
 			}
 			maneuverContainer->set_allocated_intentionrequestcontainer(intentionRequestContainer);
 			break;
@@ -733,26 +732,24 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 			intentionReplyContainer = new its::IntentionReplyContainer();
 			intentionReplyContainer->set_targetstationid(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionReplyContainer.targetStationID);
 			for (int i; i<mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.count; i++) {
-				its::TrajectoryPoint* trajectory_point = new its::TrajectoryPoint();
+				its::TrajectoryPoint* trajectory_point = intentionReplyContainer->add_plannedtrajectory();;
 				trajectory_point->set_deltalat(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaLatitude);
 				trajectory_point->set_deltaalt(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaAltitude);
 				trajectory_point->set_deltalong(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaLongitude);
 				trajectory_point->set_pathdeltatime(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathDeltaTime);
-				intentionReplyContainer->add_plannedtrajectory(trajectory_point);
 			}
 			maneuverContainer->set_allocated_intentionreplycontainer(intentionReplyContainer);
 			break;
 		case ManeuverContainer_PR_prescriptionContainer:
 			maneuverContainer->set_type(its::ManeuverContainer_Type_PRESCRIPTION_CONTAINER);
-			prescriptionContainer = new its::PrescritionContainer();
+			prescriptionContainer = new its::PrescriptionContainer();
 			prescriptionContainer->set_targetstationid(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.targetStationID);
 			for (int i; i<mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.count; i++) {
-				its::TrajectoryPoint* trajectory_point = new its::TrajectoryPoint();
+				its::TrajectoryPoint* trajectory_point = prescriptionContainer->add_desiredtrajectory();
 				trajectory_point->set_deltalat(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaLatitude);
 				trajectory_point->set_deltaalt(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaAltitude);
 				trajectory_point->set_deltalong(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaLongitude);
 				trajectory_point->set_pathdeltatime(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathDeltaTime);
-				prescriptionContainer->add_desiredtrajectory(trajectory_point);
 			}
 			maneuverContainer->set_allocated_prescriptioncontainer(prescriptionContainer);
 			break;
@@ -762,12 +759,11 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 			acknowledgementContainer->set_targetstationid(mcm->mcm.mcmParameters.maneuverContainer.choice.acknowledgementContainer.targetStationID);
 			acknowledgementContainer->set_adviceaccepted(mcm->mcm.mcmParameters.maneuverContainer.choice.acknowledgementContainer.adviceAccepted);
 			for (int i; i<mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.count; i++) {
-				its::TrajectoryPoint* trajectory_point = new its::TrajectoryPoint();
+				its::TrajectoryPoint* trajectory_point = acknowledgementContainer->add_followedtrajectory();
 				trajectory_point->set_deltalat(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaLatitude);
 				trajectory_point->set_deltaalt(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaAltitude);
 				trajectory_point->set_deltalong(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaLongitude);
 				trajectory_point->set_pathdeltatime(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathDeltaTime);
-				acknowledgementContainer->add_followedtrajectory(trajectory_point);
 			}
 			maneuverContainer->set_allocated_acknowledgementcontainer(acknowledgementContainer);
 			break;
