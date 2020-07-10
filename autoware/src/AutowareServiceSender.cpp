@@ -51,7 +51,7 @@ AutowareService::AutowareService(AutowareConfig &config, int argc, char* argv[])
 	ptree pt = load_config_tree();
 	mLogger = new LoggingUtility(AUTOWARE_CONFIG_NAME, AUTOWARE_MODULE_NAME, mGlobalConfig.mLogBasePath, mGlobalConfig.mExpName, mGlobalConfig.mExpNo, pt);
 
-	mSender = new CommunicationSender("25000", *mLogger);
+	mSender = new CommunicationSender("26666", *mLogger);
 	mReceiverFromCaService = new CommunicationReceiver("23456", "CAM", *mLogger);
 	mLogger->logStats("speed (m/sec)");
 
@@ -83,8 +83,9 @@ AutowareService::AutowareService(AutowareConfig &config, int argc, char* argv[])
 	mThreadReceive = new boost::thread(&AutowareService::receiveFromAutoware, this);
 	mThreadReceiveFromCaService = new boost::thread(&AutowareService::receiveFromCaService, this);
 	
+	testSender();
 	while(1){
-//		testSender();
+		// testSender();
 		sleep(1);
 	}
 
@@ -119,25 +120,47 @@ void AutowareService::loadOpt(int argc, char* argv[]){
 //simulates Autoware data, logs and sends it
 void AutowareService::setData() {
 	std::cout << "simulating....." << std::endl;
-	for(unsigned int i=0; i < s_message.speed.size(); i++){
-		autowarePackage::AUTOWARE autoware;
-		std::cout << "stationid is :::" << s_message.stationid[i] << std::endl;
-		autoware.set_id(s_message.stationid[i]);
-		autoware.set_speed(s_message.speed[i]); // standard expects speed in 0.01 m/s
-		autoware.set_time(s_message.time[i]);
-		autoware.set_longitude(s_message.longitude[i]);
-		autoware.set_latitude(s_message.latitude[i]);
-		sendToServices(autoware);
-		if(s_message.stationid[i] == 0){
-			latitude = s_message.latitude[i];
-			longitude = s_message.longitude[i];
-		}
+	
+	autowarePackage::AUTOWAREMCM autoware;
+
+	autoware.set_id(s_message.id);
+	autoware.set_time(s_message.time);
+	autoware.set_scenerio(s_message.scenerio);
+	autoware.set_targetstationid(s_message.targetstationid);
+
+	for (int i=0; i<s_message.trajectory.size(); i++) {
+		its::TrajectoryPoint* trajectory_point = autoware.add_trajectory();
+		trajectory_point->set_deltalat(s_message.trajectory[i].deltalat);
+		trajectory_point->set_deltaalt(s_message.trajectory[i].deltalong);
+		trajectory_point->set_deltalong(s_message.trajectory[i].deltaalt);
+		trajectory_point->set_pathdeltatime(s_message.trajectory[i].pathdeltatime);
 	}
+	
+	for (int i=0; i<autoware.trajectory_size(); i++) {
+		std::cout << autoware.trajectory(i).deltalat() << std::endl;
+	}
+
+	sendToServices(autoware);
+
+	// for(unsigned int i=0; i < s_message.speed.size(); i++){
+	// 	autowarePackage::AUTOWARE autoware;
+	// 	std::cout << "stationid is :::" << s_message.stationid[i] << std::endl;
+	// 	autoware.set_id(s_message.stationid[i]);
+	// 	autoware.set_speed(s_message.speed[i]); // standard expects speed in 0.01 m/s
+	// 	autoware.set_time(s_message.time[i]);
+	// 	autoware.set_longitude(s_message.longitude[i]);
+	// 	autoware.set_latitude(s_message.latitude[i]);
+	// 	sendToServices(autoware);
+	// 	if(s_message.stationid[i] == 0){
+	// 		latitude = s_message.latitude[i];
+	// 		longitude = s_message.longitude[i];
+	// 	}
+	// }
 }
 
 
 //logs and sends Autoware
-void AutowareService::sendToServices(autowarePackage::AUTOWARE autoware) {
+void AutowareService::sendToServices(autowarePackage::AUTOWAREMCM autoware) {
 	//send buffer to services
 	string serializedAutoware;
 	autoware.SerializeToString(&serializedAutoware);
@@ -220,68 +243,83 @@ void AutowareService::sendBackToAutoware(socket_message msg){
 
 void AutowareService::testSender(){
 	while(1){
-		s_message.speed.clear();
-		s_message.latitude.clear();
-		s_message.longitude.clear();
-		s_message.time.clear();
-		s_message.stationid.clear();
+		s_message.id = 0;
+		s_message.time = 0;
+		s_message.scenerio = 0;
+		s_message.targetstationid = 1;
+		struct trajectory_point tp;
 
-		s_message.stationid.push_back(100);
-		s_message.speed.push_back(1919);
-		s_message.latitude.push_back(35.714464 * 10000000);
-		s_message.longitude.push_back(139.760606 * 10000000);
-		s_message.time.push_back(1919);
+		for (int i=0; i<10; i++) {
+			tp.deltalat = i;
+			tp.deltalong = i;
+			tp.deltaalt = i;
+			tp.pathdeltatime = i;
+			s_message.trajectory.push_back(tp);
+		}
 
-		s_message.stationid.push_back(101);
-		s_message.speed.push_back(1919);
-		s_message.latitude.push_back(35.71419722 * 10000000);
-		s_message.longitude.push_back(139.76148888 * 10000000);
-		s_message.time.push_back(1919);
+		// s_message.speed.clear();
+		// s_message.adviceaccepted.clear();
+		// s_message.latitude.clear();
+		// s_message.longitude.clear();
+		// s_message.time.clear();
+		// s_message.stationid.clear();
 
-		s_message.stationid.push_back(102);
-		s_message.speed.push_back(1919);
-		s_message.latitude.push_back(35.714497 * 10000000);
-		s_message.longitude.push_back(139.763014 * 10000000);
-		s_message.time.push_back(1919);
+		// s_message.stationid.push_back(100);
+		// s_message.speed.push_back(1919);
+		// s_message.latitude.push_back(35.714464 * 10000000);
+		// s_message.longitude.push_back(139.760606 * 10000000);
+		// s_message.time.push_back(1919);
 
-		s_message.stationid.push_back(103);
-		s_message.speed.push_back(1919);
-		s_message.latitude.push_back(35.713997 * 10000000);
-		s_message.longitude.push_back(139.760153 * 10000000);
-		s_message.time.push_back(1919);
+		// s_message.stationid.push_back(101);
+		// s_message.speed.push_back(1919);
+		// s_message.latitude.push_back(35.71419722 * 10000000);
+		// s_message.longitude.push_back(139.76148888 * 10000000);
+		// s_message.time.push_back(1919);
 
-		s_message.stationid.push_back(104);
-		s_message.speed.push_back(1919);
-		s_message.latitude.push_back(35.712992 * 10000000);
-		s_message.longitude.push_back(139.759819 * 10000000);
-		s_message.time.push_back(1919);
+		// s_message.stationid.push_back(102);
+		// s_message.speed.push_back(1919);
+		// s_message.latitude.push_back(35.714497 * 10000000);
+		// s_message.longitude.push_back(139.763014 * 10000000);
+		// s_message.time.push_back(1919);
+
+		// s_message.stationid.push_back(103);
+		// s_message.speed.push_back(1919);
+		// s_message.latitude.push_back(35.713997 * 10000000);
+		// s_message.longitude.push_back(139.760153 * 10000000);
+		// s_message.time.push_back(1919);
+
+		// s_message.stationid.push_back(104);
+		// s_message.speed.push_back(1919);
+		// s_message.latitude.push_back(35.712992 * 10000000);
+		// s_message.longitude.push_back(139.759819 * 10000000);
+		// s_message.time.push_back(1919);
 		setData();
-		usleep(90000);
+		sleep(1);
 	}
 }
 
 void AutowareService::receiveFromCaService(){
-	string serializedAutoware;
-	camPackage::CAM cam;
+	// string serializedAutoware;
+	// camPackage::CAM cam;
 
-	while (1) {
-		pair<string, string> received = mReceiverFromCaService->receive();
-		std::cout << "receive from caservice" << std::endl;
+	// while (1) {
+	// 	pair<string, string> received = mReceiverFromCaService->receive();
+	// 	std::cout << "receive from caservice" << std::endl;
 
-		serializedAutoware = received.second;
-		cam.ParseFromString(serializedAutoware);
-		int64_t currTime = Utils::currentTime();
-		long genDeltaTime = (long)(currTime/1000000 - 10728504000) % 65536;
-		delay_output_file << std::setprecision(20) << cam.header().stationid() << "" << "," << genDeltaTime << "," << currTime << "," << latitude << "," << longitude << std::endl;
+	// 	serializedAutoware = received.second;
+	// 	cam.ParseFromString(serializedAutoware);
+	// 	int64_t currTime = Utils::currentTime();
+	// 	long genDeltaTime = (long)(currTime/1000000 - 10728504000) % 65536;
+	// 	delay_output_file << std::setprecision(20) << cam.header().stationid() << "" << "," << genDeltaTime << "," << currTime << "," << latitude << "," << longitude << std::endl;
 
-		socket_message msg;
-		msg.timestamp = 10;
-		msg.speed.push_back(0);
-		msg.latitude.push_back(0);
-		msg.longitude.push_back(0);
-		msg.time.push_back(0);
-		msg.stationid.push_back(cam.header().stationid());
-	}
+	// 	socket_message msg;
+	// 	msg.timestamp = 10;
+	// 	msg.speed.push_back(0);
+	// 	msg.latitude.push_back(0);
+	// 	msg.longitude.push_back(0);
+	// 	msg.time.push_back(0);
+	// 	msg.stationid.push_back(cam.header().stationid());
+	// }
 }
 
 int main(int argc,  char* argv[]) {

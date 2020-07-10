@@ -34,6 +34,7 @@
 #include <common/utility/Constants.h>
 #include <common/buffers/cam.pb.h>
 #include <common/buffers/autoware.pb.h>
+#include <common/buffers/autowareMcm.pb.h>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/thread.hpp>
@@ -91,25 +92,54 @@ struct AutowareConfig {
 	}
 };
 
+struct trajectory_point{
+	int deltalat;
+	int deltalong;
+	int deltaalt;
+	int pathdeltatime;
+
+private:
+	friend class boost::serialization::access;
+	template<class Archive>
+		void serialize( Archive& ar, unsigned int ver){
+			ar & deltalat;
+			ar & deltalong;
+			ar & deltaalt;
+			ar & pathdeltatime;
+		}
+};
 
 struct socket_message{
 	long timestamp;
-	std::vector<int> speed;
-	std::vector<int> latitude;
-	std::vector<int> longitude;
-	std::vector<int> time;
-	std::vector<int> stationid;
+	int id;
+	int time;
+	int scenerio;
+	int targetstationid;
+	std::vector<struct trajectory_point> trajectory;
+	int adviceaccepted;
+
+	// std::vector<int> speed;
+	// std::vector<int> latitude;
+	// std::vector<int> longitude;
+	// std::vector<int> time;
+	// std::vector<int> stationid;
 
 private:
 	friend class boost::serialization::access;
 	template<class Archive>
 		void serialize( Archive& ar, unsigned int ver){
 			ar & timestamp;
-			ar & speed;
-			ar & latitude;
-			ar & longitude;
+			ar & id;
 			ar & time;
-			ar & stationid;
+			ar & scenerio;
+			ar & targetstationid;
+			ar & trajectory;
+			ar & adviceaccepted;
+			// ar & speed;
+			// ar & latitude;
+			// ar & longitude;
+			// ar & time;
+			// ar & stationid;
 		}
 };
 
@@ -132,7 +162,7 @@ public:
 
 	void sendBackToAutoware(socket_message msg);
 
-	void sendToServices(autowarePackage::AUTOWARE autoware);
+	void sendToServices(autowarePackage::AUTOWAREMCM autoware);
 
 	void loadOpt(int argc, char* argv[]);
 

@@ -1,12 +1,12 @@
 package autowarePackage;
 
-import "PathPoint.proto";
+import "TrajectoryPoint.proto";
 
 message AUTOWAREMCM {
 	optional int64 id = 1;
 	optional int64 time = 2;
 	optional int64 scenerio = 3;
 	optional int64 targetStationID = 4;
-	repeated its.PathPoint trajectory = 5;
+	repeated its.TrajectoryPoint trajectory = 5;
 	optional int64 adviceAccepted = 6;
 }

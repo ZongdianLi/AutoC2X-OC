@@ -200,15 +200,23 @@ void McService::receiveAutowareData() { //実装
 	while (1) {
 		serializedAutoware = mReceiverAutoware->receiveData();
 		newAutoware.ParseFromString(serializedAutoware);
+		std::cout << "----------" << std::endl;
+		std::cout << newAutoware.trajectory_size() << std::endl;
+		for (int i; i<newAutoware.trajectory_size(); i++) {
+			its::TrajectoryPoint tp = newAutoware.trajectory(i);
+			std::cout << tp.deltalat() << std::endl;
+		}
+		std::cout << "----------" << std::endl;
+		
 		//mLogger->logDebug("Received AUTOWARE with speed (m/s): " + to_string(10));
 		//mMutexLatestAutoware.lock();
 		//mLatestAutoware = newAutoware;
 		//mMutexLatestAutoware.lock();
-		if(newAutoware.id() == 0 && waiting_data.size() == 0){
-			waiting_data.clear();
-			std::cout << "clear because 0" << std::endl;
-			//waiting_data.shrink_to_fit();
-		}
+		// if(newAutoware.id() == 0 && waiting_data.size() == 0){
+		// 	waiting_data.clear();
+		// 	std::cout << "clear because 0" << std::endl;
+		// 	//waiting_data.shrink_to_fit();
+		// }
 		waiting_data.push_back(newAutoware);
 		//mMutexLatestAutoware.unlock();
 		atoc_delay_output_file << Utils::currentTime() << "," << (Utils::currentTime() - newAutoware.time()) / 1000000.0 << std::endl;
