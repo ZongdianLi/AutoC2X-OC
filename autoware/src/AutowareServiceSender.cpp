@@ -128,6 +128,7 @@ void AutowareService::setData() {
 	autoware.set_scenerio(s_message.scenerio);
 	autoware.set_targetstationid(s_message.targetstationid);
 
+	// autoware.clear_trajectory();
 	for (int i=0; i<s_message.trajectory.size(); i++) {
 		its::TrajectoryPoint* trajectory_point = autoware.add_trajectory();
 		trajectory_point->set_deltalat(s_message.trajectory[i].deltalat);
@@ -136,9 +137,10 @@ void AutowareService::setData() {
 		trajectory_point->set_pathdeltatime(s_message.trajectory[i].pathdeltatime);
 	}
 	
-	for (int i=0; i<autoware.trajectory_size(); i++) {
-		std::cout << autoware.trajectory(i).deltalat() << std::endl;
-	}
+	std::cout << autoware.trajectory_size() << std::endl;
+	// for (int i=0; i<autoware.trajectory_size(); i++) {
+	// 	std::cout << autoware.trajectory(i).deltalat() << std::endl;
+	// }
 
 	sendToServices(autoware);
 
@@ -248,6 +250,7 @@ void AutowareService::testSender(){
 		s_message.scenerio = 0;
 		s_message.targetstationid = 1;
 		struct trajectory_point tp;
+		s_message.trajectory.clear();
 
 		for (int i=0; i<10; i++) {
 			tp.deltalat = i;

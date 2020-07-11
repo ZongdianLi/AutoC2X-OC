@@ -73,7 +73,8 @@ McService::McService(McServiceConfig &config, ptree& configTree) {
 
 	mGpsValid = false;	//initially no data is available => not valid
 	mObd2Valid = false;
-	mAutowareValid = false;
+	// mAutowareValid = false;
+	mAutowareValid = true;
 
 	// char cur_dir[1024];
 	// getcwd(cur_dir, 1024);
@@ -285,9 +286,7 @@ void McService::sendMcmInfo(string triggerReason, double delta) {
 //periodically check generation rules for sending to LDM and DCC
 void McService::alarm(const boost::system::error_code &ec) {
 	// Check heading and position conditions only if we have valid GPS data
-	if(state == 0) {
-		return;
-	}
+	if(state == 0) return;
 
 	// if(isGPSdataValid()) {
 	// 	if (!mLastSentMcmInfo.hasGPS) {
@@ -321,11 +320,11 @@ void McService::alarm(const boost::system::error_code &ec) {
 	// 	return;
 	// }
 
-	// //max. time interval 1s
-	// if(isTimeToTriggerMCM()) {
-	// 	trigger();
-	// 	return;
-	// }
+	//max. time interval 1s
+	if(isTimeToTriggerMCM()) {
+		trigger();
+		return;
+	}
 
 	scheduleNextAlarm();
 }
@@ -421,17 +420,17 @@ void McService::trigger() {
 // 	return false;
 // }
 
-// bool McService::isTimeToTriggerMCM() {
-// 	//max. time interval 1s
-// 	int64_t currentTime = Utils::currentTime();
-// 	int64_t deltaTime = currentTime - mLastSentMcmInfo.timestamp;
-// 	if(deltaTime >= 1*100*1000*1000) {
-// 		sendMcmInfo("time", deltaTime);
-// 		//mLogger->logInfo("deltaTime: " + to_string(deltaTime));
-// 		return true;
-// 	}
-// 	return false;
-// }
+bool McService::isTimeToTriggerMCM() {
+	//max. time interval 1s
+	int64_t currentTime = Utils::currentTime();
+	int64_t deltaTime = currentTime - mLastSentMcmInfo.timestamp;
+	if(deltaTime >= 1*100*1000*1000) {
+		// sendMcmInfo("time", deltaTime);
+		//mLogger->logInfo("deltaTime: " + to_string(deltaTime));
+		return true;
+	}
+	return false;
+}
 
 void McService::scheduleNextAlarm() {
 	//min. time interval 0.1 s
@@ -462,6 +461,12 @@ void McService::send(bool isAutoware) {
 
 		// Standard compliant MCM
 		MCM_t* mcm = generateMcm(isAutoware);
+		
+		char error_buffer[128];
+		size_t error_length = sizeof(error_buffer);
+		const int return_value = asn_check_constraints(&asn_DEF_MCM, mcm, error_buffer, &error_length); // validate the message
+		if (return_value) std::cout << error_buffer << std::endl;
+		
 		vector<uint8_t> encodedMcm = mMsgUtils->encodeMessage(&asn_DEF_MCM, mcm);
 		string strMcm(encodedMcm.begin(), encodedMcm.end());
 		//mLogger->logDebug("Encoded MCM size: " + to_string(strMcm.length()));
@@ -514,7 +519,7 @@ MCM_t* McService::generateMcm(bool isAutoware) {
 	// generation delta time
 	int64_t currTime = Utils::currentTime();
 	if (false){
-		mcm->mcm.generationDeltaTime = mLatestPingApp.time();
+		// mcm->mcm.generationDeltaTime = mLatestPingApp.time();
 	} else {
 		if (mLastSentMcmInfo.timestamp) {
 			// mcm->mcm.generationDeltaTime = (currTime - mLastSentMcmInfo.timestamp) / (100000260);
@@ -551,9 +556,9 @@ MCM_t* McService::generateMcm(bool isAutoware) {
 	mcm->mcm.mcmParameters.basicContainer.referencePosition.altitude.altitudeConfidence = AltitudeConfidence_unavailable;
 	mMutexLatestGps.unlock();
 
-	if(isAutoware){
-		mcm->mcm.mcmParameters.basicContainer.referencePosition.latitude = mLatestPingApp.latitude();
-	}
+	// if(isAutoware){
+	// 	mcm->mcm.mcmParameters.basicContainer.referencePosition.latitude = mLatestPingApp.latitude();
+	// }
 
 	mcm->mcm.mcmParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorConfidence = 0;
 	mcm->mcm.mcmParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorOrientation = 0;
@@ -576,24 +581,35 @@ MCM_t* McService::generateMcm(bool isAutoware) {
 		const int result = asn_sequence_add(trajectory, trajectory_point);
 	}
 
+	// for (int i=0; i<trajectory->list.count; i++) {
+	// 	std::cout << trajectory->list.array[i]->pathPosition.deltaLatitude << std::endl;
+	// }
+	// std::cout << trajectory->size() << std::endl;
+
+	type = 0;
+
 	if (mAutowareValid) {
 		switch(type) {
 			case 0:
+				mcm->mcm.mcmParameters.maneuverContainer.present = ManeuverContainer_PR_intentionRequestContainer;
 				mcm->mcm.mcmParameters.controlFlag = controlFlag_intentionRequest;
 				mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.scenerio = mLatestAutoware.scenerio();
 				mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory = *trajectory;
 				break;
 			case 1:
+				mcm->mcm.mcmParameters.maneuverContainer.present = ManeuverContainer_PR_intentionReplyContainer;
 				mcm->mcm.mcmParameters.controlFlag = controlFlag_intentionReply;
 				mcm->mcm.mcmParameters.maneuverContainer.choice.intentionReplyContainer.targetStationID = mLatestAutoware.targetstationid();
 				mcm->mcm.mcmParameters.maneuverContainer.choice.intentionReplyContainer.plannedTrajectory = *trajectory;
 				break;
 			case 2:
+				mcm->mcm.mcmParameters.maneuverContainer.present = ManeuverContainer_PR_prescriptionContainer;
 				mcm->mcm.mcmParameters.controlFlag = controlFlag_prescription;
 				mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.targetStationID = mLatestAutoware.targetstationid();
 				mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory = *trajectory;
 				break;
 			case 3:
+				mcm->mcm.mcmParameters.maneuverContainer.present = ManeuverContainer_PR_acknowledgementContainer;
 				mcm->mcm.mcmParameters.controlFlag = controlFlag_acknowledgement;
 				mcm->mcm.mcmParameters.maneuverContainer.choice.acknowledgementContainer.targetStationID = mLatestAutoware.targetstationid();
 				mcm->mcm.mcmParameters.maneuverContainer.choice.acknowledgementContainer.adviceAccepted = mLatestAutoware.adviceaccepted();
@@ -603,6 +619,11 @@ MCM_t* McService::generateMcm(bool isAutoware) {
 				break;
 		}
 	}
+
+	// std::cout << mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.scenerio << std::endl;
+	// for (int i=0; i<mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.count; i++) {
+	// 	std::cout << mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaLatitude << std::endl;
+	// }
 
 	// // High frequency container
 	// // Could be basic vehicle or RSU and have corresponding details
@@ -714,7 +735,7 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 	basicContainer->set_semimajororientation(mcm->mcm.mcmParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorOrientation);
 	params->set_allocated_basiccontainer(basicContainer);
 
-	// high frequency container
+	// maneuver container
 	its::ManeuverContainer* maneuverContainer = new its::ManeuverContainer;
 	its::IntentionRequestContainer* intentionRequestContainer = 0;
 	its::IntentionReplyContainer* intentionReplyContainer = 0;
@@ -723,7 +744,8 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 
 	switch (mcm->mcm.mcmParameters.maneuverContainer.present) {
 		case ManeuverContainer_PR_intentionRequestContainer:
- 			maneuverContainer->set_type(its::ManeuverContainer_Type_INTENTION_REQUEST_CONTAINER);
+ 			// maneuverContainer->set_type(its::ManeuverContainer_Type_INTENTION_REQUEST_CONTAINER);
+			params->set_controlflag(its::McmParameters_ControlFlag_INTENTION_REQUEST_CONTAINER);
 			intentionRequestContainer = new its::IntentionRequestContainer();
 			intentionRequestContainer->set_scenerio(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.scenerio);
 			for (int i; i<mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.count; i++) {
@@ -736,7 +758,8 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 			maneuverContainer->set_allocated_intentionrequestcontainer(intentionRequestContainer);
 			break;
 		case ManeuverContainer_PR_intentionReplyContainer:
-			maneuverContainer->set_type(its::ManeuverContainer_Type_INTENTION_REPLY_CONTAINER);
+			// maneuverContainer->set_type(its::ManeuverContainer_Type_INTENTION_REPLY_CONTAINER);
+			params->set_controlflag(its::McmParameters_ControlFlag_INTENTION_REPLY_CONTAINER);
 			intentionReplyContainer = new its::IntentionReplyContainer();
 			intentionReplyContainer->set_targetstationid(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionReplyContainer.targetStationID);
 			for (int i; i<mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.count; i++) {
@@ -749,7 +772,8 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 			maneuverContainer->set_allocated_intentionreplycontainer(intentionReplyContainer);
 			break;
 		case ManeuverContainer_PR_prescriptionContainer:
-			maneuverContainer->set_type(its::ManeuverContainer_Type_PRESCRIPTION_CONTAINER);
+			// maneuverContainer->set_type(its::ManeuverContainer_Type_PRESCRIPTION_CONTAINER);
+			params->set_controlflag(its::McmParameters_ControlFlag_PRESCRIPTION_CONTAINER);
 			prescriptionContainer = new its::PrescriptionContainer();
 			prescriptionContainer->set_targetstationid(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.targetStationID);
 			for (int i; i<mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.count; i++) {
@@ -762,7 +786,8 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 			maneuverContainer->set_allocated_prescriptioncontainer(prescriptionContainer);
 			break;
 		case ManeuverContainer_PR_acknowledgementContainer:
-			maneuverContainer->set_type(its::ManeuverContainer_Type_ACKNOWLEDGEMENT_CONTAINER);
+			// maneuverContainer->set_type(its::ManeuverContainer_Type_ACKNOWLEDGEMENT_CONTAINER);
+			params->set_controlflag(its::McmParameters_ControlFlag_ACKNOWLEDGEMENT_CONTAINER);
 			acknowledgementContainer = new its::AcknowledgementContainer();
 			acknowledgementContainer->set_targetstationid(mcm->mcm.mcmParameters.maneuverContainer.choice.acknowledgementContainer.targetStationID);
 			acknowledgementContainer->set_adviceaccepted(mcm->mcm.mcmParameters.maneuverContainer.choice.acknowledgementContainer.adviceAccepted);

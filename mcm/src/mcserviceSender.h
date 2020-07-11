@@ -202,7 +202,7 @@ private:
 	// /** Checks if time more than 1 second has past since last MCM.
 	//  * @return True if MCM needs to be triggered, false otherwise
 	//  */
-	// bool isTimeToTriggerMCM();
+	bool isTimeToTriggerMCM();
 
 	/** Schedules next triggering checks for new MCM.
 	 *
