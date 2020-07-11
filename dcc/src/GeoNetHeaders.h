@@ -101,4 +101,9 @@ struct GeoNetworkAndBTPHeaderDENM {
 	BTPHeader mBTPHdr;
 };
 
+struct GeoNetworkAndBTPHeaderMCM {
+	GeoNetHeaderCAM mGeoNetHdr;
+	BTPHeader mBTPHdr;
+};
+
 #endif /* GEONETHEADERS_H_ */

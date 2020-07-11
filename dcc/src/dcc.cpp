@@ -32,6 +32,7 @@
 #include <signal.h>
 #include <common/utility/Utils.h>
 #include <common/asn1/CAM.h>
+#include <common/asn1/MCM.h>
 #include <common/asn1/ItsPduHeader.h>
 #include <common/asn1/per_decoder.h>
 
@@ -93,6 +94,7 @@ DCC::DCC(bool setUpWlan) : mStrand(mIoService) {
 
 	mReceiverFromCa = new CommunicationReceiver("6666", "CAM", *mLogger);
 	mReceiverFromDen = new CommunicationReceiver("7777", "DENM", *mLogger);
+	mReceiverFromMc = new CommunicationReceiver("23333", "MCM", *mLogger);
 	mSenderToHw = new SendToHardwareViaMAC(mGlobalConfig.mEthernetDevice, *mLogger);
 	mReceiverFromHw = new ReceiveFromHardwareViaMAC(*mLogger);
 	mSenderToServices = new CommunicationSender("5555", *mLogger);
@@ -137,14 +139,17 @@ DCC::~DCC() {
 	//stop and delete threads
 	mThreadReceiveFromCa->join();
 	mThreadReceiveFromDen->join();
+	mThreadReceiveFromMc->join();
 	mThreadReceiveFromHw->join();
 	delete mThreadReceiveFromCa;
 	delete mThreadReceiveFromDen;
+	delete mThreadReceiveFromMc;
 	delete mThreadReceiveFromHw;
 
 	//delete sender and receiver
 	delete mReceiverFromCa;
 	delete mReceiverFromDen;
+	delete mReceiverFromMc;
 	delete mReceiverFromHw;
 	delete mSenderToHw;
 	delete mSenderToServices;
@@ -185,6 +190,7 @@ void DCC::init() {
 	//create and start threads
 	mThreadReceiveFromCa = new boost::thread(&DCC::receiveFromCa2, this);
 	mThreadReceiveFromDen = new boost::thread(&DCC::receiveFromDen, this);
+	mThreadReceiveFromMc = new boost::thread(&DCC::receiveFromMc, this);
 	mThreadReceiveFromHw = new boost::thread(&DCC::receiveFromHw2, this);
 
 	//start timers
@@ -278,6 +284,35 @@ void DCC::receiveFromCa2() {
 	}
 }
 
+void DCC::receiveFromMc() {
+	string encodedData;					//serialized DATA
+	dataPackage::DATA* data;			//deserialized DATA
+
+	while (1) {
+		pair<string, string> received = mReceiverFromMc->receive();
+		encodedData = received.second;
+
+		data = new dataPackage::DATA();
+		data->ParseFromString(encodedData);		//deserialize DATA
+
+		string encodedMcm = data->content();
+
+		Channels::t_access_category ac = (Channels::t_access_category) data->priority();
+		int64_t nowTime = Utils::currentTime();
+		mBucket[ac]->flushQueue(nowTime);
+
+		mLogger->logInfo("");						//for readability
+		bool enqueued = mBucket[ac]->enqueue(data, data->validuntil());
+		if (enqueued) {
+			mLogger->logInfo("AC "+ to_string(ac) + ": received and enqueued MCM " + to_string(data->id()) + ", queue length: " + to_string(mBucket[ac]->getQueuedPackets()));
+			sendQueuedPackets(ac);
+		}
+		else {
+			mLogger->logInfo("AC "+ to_string(ac) + ": received and dropped MCM " + to_string(data->id()) + ", queue full -> length: " + to_string(mBucket[ac]->getQueuedPackets()));
+		}
+	}
+}
+
 void DCC::receiveFromDen() {
 	string serializedData;		//serialized DATA
 	dataPackage::DATA* data;	//deserialized DATA
@@ -327,6 +362,7 @@ void DCC::receiveFromHw() {
 		switch(data.type()) {								//send serialized DATA to corresponding module
 			case dataPackage::DATA_Type_CAM: 		mSenderToServices->send("CAM", *serializedData);	break;
 			case dataPackage::DATA_Type_DENM:		mSenderToServices->send("DENM", *serializedData);	break;
+			// case dataPackage::DATA_Type_MCM: 		mSenderToServices->send("MCM", *serializedData);	break;
 			default:	break;
 		}
 	}
@@ -356,6 +392,10 @@ void DCC::receiveFromHw2() {
 			case dataPackage::DATA_Type_DENM:
 				mSenderToServices->send("DENM", *serializedData);
 				mLogger->logInfo("forward received DENM from source "+ pktInfo->mSenderMac +" to services");
+				break;
+			case dataPackage::DATA_Type_MCM:
+				mSenderToServices->send("MCM", *serializedData);
+				mLogger->logInfo("forward received MCM from source "+ pktInfo->mSenderMac +" to services");
 				break;
 			default:
 				break;

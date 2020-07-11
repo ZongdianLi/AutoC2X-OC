@@ -204,6 +204,11 @@ void SendToHardwareViaMAC::sendWithGeoNet(string* msg, int priority, int type) {
 			geoHdrLen = sizeof(struct GeoNetworkAndBTPHeaderCAM);
 			geoHdr = reinterpret_cast<uint8_t*>(&mGeoBtpHdrForCam);
 			break;
+		case dataPackage::DATA_Type_MCM:
+			fillGeoNetBTPheaderForMcm(msg->size());
+			geoHdrLen = sizeof(struct GeoNetworkAndBTPHeaderMCM);
+			geoHdr = reinterpret_cast<uint8_t*>(&mGeoBtpHdrForMcm);
+			break;
 		default:
 			mLogger.logError("Queued packet has invalid type: " + to_string(type));
 			break;
@@ -322,6 +327,37 @@ void SendToHardwareViaMAC::fillGeoNetBTPheaderForDenm(int payloadLen) {
 	mGeoBtpHdrForDenm.mBTPHdr.mSourcePort = htons(0);
 	//uint8_t* temp = reinterpret_cast<uint8_t*>(&mGeoBtpHdrForDenm);
 	//dumpBuffer(temp, sizeof(mGeoBtpHdrForDenm));
+}
+
+void SendToHardwareViaMAC::fillGeoNetBTPheaderForMcm(int payloadLen) {
+	// GeoNetwork Header
+	mGeoBtpHdrForMcm.mGeoNetHdr.basicHeader.versionAndNH = 1;
+	mGeoBtpHdrForMcm.mGeoNetHdr.basicHeader.reserved = 0;
+	mGeoBtpHdrForMcm.mGeoNetHdr.basicHeader.lifetime = 241;
+	mGeoBtpHdrForMcm.mGeoNetHdr.basicHeader.remainingHopLimit = 1;
+
+	mGeoBtpHdrForMcm.mGeoNetHdr.commonHeader.nhAndReserved = 32;
+	mGeoBtpHdrForMcm.mGeoNetHdr.commonHeader.htAndHst = 80;
+	mGeoBtpHdrForMcm.mGeoNetHdr.commonHeader.tc = 2;
+	mGeoBtpHdrForMcm.mGeoNetHdr.commonHeader.payload = htons(payloadLen + sizeof(struct BTPHeader));
+	mGeoBtpHdrForMcm.mGeoNetHdr.commonHeader.maxHop = 1;
+	mGeoBtpHdrForMcm.mGeoNetHdr.commonHeader.reserved = 0;
+	mGeoBtpHdrForMcm.mGeoNetHdr.tsb.spv.addr.assignmentTypeCountryCode = htons(38393);
+	//mGeoBtpHdrForMcm.mGeoNetHdr.tsb.spv.addr.llAddr = reinterpret_cast<uint8_t*>(ether_aton(mOwnMac.c_str()));
+	memcpy(&mGeoBtpHdrForMcm.mGeoNetHdr.tsb.spv.addr.llAddr, ether_aton(mOwnMac.c_str()), ETH_ALEN);
+	mGeoBtpHdrForMcm.mGeoNetHdr.tsb.spv.timestamp = htonl(2810450329);
+	mGeoBtpHdrForMcm.mGeoNetHdr.tsb.spv.latitude = htonl(424937722);
+	mGeoBtpHdrForMcm.mGeoNetHdr.tsb.spv.longitude = htonl(3460636913);
+	mGeoBtpHdrForMcm.mGeoNetHdr.tsb.spv.speed = htons(496);
+	mGeoBtpHdrForMcm.mGeoNetHdr.tsb.spv.heading = htons(1996);
+
+	mGeoBtpHdrForMcm.mGeoNetHdr.tsb.reserved = htonl(0);
+
+	// BTP Header
+	mGeoBtpHdrForMcm.mBTPHdr.mDestinationPort = htons(2001);
+	mGeoBtpHdrForMcm.mBTPHdr.mSourcePort = htons(0);
+	//uint8_t* temp = reinterpret_cast<uint8_t*>(&mGeoBtpHdrForMcm);
+	//dumpBuffer(temp, sizeof(mGeoBtpHdrForMcm));
 }
 
 void SendToHardwareViaMAC::dumpBuffer(const uint8_t* buffer, int size) {

@@ -88,6 +88,8 @@ public:
 
 	void fillGeoNetBTPheaderForDenm(int payloadLen);
 
+	void fillGeoNetBTPheaderForMcm(int payloadLen);
+
 	/**
 	 * Dumps the content in the buffer in hex format
 	 */
@@ -112,6 +114,7 @@ private:
 	// Hard-coded for interoperability with Cohda MK5 box
 	struct GeoNetworkAndBTPHeaderCAM mGeoBtpHdrForCam;
 	struct GeoNetworkAndBTPHeaderDENM mGeoBtpHdrForDenm;
+	struct GeoNetworkAndBTPHeaderMCM mGeoBtpHdrForMcm;
 };
 
 /**
