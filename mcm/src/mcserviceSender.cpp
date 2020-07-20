@@ -54,7 +54,7 @@ McService::McService(McServiceConfig &config, ptree& configTree) {
 	mMsgUtils = new MessageUtils(*mLogger);
 	mLogger->logStats("Station Id \tMCM id \tCreate Time \tReceive Time");
 
-	mReceiverFromDcc = new CommunicationReceiver("22222", "MCM", *mLogger);
+	mReceiverFromDcc = new CommunicationReceiver("5555", "MCM", *mLogger);
 	mSenderToDcc = new CommunicationSender("23333", *mLogger);
 	mSenderToLdm = new CommunicationSender("24444", *mLogger);
 	mSenderToAutoware = new CommunicationSender("25555", *mLogger);

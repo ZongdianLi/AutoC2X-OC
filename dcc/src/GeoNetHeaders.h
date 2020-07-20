@@ -86,6 +86,12 @@ struct GeoNetHeaderDENM {
 	GeoBroadcast brdcst;
 };
 
+struct GeoNetHeaderMCM {
+	GeoNetBasicHeader basicHeader;
+	GeoNetCommonHeader commonHeader;
+	GeoNetTSB tsb;
+};
+
 struct BTPHeader {
 	uint16_t mDestinationPort;
 	uint16_t mSourcePort;
@@ -102,7 +108,7 @@ struct GeoNetworkAndBTPHeaderDENM {
 };
 
 struct GeoNetworkAndBTPHeaderMCM {
-	GeoNetHeaderCAM mGeoNetHdr;
+	GeoNetHeaderMCM mGeoNetHdr;
 	BTPHeader mBTPHdr;
 };
 

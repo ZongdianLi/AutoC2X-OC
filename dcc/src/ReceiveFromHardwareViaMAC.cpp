@@ -119,6 +119,15 @@ pair<ReceivedPacketInfo, string> ReceiveFromHardwareViaMAC::receiveWithGeoNetHea
 			info.mSenderMac = senderMac;
 			info.mType = dataPackage::DATA_Type_DENM;
 			return make_pair(info, msg);
+		} else if (geoNetPDU[5] == 64) { // geobroadcast_circle
+			// MCM
+			int mcmPDULen = geoNetPDULen - sizeof(struct GeoNetworkAndBTPHeaderMCM);
+			char* mcmPDU = geoNetPDU + sizeof(struct GeoNetworkAndBTPHeaderMCM);
+			string msg(mcmPDU, mcmPDULen);
+			ReceivedPacketInfo info;
+			info.mSenderMac = senderMac;
+			info.mType = dataPackage::DATA_Type_MCM;
+			return make_pair(info, msg);
 		} else {
 			// TODO: Possible cases?
 			continue;

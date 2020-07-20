@@ -362,7 +362,7 @@ void DCC::receiveFromHw() {
 		switch(data.type()) {								//send serialized DATA to corresponding module
 			case dataPackage::DATA_Type_CAM: 		mSenderToServices->send("CAM", *serializedData);	break;
 			case dataPackage::DATA_Type_DENM:		mSenderToServices->send("DENM", *serializedData);	break;
-			// case dataPackage::DATA_Type_MCM: 		mSenderToServices->send("MCM", *serializedData);	break;
+			case dataPackage::DATA_Type_MCM: 		mSenderToServices->send("MCM", *serializedData);	break;
 			default:	break;
 		}
 	}
