@@ -337,7 +337,7 @@ void SendToHardwareViaMAC::fillGeoNetBTPheaderForMcm(int payloadLen) {
 	mGeoBtpHdrForMcm.mGeoNetHdr.basicHeader.remainingHopLimit = 1;
 
 	mGeoBtpHdrForMcm.mGeoNetHdr.commonHeader.nhAndReserved = 32;
-	mGeoBtpHdrForMcm.mGeoNetHdr.commonHeader.htAndHst = 80;
+	mGeoBtpHdrForMcm.mGeoNetHdr.commonHeader.htAndHst = 64;
 	mGeoBtpHdrForMcm.mGeoNetHdr.commonHeader.tc = 2;
 	mGeoBtpHdrForMcm.mGeoNetHdr.commonHeader.payload = htons(payloadLen + sizeof(struct BTPHeader));
 	mGeoBtpHdrForMcm.mGeoNetHdr.commonHeader.maxHop = 1;
