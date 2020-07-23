@@ -52,7 +52,7 @@ AutowareService::AutowareService(AutowareConfig &config, int argc, char* argv[])
 	mLogger = new LoggingUtility(AUTOWARE_CONFIG_NAME, AUTOWARE_MODULE_NAME, mGlobalConfig.mLogBasePath, mGlobalConfig.mExpName, mGlobalConfig.mExpNo, pt);
 
 	mSender = new CommunicationSender("26666", *mLogger);
-	mReceiverFromCaService = new CommunicationReceiver("23456", "CAM", *mLogger);
+	mReceiverFromMcService = new CommunicationReceiver("25555", "MCM", *mLogger);
 	mLogger->logStats("speed (m/sec)");
 
 	loadOpt(argc, argv);
@@ -81,7 +81,7 @@ AutowareService::AutowareService(AutowareConfig &config, int argc, char* argv[])
 	delay_output_file.open(filename, std::ios::out);
 
 	mThreadReceive = new boost::thread(&AutowareService::receiveFromAutoware, this);
-	mThreadReceiveFromCaService = new boost::thread(&AutowareService::receiveFromCaService, this);
+	mThreadReceiveFromMcService = new boost::thread(&AutowareService::receiveFromMcService, this);
 	
 	testSender();
 	while(1){
@@ -95,9 +95,9 @@ AutowareService::~AutowareService() {
 	delete mSender;
 	delete mLogger;
 
-	delete mReceiverFromCaService;
+	delete mReceiverFromMcService;
 	delete mThreadReceive;
-	delete mThreadReceiveFromCaService;
+	delete mThreadReceiveFromMcService;
 	delete mThreadTestSender;
 
 }
@@ -301,28 +301,32 @@ void AutowareService::testSender(){
 	}
 }
 
-void AutowareService::receiveFromCaService(){
-	// string serializedAutoware;
-	// camPackage::CAM cam;
+void AutowareService::receiveFromMcService(){
+	string serializedAutoware;
+	mcmPackage::MCM mcm;
 
-	// while (1) {
-	// 	pair<string, string> received = mReceiverFromCaService->receive();
-	// 	std::cout << "receive from caservice" << std::endl;
+	while (1) {
+		pair<string, string> received = mReceiverFromMcService->receive();
+		std::cout << "receive from mcservice" << std::endl;
 
-	// 	serializedAutoware = received.second;
-	// 	cam.ParseFromString(serializedAutoware);
-	// 	int64_t currTime = Utils::currentTime();
-	// 	long genDeltaTime = (long)(currTime/1000000 - 10728504000) % 65536;
-	// 	delay_output_file << std::setprecision(20) << cam.header().stationid() << "" << "," << genDeltaTime << "," << currTime << "," << latitude << "," << longitude << std::endl;
+		serializedAutoware = received.second;
+		mcm.ParseFromString(serializedAutoware);
+		its::IntentionRequestContainer container = mcm.maneuver().mcmparameters().maneuvercontainer().intentionrequestcontainer();
+		for (int i=0; i<container.plannedtrajectory_size(); i++) {
+			std::cout << container.plannedtrajectory(i).deltaalt() << std::endl;
+		}
+		// int64_t currTime = Utils::currentTime();
+		// long genDeltaTime = (long)(currTime/1000000 - 10728504000) % 65536;
+		// delay_output_file << std::setprecision(20) << mcm.header().stationid() << "" << "," << genDeltaTime << "," << currTime << "," << latitude << "," << longitude << std::endl;
 
-	// 	socket_message msg;
-	// 	msg.timestamp = 10;
-	// 	msg.speed.push_back(0);
-	// 	msg.latitude.push_back(0);
-	// 	msg.longitude.push_back(0);
-	// 	msg.time.push_back(0);
-	// 	msg.stationid.push_back(cam.header().stationid());
-	// }
+		// socket_message msg;
+		// msg.timestamp = 10;
+		// msg.speed.push_back(0);
+		// msg.latitude.push_back(0);
+		// msg.longitude.push_back(0);
+		// msg.time.push_back(0);
+		// msg.stationid.push_back(mcm.header().stationid());
+	}
 }
 
 int main(int argc,  char* argv[]) {

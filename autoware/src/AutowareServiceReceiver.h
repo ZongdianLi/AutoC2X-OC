@@ -140,7 +140,7 @@ public:
 	void init();
 	
 	void simulateData();
-	void receiveFromCa();
+	void receiveFromMc();
 
 	double calcSpeed();
 

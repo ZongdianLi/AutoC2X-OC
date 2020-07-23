@@ -33,6 +33,7 @@
 #include <common/utility/LoggingUtility.h>
 #include <common/utility/Constants.h>
 #include <common/buffers/cam.pb.h>
+#include <common/buffers/mcm.pb.h>
 #include <common/buffers/autoware.pb.h>
 #include <common/buffers/autowareMcm.pb.h>
 #include <boost/property_tree/ptree.hpp>
@@ -158,7 +159,7 @@ public:
 
 	void testSender();
 
-	void receiveFromCaService();
+	void receiveFromMcService();
 
 	void sendBackToAutoware(socket_message msg);
 
@@ -171,11 +172,11 @@ private:
 	GlobalConfig mGlobalConfig;
 
 	CommunicationSender* mSender;
-	CommunicationReceiver* mReceiverFromCaService;
+	CommunicationReceiver* mReceiverFromMcService;
 	LoggingUtility* mLogger;
 
 	boost::thread* mThreadReceive;
-	boost::thread* mThreadReceiveFromCaService;
+	boost::thread* mThreadReceiveFromMcService;
 
 	boost::thread* mThreadTestSender;
 
