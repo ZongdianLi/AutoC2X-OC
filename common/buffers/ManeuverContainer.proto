@@ -3,13 +3,17 @@ package its;
 import "IntentionRequestContainer.proto";
 import "IntentionReplyContainer.proto";
 import "PrescriptionContainer.proto";
-import "AcknowledgementContainer.proto";
+import "AcceptanceContainer.proto";
+import "HeartbeatContainer.proto";
+import "AckContainer.proto";
 
 message ManeuverContainer {
-	// enum Type {INTENTION_REQUEST_CONTAINER = 1; INTENTION_REPLY_CONTAINER = 2; PRESCRIPTION_CONTAINER = 3; ACKNOWLEDGEMENT_CONTAINER = 4;}
+	// enum Type {INTENTION_REQUEST_CONTAINER = 1; INTENTION_REPLY_CONTAINER = 2; PRESCRIPTION_CONTAINER = 3; ACCEPTANCE_CONTAINER = 4;}
 	// required Type type = 1;
-	optional its.IntentionRequestContainer intentionRequestContainer = 2;
-	optional its.IntentionReplyContainer intentionReplyContainer = 3;
-	optional its.PrescriptionContainer prescriptionContainer = 4;
-	optional its.AcknowledgementContainer acknowledgementContainer = 5;
+	optional its.IntentionRequestContainer intentionRequestContainer = 1;
+	optional its.IntentionReplyContainer intentionReplyContainer = 2;
+	optional its.PrescriptionContainer prescriptionContainer = 3;
+	optional its.AcceptanceContainer acceptanceContainer = 4;
+	optional its.HeartbeatContainer heartbeatContainer = 5;
+	optional its.AckContainer ackContainer = 6;
 }

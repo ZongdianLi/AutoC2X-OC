@@ -1,0 +1,5 @@
+package its;
+
+message AckContainer {
+	required uint64 targetStationID = 1;
+}

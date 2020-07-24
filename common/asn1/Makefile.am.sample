@@ -33,7 +33,9 @@ ASN_MODULE_SOURCES=	\
 	IntentionRequestContainer.c	\
 	IntentionReplyContainer.c	\
 	PrescriptionContainer.c	\
-	AcknowledgementContainer.c	\
+	AcceptanceContainer.c	\
+	HeartbeatContainer.c	\
+	AckContainer.c	\
 	Trajectory.c	\
 	TrajectoryPoint.c	\
 	ItsPduHeader.c	\
@@ -206,7 +208,9 @@ ASN_MODULE_HEADERS=	\
 	IntentionRequestContainer.h	\
 	IntentionReplyContainer.h	\
 	PrescriptionContainer.h	\
-	AcknowledgementContainer.h	\
+	AcceptanceContainer.h	\
+	HeartbeatContainer.h	\
+	AckContainer.h	\
 	Trajectory.h	\
 	TrajectoryPoint.h	\
 	ItsPduHeader.h	\

@@ -1,0 +1,8 @@
+package its;
+
+import "TrajectoryPoint.proto";
+
+message HeartbeatContainer {
+	required uint64 targetStationID = 1;
+	repeated its.TrajectoryPoint selectedTrajectory = 2;
+}

@@ -275,7 +275,9 @@ BEGIN
 	intentionRequest(0),
 	intentionReply(1),
 	prescription(2),
-	acknowledgement(3)
+	acceptance(3),
+	heartbeat(4),
+	ack(5)
 	} (0..16),
 	maneuverContainer		ManeuverContainer,
 	                        ...
@@ -285,7 +287,9 @@ BEGIN
 	intentionRequestContainer	IntentionRequestContainer,
 	intentionReplyContainer		IntentionReplyContainer,
 	prescriptionContainer 		PrescriptionContainer,
-	acknowledgementContainer	AcknowledgementContainer,
+	acceptanceContainer			AcceptanceContainer,
+	heartbeatContainer			HeartbeatContainer,
+	ackContainer				AckContainer,
 								...
 	}
 
@@ -311,14 +315,24 @@ BEGIN
 						...
 	}
 
-	AcknowledgementContainer ::= SEQUENCE {
+	AcceptanceContainer ::= SEQUENCE {
 	targetStationID		StationID,
 	adviceAccepted		INTEGER {
 		accepted(0),
 		rejected(1)
 	} (0..1),
-	followedTrajectory	Trajectory,
+	selectedTrajectory	Trajectory,
 						...
+	}
+
+	HeartbeatContainer ::= SEQUENCE {
+	targetStationID		StationID,
+	selectedTrajectory	Trajectory,
+						...
+	}
+
+	AckContainer ::= SEQUENCE {
+	targetStationID		StationID
 	}
 
 	Trajectory ::= SEQUENCE OF TrajectoryPoint

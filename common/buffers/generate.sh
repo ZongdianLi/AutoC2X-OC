@@ -66,5 +66,8 @@ protoc --proto_path=./ --cpp_out=build/ IntentionReplyContainer.proto
 
 protoc --proto_path=./ --cpp_out=build/ PrescriptionContainer.proto
 
-protoc --proto_path=./ --cpp_out=build/ AcknowledgementContainer.proto
+protoc --proto_path=./ --cpp_out=build/ AcceptanceContainer.proto
 
+protoc --proto_path=./ --cpp_out=build/ HeartbeatContainer.proto
+
+protoc --proto_path=./ --cpp_out=build/ AckContainer.proto

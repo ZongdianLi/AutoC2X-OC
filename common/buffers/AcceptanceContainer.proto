@@ -2,8 +2,8 @@ package its;
 
 import "TrajectoryPoint.proto";
 
-message AcknowledgementContainer {
+message AcceptanceContainer {
 	required uint64 targetStationID = 1;
 	required int64 adviceAccepted = 2;
-	repeated its.TrajectoryPoint followedTrajectory = 3;
+	repeated its.TrajectoryPoint selectedTrajectory = 3;
 }
