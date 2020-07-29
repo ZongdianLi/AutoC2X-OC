@@ -50,6 +50,9 @@
 #include <boost/serialization/vector.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
+#include "rosbridge_ws_client.hpp"
+
+using WsClient = SimpleWeb::SocketClient<SimpleWeb::WS>;
 
 /** Struct that holds the configuration for AutowareService.
  * The configuration is defined in <a href="../../autoware/config/config.xml">autoware/config/config.xml</a>.
@@ -155,6 +158,16 @@ public:
 
 	void setData();
 
+	static void ReceiveScenarioTrigger(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message);
+
+	static void detectCollision(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message);
+
+	static void validatedDesiredTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message);
+
+	static void calculatedTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message);
+
+	static void 
+
 	void receiveFromAutoware();
 
 	void testSender();
@@ -194,6 +207,7 @@ private:
 	int sock_fd;
 	int flag;
 	std::string host_addr;
+	RosbridgeWsClient rbc("localhost:9090");
 };
 
 /** @} */ //end group

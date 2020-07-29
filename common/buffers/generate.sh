@@ -71,3 +71,5 @@ protoc --proto_path=./ --cpp_out=build/ AcceptanceContainer.proto
 protoc --proto_path=./ --cpp_out=build/ HeartbeatContainer.proto
 
 protoc --proto_path=./ --cpp_out=build/ AckContainer.proto
+
+protoc --proto_path=./ --cpp_out=build/ FinContainer.proto

@@ -36,6 +36,7 @@ ASN_MODULE_SOURCES=	\
 	AcceptanceContainer.c	\
 	HeartbeatContainer.c	\
 	AckContainer.c	\
+	FinContainer.c	\
 	Trajectory.c	\
 	TrajectoryPoint.c	\
 	ItsPduHeader.c	\
@@ -211,6 +212,7 @@ ASN_MODULE_HEADERS=	\
 	AcceptanceContainer.h	\
 	HeartbeatContainer.h	\
 	AckContainer.h	\
+	FinContainer.h	\
 	Trajectory.h	\
 	TrajectoryPoint.h	\
 	ItsPduHeader.h	\

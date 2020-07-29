@@ -101,7 +101,7 @@ McService::McService(McServiceConfig &config, ptree& configTree) {
 
 	if (mConfig.mGenerateMsgs) {
 		mTimer = new boost::asio::deadline_timer(mIoService, boost::posix_time::millisec(100));
-		mTimer->async_wait(boost::bind(&McService::alarm, this, boost::asio::placeholders::error));
+		mTimer->async_wait(boost::bind(&McService::alarm, this, boost::asio::placeholders::error, type));
 		mIoService.run();
 	}
 	else {
@@ -157,12 +157,53 @@ void McService::receive() {
 		}
 		//asn_fprint(stdout, &asn_DEF_MCM, mcm);
 		mcmPackage::MCM mcmProto = convertAsn1toProtoBuf(mcm);
-		mcmProto.SerializeToString(&serializedProtoMcm);
+
+		switch (state) {
+			case Waiting:
+				if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_INTENTION_REQUEST) {
+					mcmProto.SerializeToString(&serializedProtoMcm);
+					mSenderToAutoware->send(envelope, serializedProtoMcm);
+					// state = Negotiating;
+				} else {
+				}
+				break;
+			case Advertising:
+				if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_INTENTION_REPLY) {
+					mcmProto.SerializeToString(&serializedProtoMcm);
+					mSenderToAutoware->send(envelope, serializedProtoMcm);
+					state = Negotiating;
+					send(true, Ack);
+				} else {
+				}
+				break;
+			case Negotiating:
+				if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_PRESCRIPTION) {
+					mcmProto.SerializeToString(&serializedProtoMcm);
+					mSenderToAutoware->send(envelope, serializedProtoMcm);
+					state = Activating;
+					send(true, Ack);
+				} else {
+				}
+				break;
+			case Activating:
+				if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_HEARTBEAT) {
+					mcmProto.SerializeToString(&serializedProtoMcm);
+					mSenderToAutoware->send(envelope, serializedProtoMcm);
+				} else if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_FIN) {
+					state = Waiting;
+					send(true, Ack);
+				} else {
+				}
+				break;
+			default:
+				break;
+		}
+		// mcmProto.SerializeToString(&serializedProtoMcm);
 
 		// mLogger->logInfo("Forward incoming MCM " + to_string(mcm->header.stationID) + " to LDM");
 		// mSenderToLdm->send(envelope, serializedProtoMcm);	//send serialized MCM to LDM //帰ってきたMCMは今回はLDMには格納しない
 
-		mSenderToAutoware->send(envelope, serializedProtoMcm);
+		// mSenderToAutoware->send(envelope, serializedProtoMcm);
 	}
 }
 
@@ -200,15 +241,35 @@ void McService::receiveAutowareData() { //実装
 
 	while (1) {
 		serializedAutoware = mReceiverAutoware->receiveData();
-		newAutoware.ParseFromString(serializedAutoware);
+		waiting_data.ParseFromString(serializedAutoware);
 		std::cout << "----------" << std::endl;
-		std::cout << newAutoware.trajectory_size() << std::endl;
-		for (int i; i<newAutoware.trajectory_size(); i++) {
-			its::TrajectoryPoint tp = newAutoware.trajectory(i);
+		std::cout << waiting_data.trajectory_size() << std::endl;
+		for (int i=0; i<waiting_data.trajectory_size(); i++) {
+			its::TrajectoryPoint tp = waiting_data.trajectory(i);
 			std::cout << tp.deltalat() << std::endl;
 		}
 		std::cout << "----------" << std::endl;
-		
+		switch (state) {
+			case Waiting:
+				if (waiting_data.has_scenerio()) {
+					state = Advertising;
+					trigger(IntentionRequest, 100);
+				} else if (waiting_data.has_targetstationid()) {
+					state = Negotiating;
+					trigger(IntentionReply, 100);
+				}
+				break;
+			case Advertising:
+				break;
+			case Negotiating:
+				trigger(Prescription, 100);
+				break;
+			case Activating:
+				trigger(Fin, 100);
+				break;
+			default:
+				break;
+		}
 		//mLogger->logDebug("Received AUTOWARE with speed (m/s): " + to_string(10));
 		//mMutexLatestAutoware.lock();
 		//mLatestAutoware = newAutoware;
@@ -218,9 +279,9 @@ void McService::receiveAutowareData() { //実装
 		// 	std::cout << "clear because 0" << std::endl;
 		// 	//waiting_data.shrink_to_fit();
 		// }
-		waiting_data.push_back(newAutoware);
+		// waiting_data.push_back(newAutoware);
 		//mMutexLatestAutoware.unlock();
-		atoc_delay_output_file << Utils::currentTime() << "," << (Utils::currentTime() - newAutoware.time()) / 1000000.0 << std::endl;
+		// atoc_delay_output_file << Utils::currentTime() << "," << (Utils::currentTime() - newAutoware.time()) / 1000000.0 << std::endl;
 	}
 }
 
@@ -253,172 +314,56 @@ void McService::sendMcmInfo(string triggerReason, double delta) {
 	mSenderToLdm->send("mcmInfo", serializedMcmInfo);
 }
 
-// double McService::getDistance(double lat1, double lon1, double lat2, double lon2) {
-// 	double R = 6371; // km
-// 	double dLat = (lat2-lat1) * M_PI/180.0;		//convert to rad
-// 	double dLon = (lon2-lon1) * M_PI/180.0;
-// 	lat1 = lat1 * M_PI/180.0;
-// 	lat2 = lat2 * M_PI/180.0;
-
-// 	double a = sin(dLat/2) * sin(dLat/2) + sin(dLon/2) * sin(dLon/2) * cos(lat1) * cos(lat2);
-// 	double c = 2 * atan2(sqrt(a), sqrt(1-a));
-// 	return R * c * 1000;						//convert to m
-// }
-
-// double McService::getHeading(double lat1, double lon1, double lat2, double lon2) {
-// 	if (getDistance(lat1, lon1, lat2, lon2) < mConfig.mThresholdRadiusForHeading) {
-// 		mLogger->logDebug("Ignore heading: not moved more than " +to_string(mConfig.mThresholdRadiusForHeading) + " meters.");
-// 		return -1;
-// 	}
-
-// 	double dLat = (lat2-lat1) * M_PI/180.0;		//convert to rad
-// 	double dLon = (lon2-lon1) * M_PI/180.0;
-// 	lat1 = lat1 * M_PI/180.0;
-
-// 	double phi = atan2(sin(lat1)*dLon, dLat);	//between -pi and +pi
-// 	phi = phi * 180.0/M_PI;						//convert to deg (-180, +180)
-// 	if(phi < 0) {
-// 		phi += 360;								//between 0 and 360 deg
-// 	}
-// 	return phi;
-// }
-
 //periodically check generation rules for sending to LDM and DCC
-void McService::alarm(const boost::system::error_code &ec) {
+void McService::alarm(const boost::system::error_code &ec, Type type) {
 	// Check heading and position conditions only if we have valid GPS data
-	if(state == 0) return;
 
-	// if(isGPSdataValid()) {
-	// 	if (!mLastSentMcmInfo.hasGPS) {
-	// 		sendMcmInfo("First GPS data", -1);
-	// 		mLogger->logInfo("First GPS data");
-	// 		trigger();
-	// 		return;
-	// 	}
-
-	// 	//|current position - last MCM position| > 5 m
-	// 	if(isPositionChanged()) {
-	// 		trigger();
-	// 		return;
-	// 	}
-
-	// 	//|current heading (towards North) - last MCM heading| > 4 deg
-	// 	if(isHeadingChanged()) {
-	// 		trigger();
-	// 		return;
-	// 	}
-	// }
-
-	// //|current speed - last MCM speed| > 1 m/s
-	// if(isSpeedChanged()) {
-	// 	trigger();
-	// 	return;
-	// }
-
-	// if(isAutowareSpeedChanged()) {
-	// 	trigger();
-	// 	return;
-	// }
-
-	//max. time interval 1s
-	if(isTimeToTriggerMCM()) {
-		trigger();
-		return;
+	switch (type) {
+		case IntentionRequest:
+			if (state == Advertising && isTimeToTriggerMCM()) {
+				trigger(type, 100);
+			}
+		case IntentionReply:
+		case Prescription:
+		case Acceptance:
+			if (!ack) {
+				trigger(type, 100);
+			}
+			break;
+		case Heartbeat:
+			if (state == Activating && isTimeToTriggerMCM()) {
+				trigger(type, 100);
+			}
+			break;
+		default:
+			break;
 	}
-
-	scheduleNextAlarm();
+	
+	// switch (state) {
+	// 	case Negotiating:
+	// 		if (!ack) {
+	// 			trigger(type, 100);
+	// 		}
+	// 		break;
+	// 	case Activating:
+	// 		if(isTimeToTriggerMCM()) {
+	// 			trigger(type, 100);
+	// 		}
+	// 		break;
+	// 	case Advertising:
+	// 		if(isTimeToTriggerMCM()) {
+	// 			trigger(type, 100);
+	// 		}
+	// 		// scheduleNextAlarm();
+	// 		break;
+	// 	default:
+	// 		break;
 }
 
-void McService::trigger() {
-	send(true);
-	scheduleNextAlarm();
+void McService::trigger(Type type, int interval) {
+	send(true, type);
+	scheduleNextAlarm(type, interval);
 }
-
-// bool McService::isGPSdataValid() {
-// 	mMutexLatestGps.lock();
-// 	int64_t currentTime = Utils::currentTime();
-// 	if (currentTime - mLatestGps.time() > (int64_t)mConfig.mMaxGpsAge * 1000*1000*1000) {	//GPS data too old
-// 		mGpsValid = false;
-// 	} else {
-// 		mGpsValid = true;
-// 	}
-// 	mMutexLatestGps.unlock();
-// 	return mGpsValid;
-// }
-
-// bool McService::isHeadingChanged() {
-// 	mMutexLatestGps.lock();
-// 	double currentHeading = getHeading(mLastSentMcmInfo.lastGps.latitude(), mLastSentMcmInfo.lastGps.longitude(), mLatestGps.latitude(), mLatestGps.longitude());
-// 	if(currentHeading != -1) {
-// 		double deltaHeading = currentHeading - mLastSentMcmInfo.lastHeading;
-// 		if (deltaHeading > 180) {
-// 			deltaHeading -= 360;
-// 		} else if (deltaHeading < -180) {
-// 			deltaHeading += 360;
-// 		}
-// 		if(abs(deltaHeading) > 4.0) {
-// 			sendMcmInfo("heading", deltaHeading);
-// 			mLogger->logInfo("deltaHeading: " + to_string(deltaHeading));
-// 			mMutexLatestGps.unlock();
-// 			return true;
-// 		}
-// 	}
-// 	mMutexLatestGps.unlock();
-// 	return false;
-// }
-
-// bool McService::isAutowareSpeedChanged() {
-// 	mMutexLatestAutoware.lock();
-// 	int64_t currentTime = Utils::currentTime();
-// 	// if (currentTime - mLatestAutoware.time() > (int64_t)mConfig.mMaxObd2Age * 1000*1000*1000) {	//AUTOWARE data too old
-// 	// 	mMutexLatestAutoware.unlock();
-// 	// 	mAutowareValid = false;
-// 	// 	return false;
-// 	// }
-// 	mAutowareValid = true;
-// 	double deltaSpeed = abs(mLatestAutoware.speed() - mLastSentMcmInfo.lastAutoware.speed());
-// 	if(deltaSpeed > 1.0) {
-// 		sendMcmInfo("speed", deltaSpeed);
-// 		mLogger->logInfo("autowaredeltaSpeed: " + to_string(deltaSpeed));
-// 		mMutexLatestAutoware.unlock();
-// 		return true;
-// 	}
-// 	mMutexLatestAutoware.unlock();
-// 	return false;
-// }
-
-// bool McService::isPositionChanged() {
-// 	mMutexLatestGps.lock();
-// 	double distance = getDistance(mLastSentMcmInfo.lastGps.latitude(), mLastSentMcmInfo.lastGps.longitude(), mLatestGps.latitude(), mLatestGps.longitude());
-// 	if(distance > 5.0) {
-// 		sendMcmInfo("distance", distance);
-// 		mLogger->logInfo("distance: " + to_string(distance));
-// 		mMutexLatestGps.unlock();
-// 		return true;
-// 	}
-// 	mMutexLatestGps.unlock();
-// 	return false;
-// }
-
-// bool McService::isSpeedChanged() {
-// 	mMutexLatestObd2.lock();
-// 	int64_t currentTime = Utils::currentTime();
-// 	if (currentTime - mLatestObd2.time() > (int64_t)mConfig.mMaxObd2Age * 1000*1000*1000) {	//OBD2 data too old
-// 		mMutexLatestObd2.unlock();
-// 		mObd2Valid = false;
-// 		return false;
-// 	}
-// 	mObd2Valid = true;
-// 	double deltaSpeed = abs(mLatestObd2.speed() - mLastSentMcmInfo.lastObd2.speed());
-// 	if(deltaSpeed > 1.0) {
-// 		sendMcmInfo("speed", deltaSpeed);
-// 		mLogger->logInfo("deltaSpeed: " + to_string(deltaSpeed));
-// 		mMutexLatestObd2.unlock();
-// 		return true;
-// 	}
-// 	mMutexLatestObd2.unlock();
-// 	return false;
-// }
 
 bool McService::isTimeToTriggerMCM() {
 	//max. time interval 1s
@@ -432,76 +377,120 @@ bool McService::isTimeToTriggerMCM() {
 	return false;
 }
 
-void McService::scheduleNextAlarm() {
+void McService::scheduleNextAlarm(Type type, int interval) {
 	//min. time interval 0.1 s
-	mTimer->expires_from_now(boost::posix_time::millisec(100));
-	mTimer->async_wait(boost::bind(&McService::alarm, this, boost::asio::placeholders::error));
+	mTimer->expires_from_now(boost::posix_time::millisec(interval));
+	mTimer->async_wait(boost::bind(&McService::alarm, this, boost::asio::placeholders::error, type));
 }
 
 //generate MCM and send to LDM and DCC
-void McService::send(bool isAutoware) {
+void McService::send(bool isAutoware, Type type) {
 	std::chrono::system_clock::time_point start, end;
 	start = std::chrono::system_clock::now();
-	std::cout << "*********lets send MCM:" << waiting_data.size() << "," << std::endl;
-	//mMutexLatestAutoware.lock();
-	std::list<autowarePackage::AUTOWAREMCM>::iterator itr;
-	//for(int i = 0; i< waiting_data.size(); i++){
-	for(itr = waiting_data.begin(); itr != waiting_data.end(); itr++){	
-	// while(waiting_data.size() > 0){
-		// mLatestAutoware = waiting_data.back();
-		//mLatestAutoware = waiting_data[i];
-		if(waiting_data.size() == 0){
-			break;
-		}
-		mLatestAutoware = *itr;
-		// waiting_data.pop_back();
-		std::cout << "send****" << std::endl;
-		string serializedData;
-		dataPackage::DATA data;
 
-		// Standard compliant MCM
-		MCM_t* mcm = generateMcm(isAutoware);
-		
-		char error_buffer[128];
-		size_t error_length = sizeof(error_buffer);
-		const int return_value = asn_check_constraints(&asn_DEF_MCM, mcm, error_buffer, &error_length); // validate the message
-		if (return_value) std::cout << error_buffer << std::endl;
-		
-		vector<uint8_t> encodedMcm = mMsgUtils->encodeMessage(&asn_DEF_MCM, mcm);
-		string strMcm(encodedMcm.begin(), encodedMcm.end());
-		//mLogger->logDebug("Encoded MCM size: " + to_string(strMcm.length()));
-
-		// data.set_id(messageID_mcm);
-		data.set_id(messageID_mcm);
-		data.set_type(dataPackage::DATA_Type_MCM);
-		data.set_priority(dataPackage::DATA_Priority_BE);
-
-		int64_t currTime = Utils::currentTime();
-		data.set_createtime(currTime);
-		data.set_validuntil(currTime + mConfig.mExpirationTime*1000*1000*1000);
-		data.set_content(strMcm);
-
-		data.SerializeToString(&serializedData);
-		//mLogger->logInfo("Send new MCM to DCC and LDM\n");
-
-		mSenderToDcc->send("MCM", serializedData);	//send serialized DATA to DCC
-
-		mcmPackage::MCM mcmProto = convertAsn1toProtoBuf(mcm);
-		string serializedProtoMcm;
-		mcmProto.SerializeToString(&serializedProtoMcm);
-		mSenderToLdm->send("MCM", serializedProtoMcm); //send serialized MCM to LDM
-		asn_DEF_MCM.free_struct(&asn_DEF_MCM, mcm, 0);
+	std::cout << "*********lets send MCM:" << std::endl;
+	for (int i=0; i<waiting_data.trajectory_size(); i++) {
+		its::TrajectoryPoint tp = waiting_data.trajectory(i);
+		std::cout << tp.deltalat() << std::endl;
 	}
-	waiting_data.clear();
-	std::cout << "clear because queue" << std::endl;
-	//mMutexLatestAutoware.unlock();
-	//waiting_data.shrink_to_fit();
-	end = std::chrono::system_clock::now();
-	std::cout << "******* time elapsed*********" << std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << std::endl;
+
+	// std::cout << "send****" << std::endl;
+	string serializedData;
+	dataPackage::DATA data;
+
+	// Standard compliant MCM
+	MCM_t* mcm = generateMcm(isAutoware, type);
+	
+	char error_buffer[128];
+	size_t error_length = sizeof(error_buffer);
+	const int return_value = asn_check_constraints(&asn_DEF_MCM, mcm, error_buffer, &error_length); // validate the message
+	if (return_value) std::cout << error_buffer << std::endl;
+	
+	vector<uint8_t> encodedMcm = mMsgUtils->encodeMessage(&asn_DEF_MCM, mcm);
+	string strMcm(encodedMcm.begin(), encodedMcm.end());
+	//mLogger->logDebug("Encoded MCM size: " + to_string(strMcm.length()));
+
+	// data.set_id(messageID_mcm);
+	data.set_id(messageID_mcm);
+	data.set_type(dataPackage::DATA_Type_MCM);
+	data.set_priority(dataPackage::DATA_Priority_BE);
+
+	int64_t currTime = Utils::currentTime();
+	data.set_createtime(currTime);
+	data.set_validuntil(currTime + mConfig.mExpirationTime*1000*1000*1000);
+	data.set_content(strMcm);
+
+	data.SerializeToString(&serializedData);
+	//mLogger->logInfo("Send new MCM to DCC and LDM\n");
+
+	mSenderToDcc->send("MCM", serializedData);	//send serialized DATA to DCC
+
+	mcmPackage::MCM mcmProto = convertAsn1toProtoBuf(mcm);
+	string serializedProtoMcm;
+	mcmProto.SerializeToString(&serializedProtoMcm);
+	mSenderToLdm->send("MCM", serializedProtoMcm); //send serialized MCM to LDM
+	asn_DEF_MCM.free_struct(&asn_DEF_MCM, mcm, 0);
+
+	// std::cout << "*********lets send MCM:" << waiting_data.size() << "," << std::endl;
+	// //mMutexLatestAutoware.lock();
+	// std::list<autowarePackage::AUTOWAREMCM>::iterator itr;
+	// //for(int i = 0; i< waiting_data.size(); i++){
+	// for(itr = waiting_data.begin(); itr != waiting_data.end(); itr++){	
+	// // while(waiting_data.size() > 0){
+	// 	// mLatestAutoware = waiting_data.back();
+	// 	//mLatestAutoware = waiting_data[i];
+	// 	if(waiting_data.size() == 0){
+	// 		break;
+	// 	}
+	// 	mLatestAutoware = *itr;
+	// 	// waiting_data.pop_back();
+	// 	std::cout << "send****" << std::endl;
+	// 	string serializedData;
+	// 	dataPackage::DATA data;
+
+	// 	// Standard compliant MCM
+	// 	MCM_t* mcm = generateMcm(isAutoware);
+		
+	// 	char error_buffer[128];
+	// 	size_t error_length = sizeof(error_buffer);
+	// 	const int return_value = asn_check_constraints(&asn_DEF_MCM, mcm, error_buffer, &error_length); // validate the message
+	// 	if (return_value) std::cout << error_buffer << std::endl;
+		
+	// 	vector<uint8_t> encodedMcm = mMsgUtils->encodeMessage(&asn_DEF_MCM, mcm);
+	// 	string strMcm(encodedMcm.begin(), encodedMcm.end());
+	// 	//mLogger->logDebug("Encoded MCM size: " + to_string(strMcm.length()));
+
+	// 	// data.set_id(messageID_mcm);
+	// 	data.set_id(messageID_mcm);
+	// 	data.set_type(dataPackage::DATA_Type_MCM);
+	// 	data.set_priority(dataPackage::DATA_Priority_BE);
+
+	// 	int64_t currTime = Utils::currentTime();
+	// 	data.set_createtime(currTime);
+	// 	data.set_validuntil(currTime + mConfig.mExpirationTime*1000*1000*1000);
+	// 	data.set_content(strMcm);
+
+	// 	data.SerializeToString(&serializedData);
+	// 	//mLogger->logInfo("Send new MCM to DCC and LDM\n");
+
+	// 	mSenderToDcc->send("MCM", serializedData);	//send serialized DATA to DCC
+
+	// 	mcmPackage::MCM mcmProto = convertAsn1toProtoBuf(mcm);
+	// 	string serializedProtoMcm;
+	// 	mcmProto.SerializeToString(&serializedProtoMcm);
+	// 	mSenderToLdm->send("MCM", serializedProtoMcm); //send serialized MCM to LDM
+	// 	asn_DEF_MCM.free_struct(&asn_DEF_MCM, mcm, 0);
+	// }
+	// waiting_data.clear();
+	// std::cout << "clear because queue" << std::endl;
+	// //mMutexLatestAutoware.unlock();
+	// //waiting_data.shrink_to_fit();
+	// end = std::chrono::system_clock::now();
+	// std::cout << "******* time elapsed*********" << std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << std::endl;
 }
 
 //generate new MCM with latest gps and obd2 data
-MCM_t* McService::generateMcm(bool isAutoware) {
+MCM_t* McService::generateMcm(bool isAutoware, Type type) {
 	//mLogger->logDebug("Generating MCM as per UPER");
 	MCM_t* mcm = static_cast<MCM_t*>(calloc(1, sizeof(MCM_t)));
 	if (!mcm) {
@@ -586,45 +575,47 @@ MCM_t* McService::generateMcm(bool isAutoware) {
 	// }
 	// std::cout << trajectory->size() << std::endl;
 
-	type = 0;
+	// type = 0;
 
 	if (mAutowareValid) {
 		switch(type) {
-			case 0:
+			case IntentionRequest:
 				mcm->mcm.mcmParameters.maneuverContainer.present = ManeuverContainer_PR_intentionRequestContainer;
 				mcm->mcm.mcmParameters.controlFlag = controlFlag_intentionRequest;
 				mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.scenerio = mLatestAutoware.scenerio();
 				mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory = *trajectory;
 				break;
-			case 1:
+			case IntentionReply:
 				mcm->mcm.mcmParameters.maneuverContainer.present = ManeuverContainer_PR_intentionReplyContainer;
 				mcm->mcm.mcmParameters.controlFlag = controlFlag_intentionReply;
 				mcm->mcm.mcmParameters.maneuverContainer.choice.intentionReplyContainer.targetStationID = mLatestAutoware.targetstationid();
 				mcm->mcm.mcmParameters.maneuverContainer.choice.intentionReplyContainer.plannedTrajectory = *trajectory;
 				break;
-			case 2:
+			case Prescription:
 				mcm->mcm.mcmParameters.maneuverContainer.present = ManeuverContainer_PR_prescriptionContainer;
 				mcm->mcm.mcmParameters.controlFlag = controlFlag_prescription;
 				mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.targetStationID = mLatestAutoware.targetstationid();
 				mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory = *trajectory;
 				break;
-			case 3:
+			case Acceptance:
 				mcm->mcm.mcmParameters.maneuverContainer.present = ManeuverContainer_PR_acceptanceContainer;
 				mcm->mcm.mcmParameters.controlFlag = controlFlag_acceptance;
 				mcm->mcm.mcmParameters.maneuverContainer.choice.acceptanceContainer.targetStationID = mLatestAutoware.targetstationid();
 				mcm->mcm.mcmParameters.maneuverContainer.choice.acceptanceContainer.adviceAccepted = mLatestAutoware.adviceaccepted();
 				mcm->mcm.mcmParameters.maneuverContainer.choice.acceptanceContainer.selectedTrajectory = *trajectory;
 				break;
-			case 4:
+			case Heartbeat:
 				mcm->mcm.mcmParameters.maneuverContainer.present = ManeuverContainer_PR_heartbeatContainer;
 				mcm->mcm.mcmParameters.controlFlag = controlFlag_heartbeat;
 				mcm->mcm.mcmParameters.maneuverContainer.choice.heartbeatContainer.targetStationID = mLatestAutoware.targetstationid();
 				mcm->mcm.mcmParameters.maneuverContainer.choice.heartbeatContainer.selectedTrajectory = *trajectory;
 				break;
-			case 5:
+			case Ack:
 				mcm->mcm.mcmParameters.maneuverContainer.present = ManeuverContainer_PR_ackContainer;
 				mcm->mcm.mcmParameters.controlFlag = controlFlag_ack;
 				mcm->mcm.mcmParameters.maneuverContainer.choice.ackContainer.targetStationID = mLatestAutoware.targetstationid();
+				break;
+			case Fin:
 				break;
 			default:
 				break;
@@ -757,8 +748,8 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 
 	switch (mcm->mcm.mcmParameters.maneuverContainer.present) {
 		case ManeuverContainer_PR_intentionRequestContainer:
- 			// maneuverContainer->set_type(its::ManeuverContainer_Type_INTENTION_REQUEST_CONTAINER);
-			params->set_controlflag(its::McmParameters_ControlFlag_INTENTION_REQUEST_CONTAINER);
+ 			// maneuverContainer->set_type(its::ManeuverContainer_Type_INTENTION_REQUEST);
+			params->set_controlflag(its::McmParameters_ControlFlag_INTENTION_REQUEST);
 			intentionRequestContainer = new its::IntentionRequestContainer();
 			intentionRequestContainer->set_scenerio(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.scenerio);
 			for (int i; i<mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.count; i++) {
@@ -771,8 +762,8 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 			maneuverContainer->set_allocated_intentionrequestcontainer(intentionRequestContainer);
 			break;
 		case ManeuverContainer_PR_intentionReplyContainer:
-			// maneuverContainer->set_type(its::ManeuverContainer_Type_INTENTION_REPLY_CONTAINER);
-			params->set_controlflag(its::McmParameters_ControlFlag_INTENTION_REPLY_CONTAINER);
+			// maneuverContainer->set_type(its::ManeuverContainer_Type_INTENTION_REPLY);
+			params->set_controlflag(its::McmParameters_ControlFlag_INTENTION_REPLY);
 			intentionReplyContainer = new its::IntentionReplyContainer();
 			intentionReplyContainer->set_targetstationid(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionReplyContainer.targetStationID);
 			for (int i; i<mcm->mcm.mcmParameters.maneuverContainer.choice.intentionReplyContainer.plannedTrajectory.list.count; i++) {
@@ -785,8 +776,8 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 			maneuverContainer->set_allocated_intentionreplycontainer(intentionReplyContainer);
 			break;
 		case ManeuverContainer_PR_prescriptionContainer:
-			// maneuverContainer->set_type(its::ManeuverContainer_Type_PRESCRIPTION_CONTAINER);
-			params->set_controlflag(its::McmParameters_ControlFlag_PRESCRIPTION_CONTAINER);
+			// maneuverContainer->set_type(its::ManeuverContainer_Type_PRESCRIPTION);
+			params->set_controlflag(its::McmParameters_ControlFlag_PRESCRIPTION);
 			prescriptionContainer = new its::PrescriptionContainer();
 			prescriptionContainer->set_targetstationid(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.targetStationID);
 			for (int i; i<mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.count; i++) {
@@ -799,8 +790,8 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 			maneuverContainer->set_allocated_prescriptioncontainer(prescriptionContainer);
 			break;
 		case ManeuverContainer_PR_acceptanceContainer:
-			// maneuverContainer->set_type(its::ManeuverContainer_Type_ACCEPTANCE_CONTAINER);
-			params->set_controlflag(its::McmParameters_ControlFlag_ACCEPTANCE_CONTAINER);
+			// maneuverContainer->set_type(its::ManeuverContainer_Type_ACCEPTANCE);
+			params->set_controlflag(its::McmParameters_ControlFlag_ACCEPTANCE);
 			acceptanceContainer = new its::AcceptanceContainer();
 			acceptanceContainer->set_targetstationid(mcm->mcm.mcmParameters.maneuverContainer.choice.acceptanceContainer.targetStationID);
 			acceptanceContainer->set_adviceaccepted(mcm->mcm.mcmParameters.maneuverContainer.choice.acceptanceContainer.adviceAccepted);
@@ -814,8 +805,8 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 			maneuverContainer->set_allocated_acceptancecontainer(acceptanceContainer);
 			break;
 		case ManeuverContainer_PR_heartbeatContainer:
-			// maneuverContainer->set_type(its::ManeuverContainer_Type_HEARTBEAT_CONTAINER);
-			params->set_controlflag(its::McmParameters_ControlFlag_HEARTBEAT_CONTAINER);
+			// maneuverContainer->set_type(its::ManeuverContainer_Type_HEARTBEAT);
+			params->set_controlflag(its::McmParameters_ControlFlag_HEARTBEAT);
 			heartbeatContainer = new its::HeartbeatContainer();
 			heartbeatContainer->set_targetstationid(mcm->mcm.mcmParameters.maneuverContainer.choice.heartbeatContainer.targetStationID);
 			for (int i; i<mcm->mcm.mcmParameters.maneuverContainer.choice.heartbeatContainer.selectedTrajectory.list.count; i++) {
@@ -828,8 +819,8 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 			maneuverContainer->set_allocated_heartbeatcontainer(heartbeatContainer);
 			break;
 		case ManeuverContainer_PR_ackContainer:
-			// maneuverContainer->set_type(its::ManeuverContainer_Type_ACK_CONTAINER);
-			params->set_controlflag(its::McmParameters_ControlFlag_ACK_CONTAINER);
+			// maneuverContainer->set_type(its::ManeuverContainer_Type_ACK);
+			params->set_controlflag(its::McmParameters_ControlFlag_ACK);
 			ackContainer = new its::AckContainer();
 			ackContainer->set_targetstationid(mcm->mcm.mcmParameters.maneuverContainer.choice.ackContainer.targetStationID);
 			maneuverContainer->set_allocated_ackcontainer(ackContainer);

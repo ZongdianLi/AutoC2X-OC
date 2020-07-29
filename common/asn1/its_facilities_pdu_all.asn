@@ -277,7 +277,8 @@ BEGIN
 	prescription(2),
 	acceptance(3),
 	heartbeat(4),
-	ack(5)
+	ack(5),
+	fin(6)
 	} (0..16),
 	maneuverContainer		ManeuverContainer,
 	                        ...
@@ -332,6 +333,10 @@ BEGIN
 	}
 
 	AckContainer ::= SEQUENCE {
+	targetStationID		StationID
+	}
+
+	FinContainer ::= SEQUENCE {
 	targetStationID		StationID
 	}
 

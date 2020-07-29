@@ -170,51 +170,84 @@ void AutowareService::sendToServices(autowarePackage::AUTOWAREMCM autoware) {
 	// mLogger->logStats(to_string(autoware.speed()) + " (" + to_string(autoware.speed()/100*3.6) + "km/h)"); // In csv, we log speed in m/sec
 }
 
-void AutowareService::receiveFromAutoware(){
-	std::cout << "*****receive setup" << std::endl;
-	int sockfd;
-    int client_sockfd;
-    struct sockaddr_in addr;
-    socklen_t len = sizeof( struct sockaddr_in );
-    struct sockaddr_in from_addr;
-    char buf[4096];
- 
-    memset( buf, 0, sizeof( buf ) );
-    if( ( sockfd = socket( AF_INET, SOCK_STREAM, 0 ) ) < 0 ) {
-        perror( "socket" );
-    }
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons( 23457 );
-    addr.sin_addr.s_addr = INADDR_ANY;
-    if( bind( sockfd, (struct sockaddr *)&addr, sizeof( addr ) ) < 0 ) perror( "bind" );
-    if( listen( sockfd, SOMAXCONN ) < 0 ) perror( "listen" );
-    if( ( client_sockfd = accept( sockfd, (struct sockaddr *)&from_addr, &len ) ) < 0 ) perror( "accept" );
- 
-    // 受信
-    int rsize;
-    while( 1 ) {
-		std::stringstream ss;
-		memset( buf, 0, sizeof( buf ) );
-        rsize = recv( client_sockfd, buf, sizeof( buf ), 0 );
-		
-		ss << buf;
-		boost::archive::text_iarchive archive(ss);
-		archive >> s_message;
+void AutowareService::scenarioTrigger(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message) {
+	// triggerが来たら保存しておいたtrajectoryをmcserviceに返す
+	std::string message = in_message->string().c_str();
+	const char* msg = message.c_str();
+	rapidjson::Document d;
+	d.Parse(msg);
+	if (d["msg"]["data"]["detected"] == false) {
+		return;
+	}
+	s_message.id = 0;
+	s_message.targetstationid = d["msg"]["data"]["target_stationID"].getString();
+	setData();
+	rbc.removeClient("collision_detect");
+}
 
-		std::cout << "received" << std::endl;
-	
-        if ( rsize == 0 ) {
-            break;	
-        } else if ( rsize == -1 ) {
-            perror( "recv" );
-        }
-		std::cout << s_message.timestamp << std::endl;
-		setData();
-		sendBackToAutoware(s_message);
-    }
+void AutowareService::storePlannedTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message) {
+	// trajectoryを受け取ったらcurrent_trajecotoryに保存
+	std::string message = in_message->string();
+	std::cout << "subscriberCallback(): Message Received: " << message << std::endl;
+	std::string err;
+	auto json = Json::parse(message, err);
+	std::cout << json["msg"]["data"].string_value() << std::endl;
+}
+
+void AutowareService::storeTrajectory
+
+void AutowareService::receiveFromAutoware(){
+	rbc.addClient("trajectory_subscriber");
+	rbc.addClient("scenario_trigger");
+	rbc.subscribe("trajectory_subscriber", "/trajectory", AutowareService::storeTrajectory);
+	rbc.subscribe("scenario_trigger", "/scenario_trigger", AutowareService::scenarioTrigger);
+	while (1) {
+	}
+
+	// std::cout << "*****receive setup" << std::endl;
+	// int sockfd;
+    // int client_sockfd;
+    // struct sockaddr_in addr;
+    // socklen_t len = sizeof( struct sockaddr_in );
+    // struct sockaddr_in from_addr;
+    // char buf[4096];
  
-    close( client_sockfd );
-    close( sockfd );
+    // memset( buf, 0, sizeof( buf ) );
+    // if( ( sockfd = socket( AF_INET, SOCK_STREAM, 0 ) ) < 0 ) {
+    //     perror( "socket" );
+    // }
+    // addr.sin_family = AF_INET;
+    // addr.sin_port = htons( 23457 );
+    // addr.sin_addr.s_addr = INADDR_ANY;
+    // if( bind( sockfd, (struct sockaddr *)&addr, sizeof( addr ) ) < 0 ) perror( "bind" );
+    // if( listen( sockfd, SOMAXCONN ) < 0 ) perror( "listen" );
+    // if( ( client_sockfd = accept( sockfd, (struct sockaddr *)&from_addr, &len ) ) < 0 ) perror( "accept" );
+ 
+    // // 受信
+    // int rsize;
+    // while( 1 ) {
+	// 	std::stringstream ss;
+	// 	memset( buf, 0, sizeof( buf ) );
+    //     rsize = recv( client_sockfd, buf, sizeof( buf ), 0 );
+		
+	// 	ss << buf;
+	// 	boost::archive::text_iarchive archive(ss);
+	// 	archive >> s_message;
+
+	// 	std::cout << "received" << std::endl;
+	
+    //     if ( rsize == 0 ) {
+    //         break;	
+    //     } else if ( rsize == -1 ) {
+    //         perror( "recv" );
+    //     }
+	// 	std::cout << s_message.timestamp << std::endl;
+	// 	setData();
+	// 	sendBackToAutoware(s_message);
+    // }
+ 
+    // close( client_sockfd );
+    // close( sockfd );
 
 }
 
@@ -244,61 +277,27 @@ void AutowareService::sendBackToAutoware(socket_message msg){
 
 
 void AutowareService::testSender(){
-	while(1){
-		s_message.id = 0;
-		s_message.time = 0;
-		s_message.scenerio = 0;
-		s_message.targetstationid = 1;
-		struct trajectory_point tp;
-		s_message.trajectory.clear();
+	// int l = 0;
+	// while(1){
+	// 	s_message.id = 0;
+	// 	s_message.time = 0;
+	// 	s_message.scenerio = 0;
+	// 	s_message.targetstationid = 1;
+	// 	struct trajectory_point tp;
+	// 	s_message.trajectory.clear();
 
-		for (int i=0; i<10; i++) {
-			tp.deltalat = i;
-			tp.deltalong = i;
-			tp.deltaalt = i;
-			tp.pathdeltatime = i;
-			s_message.trajectory.push_back(tp);
-		}
-
-		// s_message.speed.clear();
-		// s_message.adviceaccepted.clear();
-		// s_message.latitude.clear();
-		// s_message.longitude.clear();
-		// s_message.time.clear();
-		// s_message.stationid.clear();
-
-		// s_message.stationid.push_back(100);
-		// s_message.speed.push_back(1919);
-		// s_message.latitude.push_back(35.714464 * 10000000);
-		// s_message.longitude.push_back(139.760606 * 10000000);
-		// s_message.time.push_back(1919);
-
-		// s_message.stationid.push_back(101);
-		// s_message.speed.push_back(1919);
-		// s_message.latitude.push_back(35.71419722 * 10000000);
-		// s_message.longitude.push_back(139.76148888 * 10000000);
-		// s_message.time.push_back(1919);
-
-		// s_message.stationid.push_back(102);
-		// s_message.speed.push_back(1919);
-		// s_message.latitude.push_back(35.714497 * 10000000);
-		// s_message.longitude.push_back(139.763014 * 10000000);
-		// s_message.time.push_back(1919);
-
-		// s_message.stationid.push_back(103);
-		// s_message.speed.push_back(1919);
-		// s_message.latitude.push_back(35.713997 * 10000000);
-		// s_message.longitude.push_back(139.760153 * 10000000);
-		// s_message.time.push_back(1919);
-
-		// s_message.stationid.push_back(104);
-		// s_message.speed.push_back(1919);
-		// s_message.latitude.push_back(35.712992 * 10000000);
-		// s_message.longitude.push_back(139.759819 * 10000000);
-		// s_message.time.push_back(1919);
-		setData();
-		sleep(1);
-	}
+	// 	for (int i=0; i<10; i++) {
+	// 		l += 1;
+	// 		tp.deltalat = l;
+	// 		tp.deltalong = l;
+	// 		tp.deltaalt = l;
+	// 		tp.pathdeltatime = l;
+	// 		s_message.trajectory.push_back(tp);
+	// 		// std::cout << l << std::endl;
+	// 	}
+	// 	setData();
+	// 	sleep(1);
+	// }
 }
 
 void AutowareService::receiveFromMcService(){
@@ -311,10 +310,31 @@ void AutowareService::receiveFromMcService(){
 
 		serializedAutoware = received.second;
 		mcm.ParseFromString(serializedAutoware);
-		its::IntentionRequestContainer container = mcm.maneuver().mcmparameters().maneuvercontainer().intentionrequestcontainer();
-		for (int i=0; i<container.plannedtrajectory_size(); i++) {
-			std::cout << container.plannedtrajectory(i).deltaalt() << std::endl;
+		its::controlFlag controlFlag = mcm.maneuver().mcmparameters().controlFlag();
+		switch (controlFlag) {
+			case its::McmParameters_ControlFlag_INTENTION_REQUEST:
+				rbc.addClient("collision_detect");
+				rbc.publish("/other_vehicle/planned_trajectory/detect", msg);
+				rbc.subscribe("collision_detect", "/collision_detect", AutowareService::detectCollision);
+				break;
+			case its::McmParameters_ControlFlag_INTENTION_REPLY:
+				rbc.addClient("calculate_trajectory"):
+				rbc.publish("/other_vehicle/planned_trajectory/calculate", msg);
+				rbc.subscribe("calculate_trajectory", "/other_vehicle/desired_trajectory", AutowareService::calculatedDesiredTrajectory);
+				break;
+			case its::McmParameters_ControlFlag_PRESCRIPTION:
+				rbc.addClient("validate_trajectory"):
+				rbc.publish("/desired_trajectory", msg);
+				rbc.subscribe("validate_trajectory", "/accept_desired_trajectory", AutowareService::validatedDesiredTrajectory);
+				break;
+			case its::McmParameters_ControlFlag_HEARTBEAT:
+				break;
+			default:
+				break;
 		}
+		// for (int i=0; i<container.plannedtrajectory_size(); i++) {
+		// 	std::cout << container.plannedtrajectory(i).deltaalt() << std::endl;
+		// }
 		// int64_t currTime = Utils::currentTime();
 		// long genDeltaTime = (long)(currTime/1000000 - 10728504000) % 65536;
 		// delay_output_file << std::setprecision(20) << mcm.header().stationid() << "" << "," << genDeltaTime << "," << currTime << "," << latitude << "," << longitude << std::endl;
@@ -327,6 +347,57 @@ void AutowareService::receiveFromMcService(){
 		// msg.time.push_back(0);
 		// msg.stationid.push_back(mcm.header().stationid());
 	}
+}
+
+void AutowareService::detectCollision(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message) {
+	std::string message = in_message->string().c_str();
+	const char* msg = message.c_str();
+	rapidjson::Document d;
+	d.Parse(msg);
+	if (d["msg"]["data"]["detected"] == false) {
+		return;
+	}
+	s_message.id = 0;
+	s_message.targetstationid = d["msg"]["data"]["target_stationID"].getString();
+	setData();
+	rbc.removeClient("collision_detect");
+}
+
+void AutowareService::calculatedDesiredTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message) {
+	std::string message = in_message->string().c_str();
+	const char* msg = message.c_str();
+	rapidjson::Document d;
+	d.Parse(msg);
+	s_message.id = 0;
+	s_message.time = 0;
+	s_message.targetstationid = d["msg"]["data"]["target_stationID"].getString();
+	const rapidjson::Value& c = d["msg"]["data"]["trajectory"].GetArray();
+	struct trajectory_point tp;
+	for (auto& d : c.GetArray()) {
+		tp.deltalat = d["pose"]["position"]["latitude"].GetInt();
+		tp.deltalong = d["pose"]["position"]["longitude"].GetInt();
+		tp.deltaalt = 0;
+		tp.pathdeltatime = d["time"].GetInt();
+		s_message.trajectory.push_back(tp);
+		std::cout << "list value:" << e << std::endl;
+	}
+
+	setData();
+	rbc.removeClient("calculate_trajectory");
+}
+
+void AutowareService::validatedDesiredTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message) {
+	std::string message = in_message->string().c_str();
+	const char* msg = message.c_str();
+	rapidjson::Document d;
+	d.Parse(msg);
+	s_message.id = 0;
+	s_message.time = 0;
+	s_message.targetstationid = d["msg"]["data"]["target_stationID"].getString();
+	s_message.adviceAccepted = d["msg"]["data"]["accept"].getString();
+
+	setData();
+	rbc.removeClient("validate_trajectory");
 }
 
 int main(int argc,  char* argv[]) {

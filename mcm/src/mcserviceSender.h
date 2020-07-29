@@ -82,6 +82,29 @@ struct McServiceConfig {
 };
 
 /**
+* message type (ex. IntentionRequest, IntentionReply, ...)
+*/
+enum Type {
+	IntentionRequest = 0,
+	IntentionReply = 1,
+	Prescription = 2,
+	Acceptance = 3,
+	Heartbeat = 4,
+	Ack = 5,
+	Fin = 6
+};
+
+/**
+* state (ex. Waiting, Advertising, ...)
+*/
+enum State {
+	Waiting = 0,
+	Advertising = 2,
+	Negotiating = 3,
+	Activating = 4
+};
+
+/**
  * Class that handles the receiving, creating and sending of CA Messages.
  *
  * @nonStandard Outdated MCMs queued in ath9k hardware can not be flushed. Ath9k driver developer, Adrian Chadd says:
@@ -102,7 +125,7 @@ public:
 	~McService();
 
 	/** Sends a new MCM to LDM and DCC.	 */
-	void send(bool isAutoware = false);
+	void send(bool isAutoware = false, Type type = IntentionRequest);
 
 	// /** Calculates the heading towards North based on the two specified coordinates.
 	//  *
@@ -145,18 +168,18 @@ private:
 	 * The speed since the last MCM changed by more than 1m/s.
 	 * @param ec Boost error code
 	 */
-	void alarm(const boost::system::error_code &ec);
+	void alarm(const boost::system::error_code &ec, Type type);
 
 	/** Triggers sending of MCM.
 	 *
 	 */
-	void trigger();
+	void trigger(Type type, int interval);
 
 	/** Generates a new unaligned PER compliant MCM.
 	 * The new MCM includes the MAC address as stationId, an increasing but not unique ID, a current time stamp, and the latest GPS and OBD2 data if it is not too old (as configured).
 	 * @return The newly generated MCM.
 	 */
-	/*std::vector<uint8_t>*/MCM_t* generateMcm(bool isAutoware = false);
+	/*std::vector<uint8_t>*/MCM_t* generateMcm(bool isAutoware = false, Type type = IntentionRequest);
 
 	/** Converts ASN1 MCM structure into MCM protocol buffer.
 	 * @return The newly generated MCM protocol buffer.
@@ -207,7 +230,7 @@ private:
 	/** Schedules next triggering checks for new MCM.
 	 *
 	 */
-	void scheduleNextAlarm();
+	void scheduleNextAlarm(Type type, int interval);
 
 	// /** Checks if the last received GPS data is still valid.
 	//  * @return True if GPS data is valid, false otherwise.
@@ -279,17 +302,14 @@ private:
 	std::ofstream atoc_delay_output_file;
 
 	//std::vector<autowarePackage::AUTOWARE> waiting_data;
-	std::list<autowarePackage::AUTOWAREMCM> waiting_data;
+	// std::list<autowarePackage::AUTOWAREMCM> waiting_data;
+	autowarePackage::AUTOWAREMCM waiting_data;
 
-	/**
-	 * message type (ex. IntentionRequest, IntentionReply, ...)
-	 */
-	int type;
+	enum Type type;
+	enum State state = Waiting;
 
-	/**
-	 * state (ex. Waiting, Advertising, ...)
-	 */
-	int state;
+	bool ack = true;
+	bool fin = true;
 };
 
 /** @} */ //end group

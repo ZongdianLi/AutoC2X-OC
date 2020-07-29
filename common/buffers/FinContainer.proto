@@ -1,0 +1,5 @@
+package its;
+
+message FinContainer {
+	required uint64 targetStationID = 1;
+}
