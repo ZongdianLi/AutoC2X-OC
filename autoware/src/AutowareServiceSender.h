@@ -96,6 +96,14 @@ struct AutowareConfig {
 	}
 };
 
+RosbridgeWsClient rbc("localhost:9090");
+
+std::vector<struct trajectory_point> ego_vehicle_trajectory;
+std::vector<struct trajectory_point> other_vehicle_trajectory;
+
+CommunicationSender* mSender;
+LoggingUtility* mLogger;
+
 struct trajectory_point{
 	int deltalat;
 	int deltalong;
@@ -117,9 +125,10 @@ struct socket_message{
 	long timestamp;
 	int id;
 	int time;
-	int scenerio;
+	int scenario;
 	int targetstationid;
 	std::vector<struct trajectory_point> trajectory;
+	int collisiondetected;
 	int adviceaccepted;
 
 	// std::vector<int> speed;
@@ -135,9 +144,10 @@ private:
 			ar & timestamp;
 			ar & id;
 			ar & time;
-			ar & scenerio;
+			ar & scenario;
 			ar & targetstationid;
 			ar & trajectory;
+			ar & collisiondetected;
 			ar & adviceaccepted;
 			// ar & speed;
 			// ar & latitude;
@@ -147,6 +157,29 @@ private:
 		}
 };
 
+socket_message s_message;
+
+/**
+ * Callback functions of ROS subscribers
+ */
+
+void setData();
+
+void sendToServices(autowarePackage::AUTOWAREMCM autoware);
+
+/**
+ * Callback functions of ROS subscribers
+ */
+
+void storePlannedTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message);
+
+void receiveScenarioTrigger(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message);
+
+void detectCollision(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message);
+
+void validatedDesiredTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message);
+
+void calculatedDesiredTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message);
 
 /**
  * Class that connects to AUTOWARE via serial port and offers its data to other modules via ZMQ.
@@ -156,17 +189,7 @@ public:
 	AutowareService(AutowareConfig &config, int argc, char* argv[]);
 	~AutowareService();
 
-	void setData();
-
-	static void ReceiveScenarioTrigger(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message);
-
-	static void detectCollision(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message);
-
-	static void validatedDesiredTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message);
-
-	static void calculatedTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message);
-
-	static void 
+	// void setData();
 
 	void receiveFromAutoware();
 
@@ -176,7 +199,7 @@ public:
 
 	void sendBackToAutoware(socket_message msg);
 
-	void sendToServices(autowarePackage::AUTOWAREMCM autoware);
+	// void sendToServices(autowarePackage::AUTOWAREMCM autoware);
 
 	void loadOpt(int argc, char* argv[]);
 
@@ -200,14 +223,11 @@ private:
 
 	std::ofstream delay_output_file;
 
-	socket_message s_message;
-
 	std::random_device rnd;     // 非決定的な乱数生成器を生成
 
 	int sock_fd;
 	int flag;
 	std::string host_addr;
-	RosbridgeWsClient rbc("localhost:9090");
 };
 
 /** @} */ //end group

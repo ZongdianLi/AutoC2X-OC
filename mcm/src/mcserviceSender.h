@@ -91,7 +91,9 @@ enum Type {
 	Acceptance = 3,
 	Heartbeat = 4,
 	Ack = 5,
-	Fin = 6
+	Fin = 6,
+	Cancel = 7,
+	Abend = 8
 };
 
 /**
@@ -99,9 +101,13 @@ enum Type {
 */
 enum State {
 	Waiting = 0,
-	Advertising = 2,
-	Negotiating = 3,
-	Activating = 4
+	Advertising = 1,
+	CollisionDetecting = 2,
+	Prescripting = 3,
+	Negotiating = 4,
+	Activating = 5,
+	Finishing = 6,
+	Abending = 7
 };
 
 /**

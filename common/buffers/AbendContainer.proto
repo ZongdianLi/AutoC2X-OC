@@ -1,0 +1,5 @@
+package its;
+
+message AbendContainer {
+	required uint64 targetStationID = 1;
+}

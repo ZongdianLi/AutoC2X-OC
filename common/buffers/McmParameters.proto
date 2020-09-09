@@ -3,7 +3,7 @@ import "BasicContainer.proto";
 import "ManeuverContainer.proto";
 
 message McmParameters {
-	enum ControlFlag {INTENTION_REQUEST = 1; INTENTION_REPLY = 2; PRESCRIPTION = 3; ACCEPTANCE = 4; HEARTBEAT = 5; ACK = 6; FIN = 7; }
+	enum ControlFlag {INTENTION_REQUEST = 1; INTENTION_REPLY = 2; PRESCRIPTION = 3; ACCEPTANCE = 4; HEARTBEAT = 5; ACK = 6; FIN = 7; ABEND = 8; }
 	required its.BasicContainer basicContainer = 1;
 	required ControlFlag controlFlag = 2;
 	required its.ManeuverContainer maneuverContainer = 3;

@@ -36,8 +36,136 @@ using namespace std;
 namespace asio = boost::asio;
 using asio::ip::tcp;
 
-INITIALIZE_EASYLOGGINGPP
+INITIALIZE_EASYLOGGINGPP	
 
+void setData() {
+	std::cout << "simulating....." << std::endl;
+	
+	autowarePackage::AUTOWAREMCM autoware;
+
+	autoware.set_id(s_message.id);
+	autoware.set_time(s_message.time);
+	autoware.set_scenario(s_message.scenario);
+	autoware.set_targetstationid(s_message.targetstationid);
+
+	for (trajectory_point tp : ego_vehicle_trajectory) {
+		its::TrajectoryPoint* trajectory_point = autoware.add_trajectory();
+		trajectory_point->set_deltalat(tp.deltalat);
+		trajectory_point->set_deltaalt(tp.deltalong);
+		trajectory_point->set_deltalong(tp.deltaalt);
+		trajectory_point->set_pathdeltatime(tp.pathdeltatime);
+	}
+	
+	std::cout << autoware.trajectory_size() << std::endl;
+	sendToServices(autoware);
+}
+
+void sendToServices(autowarePackage::AUTOWAREMCM autoware) {
+	string serializedAutoware;
+	autoware.SerializeToString(&serializedAutoware);
+	mSender->sendData("AUTOWARE", serializedAutoware);
+	// delete mSender;
+	// delete mLogger;
+}
+
+void storePlannedTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message) {
+	// trajectoryを受け取ったらego_vehicle_trajecotoryに保存
+	std::string message = in_message->string();
+	// const char* msg = message.c_str();
+	// std::cout << "subscriberCallback(): Message Received: " << message << std::endl;
+
+	rapidjson::Document d;
+	if (d.Parse(message.c_str()).HasParseError()) {
+		std::cerr << "advertiseServiceCallback(): Error in parsing service request message: " << message << std::endl;
+		return;
+	}
+	
+	// メッセージの中身が正しいかどうか判定
+	if (!(d["msg"].IsObject()) || !(d["msg"].HasMember("trajectory"))) return;
+	
+	ego_vehicle_trajectory.clear();
+
+	// ROSトピックによって後で修正
+	for (auto& v : d["msg"]["trajectory"].GetArray()) {
+		trajectory_point tp;
+		// std::cout << "time: " << v["time"].GetInt() << std::endl;
+		tp.deltalat = v["pose"]["latitude"].GetFloat();
+		tp.deltalong = v["pose"]["longitude"].GetFloat();
+		tp.deltaalt = v["pose"]["altitude"].GetFloat();
+		tp.pathdeltatime = v["time"].GetFloat();
+		std::cout << "time: " << tp.pathdeltatime << std::endl;
+		ego_vehicle_trajectory.push_back(tp);
+	}
+}
+
+void receiveScenarioTrigger(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message) {
+	// triggerが来たら保存しておいたego_vehicle_trajectoryをmcserviceに返す
+	std::string message = in_message->string();
+	std::cout << "subscriberCallback(): Message Received: " << message << std::endl;
+	rapidjson::Document d;
+	d.Parse(message.c_str());
+	if (!(d["msg"].HasMember("data"))) return;
+	// std::cout << "aaaaaaaaa" << std::endl;
+	s_message.id = 0;
+	s_message.scenario = d["msg"]["data"].GetInt();
+	// s_message.targetstationid = d["msg"]["data"].GetInt();
+	setData();
+}
+
+void detectCollision(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message) {
+	// 衝突が検知されたらego_vehicle_trajectoryを、検知されなければcollisiondetected=falseをmcserviceに送信
+	std::string message = in_message->string().c_str();
+	const char* msg = message.c_str();
+	rapidjson::Document d;
+	d.Parse(msg);
+	s_message.id = 0;
+	if (d["msg"]["data"]["detected"] == false) {
+		s_message.collisiondetected = 0;
+	} else {
+		s_message.collisiondetected = 1;
+		s_message.targetstationid = d["msg"]["data"]["target_stationID"].GetInt();
+	}
+	setData();
+	rbc.removeClient("collision_detect");
+}
+
+void calculatedDesiredTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message) {
+	// other_vehicle/desired_trajectoryをmcserviceに送信
+	std::string message = in_message->string().c_str();
+	const char* msg = message.c_str();
+	rapidjson::Document d;
+	d.Parse(msg);
+	s_message.id = 0;
+	s_message.time = 0;
+	s_message.targetstationid = d["msg"]["data"]["target_stationID"].GetInt();
+	const rapidjson::Value& c = d["msg"]["data"]["trajectory"].GetArray();
+	struct trajectory_point tp;
+	for (auto& d : c.GetArray()) {
+		tp.deltalat = d["pose"]["position"]["latitude"].GetInt();
+		tp.deltalong = d["pose"]["position"]["longitude"].GetInt();
+		tp.deltaalt = 0;
+		tp.pathdeltatime = d["time"].GetInt();
+		s_message.trajectory.push_back(tp);
+		// std::cout << "list value:" << e << std::endl;
+	}
+
+	setData();
+	rbc.removeClient("calculate_trajectory");
+}
+
+void validatedDesiredTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message) {
+	std::string message = in_message->string().c_str();
+	const char* msg = message.c_str();
+	rapidjson::Document d;
+	d.Parse(msg);
+	s_message.id = 0;
+	s_message.time = 0;
+	s_message.targetstationid = d["msg"]["data"]["target_stationID"].GetInt();
+	s_message.adviceaccepted = d["msg"]["data"]["accept"].GetInt();
+
+	setData();
+	rbc.removeClient("validate_trajectory");
+}
 
 AutowareService::AutowareService(AutowareConfig &config, int argc, char* argv[]) {
 	flag = -1;
@@ -51,7 +179,7 @@ AutowareService::AutowareService(AutowareConfig &config, int argc, char* argv[])
 	ptree pt = load_config_tree();
 	mLogger = new LoggingUtility(AUTOWARE_CONFIG_NAME, AUTOWARE_MODULE_NAME, mGlobalConfig.mLogBasePath, mGlobalConfig.mExpName, mGlobalConfig.mExpNo, pt);
 
-	mSender = new CommunicationSender("26666", *mLogger);
+	// mSender = new CommunicationSender("26666", *mLogger);
 	mReceiverFromMcService = new CommunicationReceiver("25555", "MCM", *mLogger);
 	mLogger->logStats("speed (m/sec)");
 
@@ -118,89 +246,62 @@ void AutowareService::loadOpt(int argc, char* argv[]){
 
 
 //simulates Autoware data, logs and sends it
-void AutowareService::setData() {
-	std::cout << "simulating....." << std::endl;
+// void AutowareService::setData() {
+// 	std::cout << "simulating....." << std::endl;
 	
-	autowarePackage::AUTOWAREMCM autoware;
+// 	autowarePackage::AUTOWAREMCM autoware;
 
-	autoware.set_id(s_message.id);
-	autoware.set_time(s_message.time);
-	autoware.set_scenerio(s_message.scenerio);
-	autoware.set_targetstationid(s_message.targetstationid);
+// 	autoware.set_id(s_message.id);
+// 	autoware.set_time(s_message.time);
+// 	autoware.set_scenario(s_message.scenario);
+// 	autoware.set_targetstationid(s_message.targetstationid);
 
-	// autoware.clear_trajectory();
-	for (int i=0; i<s_message.trajectory.size(); i++) {
-		its::TrajectoryPoint* trajectory_point = autoware.add_trajectory();
-		trajectory_point->set_deltalat(s_message.trajectory[i].deltalat);
-		trajectory_point->set_deltaalt(s_message.trajectory[i].deltalong);
-		trajectory_point->set_deltalong(s_message.trajectory[i].deltaalt);
-		trajectory_point->set_pathdeltatime(s_message.trajectory[i].pathdeltatime);
-	}
+// 	for (trajectory_point tp : ego_vehicle_trajectory) {
+// 		its::TrajectoryPoint* trajectory_point = autoware.add_trajectory();
+// 		trajectory_point->set_deltalat(tp.deltalat);
+// 		trajectory_point->set_deltaalt(tp.deltalong);
+// 		trajectory_point->set_deltalong(tp.deltaalt);
+// 		trajectory_point->set_pathdeltatime(tp.pathdeltatime);
+// 	}
 	
-	std::cout << autoware.trajectory_size() << std::endl;
-	// for (int i=0; i<autoware.trajectory_size(); i++) {
-	// 	std::cout << autoware.trajectory(i).deltalat() << std::endl;
-	// }
+// 	std::cout << autoware.trajectory_size() << std::endl;
+// 	// for (int i=0; i<autoware.trajectory_size(); i++) {
+// 	// 	std::cout << autoware.trajectory(i).deltalat() << std::endl;
+// 	// }
 
-	sendToServices(autoware);
+// 	sendToServices(autoware);
 
-	// for(unsigned int i=0; i < s_message.speed.size(); i++){
-	// 	autowarePackage::AUTOWARE autoware;
-	// 	std::cout << "stationid is :::" << s_message.stationid[i] << std::endl;
-	// 	autoware.set_id(s_message.stationid[i]);
-	// 	autoware.set_speed(s_message.speed[i]); // standard expects speed in 0.01 m/s
-	// 	autoware.set_time(s_message.time[i]);
-	// 	autoware.set_longitude(s_message.longitude[i]);
-	// 	autoware.set_latitude(s_message.latitude[i]);
-	// 	sendToServices(autoware);
-	// 	if(s_message.stationid[i] == 0){
-	// 		latitude = s_message.latitude[i];
-	// 		longitude = s_message.longitude[i];
-	// 	}
-	// }
-}
+// 	// for(unsigned int i=0; i < s_message.speed.size(); i++){
+// 	// 	autowarePackage::AUTOWARE autoware;
+// 	// 	std::cout << "stationid is :::" << s_message.stationid[i] << std::endl;
+// 	// 	autoware.set_id(s_message.stationid[i]);
+// 	// 	autoware.set_speed(s_message.speed[i]); // standard expects speed in 0.01 m/s
+// 	// 	autoware.set_time(s_message.time[i]);
+// 	// 	autoware.set_longitude(s_message.longitude[i]);
+// 	// 	autoware.set_latitude(s_message.latitude[i]);
+// 	// 	sendToServices(autoware);
+// 	// 	if(s_message.stationid[i] == 0){
+// 	// 		latitude = s_message.latitude[i];
+// 	// 		longitude = s_message.longitude[i];
+// 	// 	}
+// 	// }
+// }
 
 
 //logs and sends Autoware
-void AutowareService::sendToServices(autowarePackage::AUTOWAREMCM autoware) {
-	//send buffer to services
-	string serializedAutoware;
-	autoware.SerializeToString(&serializedAutoware);
-	mSender->sendData("AUTOWARE", serializedAutoware);
-	// mLogger->logStats(to_string(autoware.speed()) + " (" + to_string(autoware.speed()/100*3.6) + "km/h)"); // In csv, we log speed in m/sec
-}
-
-void AutowareService::scenarioTrigger(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message) {
-	// triggerが来たら保存しておいたtrajectoryをmcserviceに返す
-	std::string message = in_message->string().c_str();
-	const char* msg = message.c_str();
-	rapidjson::Document d;
-	d.Parse(msg);
-	if (d["msg"]["data"]["detected"] == false) {
-		return;
-	}
-	s_message.id = 0;
-	s_message.targetstationid = d["msg"]["data"]["target_stationID"].getString();
-	setData();
-	rbc.removeClient("collision_detect");
-}
-
-void AutowareService::storePlannedTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message) {
-	// trajectoryを受け取ったらcurrent_trajecotoryに保存
-	std::string message = in_message->string();
-	std::cout << "subscriberCallback(): Message Received: " << message << std::endl;
-	std::string err;
-	auto json = Json::parse(message, err);
-	std::cout << json["msg"]["data"].string_value() << std::endl;
-}
-
-void AutowareService::storeTrajectory
+// void AutowareService::sendToServices(autowarePackage::AUTOWAREMCM autoware) {
+// 	//send buffer to services
+// 	string serializedAutoware;
+// 	autoware.SerializeToString(&serializedAutoware);
+// 	mSender->sendData("AUTOWARE", serializedAutoware);
+// 	// mLogger->logStats(to_string(autoware.speed()) + " (" + to_string(autoware.speed()/100*3.6) + "km/h)"); // In csv, we log speed in m/sec
+// }
 
 void AutowareService::receiveFromAutoware(){
-	rbc.addClient("trajectory_subscriber");
+	rbc.addClient("ego_vehicle_trajectory");
 	rbc.addClient("scenario_trigger");
-	rbc.subscribe("trajectory_subscriber", "/trajectory", AutowareService::storeTrajectory);
-	rbc.subscribe("scenario_trigger", "/scenario_trigger", AutowareService::scenarioTrigger);
+	rbc.subscribe("ego_vehicle_trajectory", "/ego_vehicle/planned_trajectory", storePlannedTrajectory);
+	rbc.subscribe("scenario_trigger", "/scenario_trigger", receiveScenarioTrigger);
 	while (1) {
 	}
 
@@ -281,7 +382,7 @@ void AutowareService::testSender(){
 	// while(1){
 	// 	s_message.id = 0;
 	// 	s_message.time = 0;
-	// 	s_message.scenerio = 0;
+	// 	s_message.scenario = 0;
 	// 	s_message.targetstationid = 1;
 	// 	struct trajectory_point tp;
 	// 	s_message.trajectory.clear();
@@ -310,22 +411,25 @@ void AutowareService::receiveFromMcService(){
 
 		serializedAutoware = received.second;
 		mcm.ParseFromString(serializedAutoware);
-		its::controlFlag controlFlag = mcm.maneuver().mcmparameters().controlFlag();
+		its::McmParameters_ControlFlag controlFlag = mcm.maneuver().mcmparameters().controlflag();
+		char* msg = R"({"data":"Test message from /test1"})";
+		rapidjson::Document d;
+		d.Parse(msg);
 		switch (controlFlag) {
 			case its::McmParameters_ControlFlag_INTENTION_REQUEST:
 				rbc.addClient("collision_detect");
-				rbc.publish("/other_vehicle/planned_trajectory/detect", msg);
-				rbc.subscribe("collision_detect", "/collision_detect", AutowareService::detectCollision);
+				rbc.publish("/other_vehicle/planned_trajectory/collision_detect", d);
+				rbc.subscribe("collision_detect", "/collision_detect", detectCollision);
 				break;
 			case its::McmParameters_ControlFlag_INTENTION_REPLY:
-				rbc.addClient("calculate_trajectory"):
-				rbc.publish("/other_vehicle/planned_trajectory/calculate", msg);
-				rbc.subscribe("calculate_trajectory", "/other_vehicle/desired_trajectory", AutowareService::calculatedDesiredTrajectory);
+				rbc.addClient("calculate_trajectory");
+				rbc.publish("/other_vehicle/planned_trajectory/calculate", d);
+				rbc.subscribe("calculate_trajectory", "/other_vehicle/desired_trajectory", calculatedDesiredTrajectory);
 				break;
 			case its::McmParameters_ControlFlag_PRESCRIPTION:
-				rbc.addClient("validate_trajectory"):
-				rbc.publish("/desired_trajectory", msg);
-				rbc.subscribe("validate_trajectory", "/accept_desired_trajectory", AutowareService::validatedDesiredTrajectory);
+				rbc.addClient("validate_trajectory");
+				rbc.publish("/desired_trajectory", d);
+				rbc.subscribe("validate_trajectory", "/accept_desired_trajectory", validatedDesiredTrajectory);
 				break;
 			case its::McmParameters_ControlFlag_HEARTBEAT:
 				break;
@@ -349,67 +453,23 @@ void AutowareService::receiveFromMcService(){
 	}
 }
 
-void AutowareService::detectCollision(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message) {
-	std::string message = in_message->string().c_str();
-	const char* msg = message.c_str();
-	rapidjson::Document d;
-	d.Parse(msg);
-	if (d["msg"]["data"]["detected"] == false) {
-		return;
-	}
-	s_message.id = 0;
-	s_message.targetstationid = d["msg"]["data"]["target_stationID"].getString();
-	setData();
-	rbc.removeClient("collision_detect");
-}
-
-void AutowareService::calculatedDesiredTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message) {
-	std::string message = in_message->string().c_str();
-	const char* msg = message.c_str();
-	rapidjson::Document d;
-	d.Parse(msg);
-	s_message.id = 0;
-	s_message.time = 0;
-	s_message.targetstationid = d["msg"]["data"]["target_stationID"].getString();
-	const rapidjson::Value& c = d["msg"]["data"]["trajectory"].GetArray();
-	struct trajectory_point tp;
-	for (auto& d : c.GetArray()) {
-		tp.deltalat = d["pose"]["position"]["latitude"].GetInt();
-		tp.deltalong = d["pose"]["position"]["longitude"].GetInt();
-		tp.deltaalt = 0;
-		tp.pathdeltatime = d["time"].GetInt();
-		s_message.trajectory.push_back(tp);
-		std::cout << "list value:" << e << std::endl;
-	}
-
-	setData();
-	rbc.removeClient("calculate_trajectory");
-}
-
-void AutowareService::validatedDesiredTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message) {
-	std::string message = in_message->string().c_str();
-	const char* msg = message.c_str();
-	rapidjson::Document d;
-	d.Parse(msg);
-	s_message.id = 0;
-	s_message.time = 0;
-	s_message.targetstationid = d["msg"]["data"]["target_stationID"].getString();
-	s_message.adviceAccepted = d["msg"]["data"]["accept"].getString();
-
-	setData();
-	rbc.removeClient("validate_trajectory");
-}
-
 int main(int argc,  char* argv[]) {
 
 	AutowareConfig config;
+	GlobalConfig mGlobalConfig;
 	try {
 		config.loadConfig();
+		mGlobalConfig.loadConfig(AUTOWARE_CONFIG_NAME);
 	}
 	catch (std::exception &e) {
 		cerr << "Error while loading config.xml: " << e.what() << endl << flush;
 		return EXIT_FAILURE;
 	}
+	
+	ptree pt = load_config_tree();
+	mLogger = new LoggingUtility(AUTOWARE_CONFIG_NAME, AUTOWARE_MODULE_NAME, mGlobalConfig.mLogBasePath, mGlobalConfig.mExpName, mGlobalConfig.mExpNo, pt);
+	mSender = new CommunicationSender("26666", *mLogger);
+
 	AutowareService autoware(config, argc, argv);
 
 	return 0;

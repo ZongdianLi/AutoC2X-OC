@@ -1,0 +1,5 @@
+package its;
+
+message CancelContainer {
+	required uint64 targetStationID = 1;
+}

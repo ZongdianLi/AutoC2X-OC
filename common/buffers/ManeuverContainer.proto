@@ -7,6 +7,8 @@ import "AcceptanceContainer.proto";
 import "HeartbeatContainer.proto";
 import "AckContainer.proto";
 import "FinContainer.proto";
+import "CancelContainer.proto";
+import "AbendContainer.proto";
 
 message ManeuverContainer {
 	// enum Type {INTENTION_REQUEST_CONTAINER = 1; INTENTION_REPLY_CONTAINER = 2; PRESCRIPTION_CONTAINER = 3; ACCEPTANCE_CONTAINER = 4;}
@@ -18,4 +20,6 @@ message ManeuverContainer {
 	optional its.HeartbeatContainer heartbeatContainer = 5;
 	optional its.AckContainer ackContainer = 6;
 	optional its.FinContainer finContainer = 7;
+	optional its.FinContainer cancelContainer = 8;
+	optional its.FinContainer abendContainer = 9;
 }

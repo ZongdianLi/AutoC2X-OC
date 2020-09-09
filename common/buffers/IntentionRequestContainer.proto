@@ -3,6 +3,6 @@ package its;
 import "TrajectoryPoint.proto";
 
 message IntentionRequestContainer {
-	required int64 scenerio = 1;
+	required int64 scenario = 1;
 	repeated its.TrajectoryPoint plannedTrajectory = 2;
 }
