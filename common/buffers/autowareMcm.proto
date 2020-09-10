@@ -4,7 +4,8 @@ import "TrajectoryPoint.proto";
 
 message AUTOWAREMCM {
 	optional int64 id = 1;
-	optional int64 messageType = 2;
+	enum MessageType {ADVERTISE = 1; COLLISION_DETECTION_RESULT = 2; CALCULATED_ROUTE = 3; SCENARIO_FINISH = 4; }
+	optional MessageType messageType = 2;
 	optional int64 time = 3;
 	optional int64 scenario = 4;
 	optional int64 scenario_end = 5;

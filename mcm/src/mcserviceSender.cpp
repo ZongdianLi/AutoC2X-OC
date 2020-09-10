@@ -281,27 +281,27 @@ void McService::receiveAutowareData() { //実装
 		std::cout << "----------" << std::endl;
 		switch (state) {
 			case Waiting:
-				if (waiting_data.messagetype() == 'advertise') {
+				if (waiting_data.messagetype() == autowarePackage::AUTOWAREMCM_MessageType_ADVERTISE) {
 					state = Advertising;
 					trigger(IntentionRequest, 100);
 				}
 				break;
 			case CollisionDetecting:
-				if (waiting_data.messagetype() == 'collision detection result') {
+				if (waiting_data.messagetype() == autowarePackage::AUTOWAREMCM_MessageType_COLLISION_DETECTION_RESULT) {
 					state = Negotiating;
 					trigger(IntentionReply, 100);
 				}
 			case Advertising:
 				break;
 			case Prescripting:
-				if (waiting_data.messagetype() == 'calculated route') {
+				if (waiting_data.messagetype() == autowarePackage::AUTOWAREMCM_MessageType_CALCULATED_ROUTE) {
 					trigger(Prescription, 100);
 				}
 				break;
 			case Negotiating:
 				break;
 			case Activating:
-				if (waiting_data.messagetype() == 'scenario finish') {
+				if (waiting_data.messagetype() == autowarePackage::AUTOWAREMCM_MessageType_SCENARIO_FINISH) {
 					state = Finishing;
 					trigger(Fin, 100);
 				}
