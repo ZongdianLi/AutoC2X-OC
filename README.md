@@ -76,3 +76,11 @@ In the terminal, navigate to scripts:
 
 For the GUI, open 'webSite/index.html' in your browser. You can also trigger denms from there.
 You can stop your experiment by running stopOpenC2X.sh in another terminal.
+
+## Additional setup for dev/mcm
+1. clone the repogitory
+```
+$ git clone https://github.com/nlohmann/json.git
+$ git clone https://github.com/ppianpak/rosbridgecpp.git
+$ sudo apt install libssl-dev
+```
