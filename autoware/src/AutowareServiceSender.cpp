@@ -31,7 +31,9 @@
 #include <cmath>
 #include <common/utility/Utils.h>
 #include <math.h>
+#include "nlohmann/json.hpp"
 
+using json = nlohmann::json;
 using namespace std;
 namespace asio = boost::asio;
 using asio::ip::tcp;
@@ -137,8 +139,8 @@ void calculatedDesiredTrajectory(std::shared_ptr<WsClient::Connection>, std::sha
 	d.Parse(msg);
 	s_message.id = 0;
 	s_message.time = 0;
-	s_message.targetstationid = d["msg"]["data"]["target_stationID"].GetInt();
-	const rapidjson::Value& c = d["msg"]["data"]["trajectory"].GetArray();
+	s_message.targetstationid = d["msg"]["target_stationID"].GetInt();
+	const rapidjson::Value& c = d["msg"]["trajectory"].GetArray();
 	struct trajectory_point tp;
 	for (auto& d : c.GetArray()) {
 		tp.deltalat = d["pose"]["position"]["latitude"].GetInt();
@@ -300,6 +302,7 @@ void AutowareService::loadOpt(int argc, char* argv[]){
 void AutowareService::receiveFromAutoware(){
 	rbc.addClient("ego_vehicle_trajectory");
 	rbc.addClient("scenario_trigger");
+	rbc.addClient("scenario_trigger_end");
 	rbc.subscribe("ego_vehicle_trajectory", "/ego_vehicle/planned_trajectory", storePlannedTrajectory);
 	rbc.subscribe("scenario_trigger", "/scenario_trigger", receiveScenarioTrigger);
 	while (1) {
@@ -412,21 +415,49 @@ void AutowareService::receiveFromMcService(){
 		serializedAutoware = received.second;
 		mcm.ParseFromString(serializedAutoware);
 		its::McmParameters_ControlFlag controlFlag = mcm.maneuver().mcmparameters().controlflag();
-		char* msg = R"({"data":"Test message from /test1"})";
+		json msg;
 		rapidjson::Document d;
-		d.Parse(msg);
+		msg["targetstationid"] = mcm.header().stationid();
+		msg["trajectory"] = json::array();
 		switch (controlFlag) {
 			case its::McmParameters_ControlFlag_INTENTION_REQUEST:
+				for (auto& v : mcm.maneuver().mcmparameters().maneuvercontainer().intentionrequestcontainer().plannedtrajectory()) {
+					json tp;
+					tp["time"] = v.pathdeltatime();
+					tp["pose"]["latitude"] = v.deltalat();
+					tp["pose"]["longitude"] = v.deltalong();
+					tp["pose"]["altitude"] = v.deltaalt();
+					msg["trajectory"].push_back(tp);
+				}
+				d.Parse(msg.dump().c_str());
 				rbc.addClient("collision_detect");
 				rbc.publish("/other_vehicle/planned_trajectory/collision_detect", d);
 				rbc.subscribe("collision_detect", "/collision_detect", detectCollision);
 				break;
 			case its::McmParameters_ControlFlag_INTENTION_REPLY:
+				for (auto& v : mcm.maneuver().mcmparameters().maneuvercontainer().intentionreplycontainer().plannedtrajectory()) {
+					json tp;
+					tp["time"] = v.pathdeltatime();
+					tp["pose"]["latitude"] = v.deltalat();
+					tp["pose"]["longitude"] = v.deltalong();
+					tp["pose"]["altitude"] = v.deltaalt();
+					msg["trajectory"].push_back(tp);
+				}
+				d.Parse(msg.dump().c_str());
 				rbc.addClient("calculate_trajectory");
 				rbc.publish("/other_vehicle/planned_trajectory/calculate", d);
 				rbc.subscribe("calculate_trajectory", "/other_vehicle/desired_trajectory", calculatedDesiredTrajectory);
 				break;
 			case its::McmParameters_ControlFlag_PRESCRIPTION:
+				for (auto& v : mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().desiredtrajectory()) {
+					json tp;
+					tp["time"] = v.pathdeltatime();
+					tp["pose"]["latitude"] = v.deltalat();
+					tp["pose"]["longitude"] = v.deltalong();
+					tp["pose"]["altitude"] = v.deltaalt();
+					msg["trajectory"].push_back(tp);
+				}
+				d.Parse(msg.dump().c_str());
 				rbc.addClient("validate_trajectory");
 				rbc.publish("/desired_trajectory", d);
 				rbc.subscribe("validate_trajectory", "/accept_desired_trajectory", validatedDesiredTrajectory);

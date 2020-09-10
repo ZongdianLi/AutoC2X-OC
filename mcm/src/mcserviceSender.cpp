@@ -808,7 +808,7 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 			intentionReplyContainer = new its::IntentionReplyContainer();
 			intentionReplyContainer->set_targetstationid(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionReplyContainer.targetStationID);
 			for (int i; i<mcm->mcm.mcmParameters.maneuverContainer.choice.intentionReplyContainer.plannedTrajectory.list.count; i++) {
-				its::TrajectoryPoint* trajectory_point = intentionReplyContainer->add_plannedtrajectory();;
+				its::TrajectoryPoint* trajectory_point = intentionReplyContainer->add_plannedtrajectory();
 				trajectory_point->set_deltalat(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionReplyContainer.plannedTrajectory.list.array[i]->pathPosition.deltaLatitude);
 				trajectory_point->set_deltaalt(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionReplyContainer.plannedTrajectory.list.array[i]->pathPosition.deltaAltitude);
 				trajectory_point->set_deltalong(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionReplyContainer.plannedTrajectory.list.array[i]->pathPosition.deltaLongitude);
