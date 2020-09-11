@@ -124,6 +124,7 @@ private:
 struct socket_message{
 	long timestamp;
 	int id;
+	autowarePackage::AUTOWAREMCM_MessageType messagetype;
 	int time;
 	int scenario;
 	int targetstationid;
@@ -143,6 +144,7 @@ private:
 		void serialize( Archive& ar, unsigned int ver){
 			ar & timestamp;
 			ar & id;
+			ar & messagetype;
 			ar & time;
 			ar & scenario;
 			ar & targetstationid;

@@ -24,4 +24,4 @@ documentation/html
 common/asn1/**/*.c
 common/asn1/**/*.h
 
-source/*
+sources/*

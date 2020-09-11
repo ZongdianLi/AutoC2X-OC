@@ -46,6 +46,7 @@ void setData() {
 	autowarePackage::AUTOWAREMCM autoware;
 
 	autoware.set_id(s_message.id);
+	autoware.set_messagetype(s_message.messagetype);
 	autoware.set_time(s_message.time);
 	autoware.set_scenario(s_message.scenario);
 	autoware.set_targetstationid(s_message.targetstationid);
@@ -381,27 +382,28 @@ void AutowareService::sendBackToAutoware(socket_message msg){
 
 
 void AutowareService::testSender(){
-	// int l = 0;
-	// while(1){
-	// 	s_message.id = 0;
-	// 	s_message.time = 0;
-	// 	s_message.scenario = 0;
-	// 	s_message.targetstationid = 1;
-	// 	struct trajectory_point tp;
-	// 	s_message.trajectory.clear();
+	int l = 0;
+	while(1){
+		s_message.id = 0;
+		s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_ADVERTISE;
+		s_message.time = 0;
+		s_message.scenario = 0;
+		s_message.targetstationid = 1;
+		struct trajectory_point tp;
+		s_message.trajectory.clear();
 
-	// 	for (int i=0; i<10; i++) {
-	// 		l += 1;
-	// 		tp.deltalat = l;
-	// 		tp.deltalong = l;
-	// 		tp.deltaalt = l;
-	// 		tp.pathdeltatime = l;
-	// 		s_message.trajectory.push_back(tp);
-	// 		// std::cout << l << std::endl;
-	// 	}
-	// 	setData();
-	// 	sleep(1);
-	// }
+		for (int i=0; i<10; i++) {
+			l += 1;
+			tp.deltalat = l;
+			tp.deltalong = l;
+			tp.deltaalt = l;
+			tp.pathdeltatime = l;
+			s_message.trajectory.push_back(tp);
+			// std::cout << l << std::endl;
+		}
+		setData();
+		sleep(1);
+	}
 }
 
 void AutowareService::receiveFromMcService(){

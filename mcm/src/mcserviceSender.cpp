@@ -100,9 +100,10 @@ McService::McService(McServiceConfig &config, ptree& configTree) {
 	// atoc_delay_output_file.open(filename, std::ios::out);
 
 	if (mConfig.mGenerateMsgs) {
-		mTimer = new boost::asio::deadline_timer(mIoService, boost::posix_time::millisec(100));
-		mTimer->async_wait(boost::bind(&McService::alarm, this, boost::asio::placeholders::error, type));
-		mIoService.run();
+		// mTimer = new boost::asio::deadline_timer(mIoService, boost::posix_time::millisec(100));
+		// mTimer->async_wait(boost::bind(&McService::alarm, this, boost::asio::placeholders::error));
+		// mTimer->async_wait(boost::bind(&McService::alarm, this, boost::asio::placeholders::error, type));
+		// mIoService.run();
 	}
 	else {
 		mLogger->logInfo("MCM triggering disabled");
@@ -283,6 +284,7 @@ void McService::receiveAutowareData() { //実装
 			case Waiting:
 				if (waiting_data.messagetype() == autowarePackage::AUTOWAREMCM_MessageType_ADVERTISE) {
 					state = Advertising;
+					std::cout << "receive advertise" << std::endl;
 					trigger(IntentionRequest, 100);
 				}
 				break;
@@ -358,10 +360,15 @@ void McService::sendMcmInfo(string triggerReason, double delta) {
 //periodically check generation rules for sending to LDM and DCC
 void McService::alarm(const boost::system::error_code &ec, Type type) {
 	// Check heading and position conditions only if we have valid GPS data
-
+	std::cout << "alarm" << std::endl;
+	std::cout << "type: " << type << std::endl;
+	std::cout << "state: " << state << std::endl;
+	
 	switch (type) {
 		case IntentionRequest:
-			if (state == Advertising && isTimeToTriggerMCM()) {
+			if (state == Advertising) {
+				mTimer->cancel();
+				delete mTimer;
 				trigger(type, 100);
 			}
 		case IntentionReply:
@@ -402,6 +409,7 @@ void McService::alarm(const boost::system::error_code &ec, Type type) {
 }
 
 void McService::trigger(Type type, int interval) {
+	std::cout << "trigger" << std::endl;
 	send(true, type);
 	scheduleNextAlarm(type, interval);
 }
@@ -420,8 +428,10 @@ bool McService::isTimeToTriggerMCM() {
 
 void McService::scheduleNextAlarm(Type type, int interval) {
 	//min. time interval 0.1 s
-	mTimer->expires_from_now(boost::posix_time::millisec(interval));
+	mTimer = new boost::asio::deadline_timer(mIoService, boost::posix_time::millisec(interval));
 	mTimer->async_wait(boost::bind(&McService::alarm, this, boost::asio::placeholders::error, type));
+	mIoService.run();
+	std::cout << "schedule next alarm" << std::endl;
 }
 
 //generate MCM and send to LDM and DCC
