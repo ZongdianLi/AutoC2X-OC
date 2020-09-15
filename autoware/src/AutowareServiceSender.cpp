@@ -51,7 +51,8 @@ void setData() {
 	autoware.set_scenario(s_message.scenario);
 	autoware.set_targetstationid(s_message.targetstationid);
 
-	for (trajectory_point tp : ego_vehicle_trajectory) {
+	// for (trajectory_point tp : ego_vehicle_trajectory) {
+	for (trajectory_point tp : s_message.trajectory) {
 		its::TrajectoryPoint* trajectory_point = autoware.add_trajectory();
 		trajectory_point->set_deltalat(tp.deltalat);
 		trajectory_point->set_deltaalt(tp.deltalong);
@@ -214,7 +215,7 @@ AutowareService::AutowareService(AutowareConfig &config, int argc, char* argv[])
 	mThreadReceive = new boost::thread(&AutowareService::receiveFromAutoware, this);
 	mThreadReceiveFromMcService = new boost::thread(&AutowareService::receiveFromMcService, this);
 	
-	testSender();
+	testSender(stoi(argv[1]));
 	while(1){
 		// testSender();
 		sleep(1);
@@ -381,11 +382,25 @@ void AutowareService::sendBackToAutoware(socket_message msg){
 }
 
 
-void AutowareService::testSender(){
+void AutowareService::testSender(int msgType){
 	int l = 0;
 	while(1){
 		s_message.id = 0;
-		s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_ADVERTISE;
+		switch (msgType) {
+			case 0:
+				s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_ADVERTISE;
+				break;
+			case 1:
+				s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_COLLISION_DETECTION_RESULT;
+				break;
+			case 2:
+				s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_CALCULATED_ROUTE;
+				break;
+			case 3:
+				s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_SCENARIO_FINISH;
+				break;
+		}
+		
 		s_message.time = 0;
 		s_message.scenario = 0;
 		s_message.targetstationid = 1;

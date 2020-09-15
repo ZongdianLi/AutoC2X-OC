@@ -195,7 +195,7 @@ public:
 
 	void receiveFromAutoware();
 
-	void testSender();
+	void testSender(int msgType);
 
 	void receiveFromMcService();
 

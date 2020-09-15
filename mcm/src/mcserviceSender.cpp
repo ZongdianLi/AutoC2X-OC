@@ -39,7 +39,34 @@ using namespace std;
 
 INITIALIZE_EASYLOGGINGPP
 
-McService::McService(McServiceConfig &config, ptree& configTree) {
+McService::McService(McServiceConfig &config, ptree& configTree, char* argv[]) {
+	switch (stoi(argv[1])) {
+		case 0:
+			state = Waiting;
+			break;
+		case 1:
+			state = Advertising;
+			break;
+		case 2:
+			state = CollisionDetecting;
+			break;
+		case 3:
+			state = Prescripting;
+			break;
+		case 4:
+			state = Negotiating;
+			break;
+		case 5:
+			state = Activating;
+			break;
+		case 6:
+			state = Finishing;
+			break;
+		case 7:
+			state = Abending;
+			break;
+	}
+	std::cout << "state: " << state << std::endl;
 	
 	try {
 		mGlobalConfig.loadConfig(MCM_CONFIG_NAME);
@@ -369,7 +396,7 @@ void McService::alarm(const boost::system::error_code &ec, Type type) {
 			if (state == Advertising) {
 				mTimer->cancel();
 				delete mTimer;
-				trigger(type, 100);
+				trigger(type, 1000);
 			}
 		case IntentionReply:
 		case Prescription:
@@ -948,8 +975,7 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 	return mcmProto;
 }
 
-int main(int argc, const char* argv[]) {
-	
+int main(int argc, char* argv[]) {
 	ptree configTree = load_config_tree();
 	McServiceConfig mcConfig;
 	try {
@@ -959,7 +985,7 @@ int main(int argc, const char* argv[]) {
 		cerr << "Error while loading /etc/config/openc2x_mcm: " << e.what() << endl << flush;
 		return EXIT_FAILURE;
 	}
-	McService mcm(mcConfig, configTree);
+	McService mcm(mcConfig, configTree, argv);
 
 	return EXIT_SUCCESS;
 }

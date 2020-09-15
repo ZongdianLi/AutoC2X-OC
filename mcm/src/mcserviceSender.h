@@ -127,7 +127,7 @@ enum State {
  */
 class McService {
 public:
-	McService(McServiceConfig &config, ptree& configTree);
+	McService(McServiceConfig &config, ptree& configTree, char* argv[]);
 	~McService();
 
 	/** Sends a new MCM to LDM and DCC.	 */
