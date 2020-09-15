@@ -195,6 +195,7 @@ void McService::receive() {
 		switch (state) {
 			case Waiting:
 				if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_INTENTION_REQUEST) {
+					std::cout << mcmProto.maneuver().mcmparameters().maneuvercontainer().intentionrequestcontainer().plannedtrajectory_size() << std::endl;
 					mcmProto.SerializeToString(&serializedProtoMcm);
 					mSenderToAutoware->send(envelope, serializedProtoMcm);
 					state = CollisionDetecting;
@@ -311,6 +312,7 @@ void McService::receiveAutowareData() { //実装
 			case Waiting:
 				if (waiting_data.messagetype() == autowarePackage::AUTOWAREMCM_MessageType_ADVERTISE) {
 					state = Advertising;
+					mLatestAutoware = waiting_data;
 					std::cout << "receive advertise" << std::endl;
 					trigger(IntentionRequest, 100);
 				}
@@ -318,12 +320,14 @@ void McService::receiveAutowareData() { //実装
 			case CollisionDetecting:
 				if (waiting_data.messagetype() == autowarePackage::AUTOWAREMCM_MessageType_COLLISION_DETECTION_RESULT) {
 					state = Negotiating;
+					mLatestAutoware = waiting_data;
 					trigger(IntentionReply, 100);
 				}
 			case Advertising:
 				break;
 			case Prescripting:
 				if (waiting_data.messagetype() == autowarePackage::AUTOWAREMCM_MessageType_CALCULATED_ROUTE) {
+					mLatestAutoware = waiting_data;
 					trigger(Prescription, 100);
 				}
 				break;
@@ -332,6 +336,7 @@ void McService::receiveAutowareData() { //実装
 			case Activating:
 				if (waiting_data.messagetype() == autowarePackage::AUTOWAREMCM_MessageType_SCENARIO_FINISH) {
 					state = Finishing;
+					mLatestAutoware = waiting_data;
 					trigger(Fin, 100);
 				}
 				break;
@@ -467,8 +472,8 @@ void McService::send(bool isAutoware, Type type) {
 	start = std::chrono::system_clock::now();
 
 	std::cout << "*********lets send MCM:" << std::endl;
-	for (int i=0; i<waiting_data.trajectory_size(); i++) {
-		its::TrajectoryPoint tp = waiting_data.trajectory(i);
+	for (int i=0; i<mLatestAutoware.trajectory_size(); i++) {
+		its::TrajectoryPoint tp = mLatestAutoware.trajectory(i);
 		std::cout << tp.deltalat() << std::endl;
 	}
 

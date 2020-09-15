@@ -215,7 +215,7 @@ AutowareService::AutowareService(AutowareConfig &config, int argc, char* argv[])
 	mThreadReceive = new boost::thread(&AutowareService::receiveFromAutoware, this);
 	mThreadReceiveFromMcService = new boost::thread(&AutowareService::receiveFromMcService, this);
 	
-	testSender(stoi(argv[1]));
+	// testSender(stoi(argv[1]));
 	while(1){
 		// testSender();
 		sleep(1);
@@ -305,6 +305,8 @@ void AutowareService::receiveFromAutoware(){
 	rbc.addClient("ego_vehicle_trajectory");
 	rbc.addClient("scenario_trigger");
 	rbc.addClient("scenario_trigger_end");
+	rbc.advertise("ego_vehicle_trajectory", "/ego_vehicle/planned_trajectory", "mcservice_msgs/Trajectory");
+	rbc.advertise("scenario_trigger", "/scenario_trigger", "std_msgs/String");
 	rbc.subscribe("ego_vehicle_trajectory", "/ego_vehicle/planned_trajectory", storePlannedTrajectory);
 	rbc.subscribe("scenario_trigger", "/scenario_trigger", receiveScenarioTrigger);
 	while (1) {
@@ -446,8 +448,10 @@ void AutowareService::receiveFromMcService(){
 					tp["pose"]["altitude"] = v.deltaalt();
 					msg["trajectory"].push_back(tp);
 				}
+				std::cout << msg.dump().c_str() << std::endl;
 				d.Parse(msg.dump().c_str());
 				rbc.addClient("collision_detect");
+  				rbc.advertise("collision_detect", "/other_vehicle/planned_trajectory/collision_detect", "mcservice_msgs/TrajectoryWithTargetStationId");
 				rbc.publish("/other_vehicle/planned_trajectory/collision_detect", d);
 				rbc.subscribe("collision_detect", "/collision_detect", detectCollision);
 				break;
