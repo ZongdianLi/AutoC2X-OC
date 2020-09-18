@@ -75,6 +75,8 @@ McService::McService(McServiceConfig &config, ptree& configTree, char* argv[]) {
 		cerr << "Error while loading /etc/config/openc2x_common: " << e.what() << endl;
 	}
 
+	std::cout << mGlobalConfig.mStationID << std::endl;
+
 	mConfig = config;
 	mLogger = new LoggingUtility(MCM_CONFIG_NAME, MCM_MODULE_NAME, mGlobalConfig.mLogBasePath, mGlobalConfig.mExpName, mGlobalConfig.mExpNo, configTree);
 
@@ -195,6 +197,7 @@ void McService::receive() {
 		switch (state) {
 			case Waiting:
 				if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_INTENTION_REQUEST) {
+					std::cout << mcmProto.maneuver().mcmparameters().maneuvercontainer().intentionrequestcontainer().plannedtrajectory_size() << std::endl;
 					mcmProto.SerializeToString(&serializedProtoMcm);
 					mSenderToAutoware->send(envelope, serializedProtoMcm);
 					state = CollisionDetecting;
@@ -206,6 +209,8 @@ void McService::receive() {
 					mcmProto.SerializeToString(&serializedProtoMcm);
 					mSenderToAutoware->send(envelope, serializedProtoMcm);
 					state = Prescripting;
+					mLatestAutoware.set_targetstationid(mcmProto.header().stationid());
+					send(true, Ack);
 				} else {
 				}
 				break;
@@ -335,6 +340,7 @@ void McService::receiveAutowareData() { //実装
 				break;
 			case Prescripting:
 				if (waiting_data.messagetype() == autowarePackage::AUTOWAREMCM_MessageType_CALCULATED_ROUTE) {
+					mLatestAutoware = waiting_data;
 					trigger(Prescription, 100);
 				}
 				break;
@@ -343,6 +349,7 @@ void McService::receiveAutowareData() { //実装
 			case Activating:
 				if (waiting_data.messagetype() == autowarePackage::AUTOWAREMCM_MessageType_SCENARIO_FINISH) {
 					state = Finishing;
+					mLatestAutoware = waiting_data;
 					ack = false;
 					trigger(Fin, 100);
 				}
@@ -402,6 +409,9 @@ void McService::alarm(const boost::system::error_code &ec, Type type) {
 	std::cout << "alarm" << std::endl;
 	std::cout << "type: " << type << std::endl;
 	std::cout << "state: " << state << std::endl;
+
+	mTimer->cancel();
+	delete mTimer;
 	
 	mTimer->cancel();
 	delete mTimer;
@@ -704,6 +714,7 @@ MCM_t* McService::generateMcm(bool isAutoware, Type type) {
 			case Ack:
 				mcm->mcm.mcmParameters.maneuverContainer.present = ManeuverContainer_PR_ackContainer;
 				mcm->mcm.mcmParameters.controlFlag = controlFlag_ack;
+				std::cout << mLatestAutoware.targetstationid() << std::endl;
 				mcm->mcm.mcmParameters.maneuverContainer.choice.ackContainer.targetStationID = mLatestAutoware.targetstationid();
 				break;
 			case Fin:
