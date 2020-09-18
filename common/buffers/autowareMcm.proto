@@ -8,7 +8,7 @@ message AUTOWAREMCM {
 	optional MessageType messageType = 2;
 	optional int64 time = 3;
 	optional int64 scenario = 4;
-	optional int64 scenario_end = 5;
+	optional int64 scenarioEnd = 5;
 	optional int64 targetStationID = 6;
 	optional int64 collisionDetected = 7;
 	repeated its.TrajectoryPoint trajectory = 8;

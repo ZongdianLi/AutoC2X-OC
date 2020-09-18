@@ -218,6 +218,8 @@ void McService::receive() {
 				}
 				break;
 			case Negotiating:
+				std::cout << "targetID: " << mcmProto.maneuver().mcmparameters().maneuvercontainer().ackcontainer().targetstationid() << std::endl;
+				std::cout << "myID: " << mGlobalConfig.mStationID << std::endl;
 				if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_ACCEPTANCE && mcmProto.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().targetstationid() == mGlobalConfig.mStationID) {
 					if (mcmProto.maneuver().mcmparameters().maneuvercontainer().acceptancecontainer().adviceaccepted() == 1) {
 						state = Activating;
@@ -232,7 +234,8 @@ void McService::receive() {
 					mSenderToAutoware->send(envelope, serializedProtoMcm);
 					state = Activating;
 					send(true, Ack);
-				} else {
+				} else if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_ACK && mcmProto.maneuver().mcmparameters().maneuvercontainer().ackcontainer().targetstationid() == mGlobalConfig.mStationID) {
+					ack = true;
 				}
 				break;
 			case Activating:
@@ -253,6 +256,7 @@ void McService::receive() {
 				} else {
 				}
 			case Abending:
+				break;			
 			default:
 				break;
 		}
@@ -311,14 +315,21 @@ void McService::receiveAutowareData() { //実装
 			case Waiting:
 				if (waiting_data.messagetype() == autowarePackage::AUTOWAREMCM_MessageType_ADVERTISE) {
 					state = Advertising;
+					mLatestAutoware = waiting_data;
 					std::cout << "receive advertise" << std::endl;
 					trigger(IntentionRequest, 100);
 				}
 				break;
 			case CollisionDetecting:
 				if (waiting_data.messagetype() == autowarePackage::AUTOWAREMCM_MessageType_COLLISION_DETECTION_RESULT) {
-					state = Negotiating;
-					trigger(IntentionReply, 100);
+					if (waiting_data.collisiondetected() == 1) {
+						mLatestAutoware = waiting_data;
+						state = Negotiating;
+						ack = false;
+						trigger(IntentionReply, 100);
+					} else {
+						state = Waiting;
+					}
 				}
 			case Advertising:
 				break;
@@ -332,6 +343,7 @@ void McService::receiveAutowareData() { //実装
 			case Activating:
 				if (waiting_data.messagetype() == autowarePackage::AUTOWAREMCM_MessageType_SCENARIO_FINISH) {
 					state = Finishing;
+					ack = false;
 					trigger(Fin, 100);
 				}
 				break;
@@ -391,23 +403,24 @@ void McService::alarm(const boost::system::error_code &ec, Type type) {
 	std::cout << "type: " << type << std::endl;
 	std::cout << "state: " << state << std::endl;
 	
+	mTimer->cancel();
+	delete mTimer;
+
 	switch (type) {
 		case IntentionRequest:
 			if (state == Advertising) {
-				mTimer->cancel();
-				delete mTimer;
 				trigger(type, 1000);
 			}
 		case IntentionReply:
 		case Prescription:
 		case Acceptance:
 			if (!ack) {
-				trigger(type, 100);
+				trigger(type, 1000);
 			}
 			break;
 		case Heartbeat:
 			if (state == Activating && isTimeToTriggerMCM()) {
-				trigger(type, 100);
+				trigger(type, 1000);
 			}
 			break;
 		default:
@@ -467,8 +480,8 @@ void McService::send(bool isAutoware, Type type) {
 	start = std::chrono::system_clock::now();
 
 	std::cout << "*********lets send MCM:" << std::endl;
-	for (int i=0; i<waiting_data.trajectory_size(); i++) {
-		its::TrajectoryPoint tp = waiting_data.trajectory(i);
+	for (int i=0; i<mLatestAutoware.trajectory_size(); i++) {
+		its::TrajectoryPoint tp = mLatestAutoware.trajectory(i);
 		std::cout << tp.deltalat() << std::endl;
 	}
 
@@ -575,11 +588,11 @@ MCM_t* McService::generateMcm(bool isAutoware, Type type) {
 		throw runtime_error("could not allocate MCM_t");
 	}
 	// ITS pdu header
-	if (isAutoware){
-		mcm->header.stationID = mLatestAutoware.id();
-	} else {
-		mcm->header.stationID = mGlobalConfig.mStationID;// mIdCounter; //
-	}
+	// if (isAutoware){
+	// 	mcm->header.stationID = mLatestAutoware.id();
+	// } else {
+	mcm->header.stationID = mGlobalConfig.mStationID;// mIdCounter; //
+	// }
 	mcm->header.messageID = messageID_mcm;
 	mcm->header.protocolVersion = protocolVersion_currentVersion;
 

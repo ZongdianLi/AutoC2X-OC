@@ -131,6 +131,7 @@ struct socket_message{
 	std::vector<struct trajectory_point> trajectory;
 	int collisiondetected;
 	int adviceaccepted;
+	int scenarioend;
 
 	// std::vector<int> speed;
 	// std::vector<int> latitude;
@@ -151,6 +152,7 @@ private:
 			ar & trajectory;
 			ar & collisiondetected;
 			ar & adviceaccepted;
+			ar & scenarioend;
 			// ar & speed;
 			// ar & latitude;
 			// ar & longitude;

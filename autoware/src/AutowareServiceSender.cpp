@@ -50,6 +50,9 @@ void setData() {
 	autoware.set_time(s_message.time);
 	autoware.set_scenario(s_message.scenario);
 	autoware.set_targetstationid(s_message.targetstationid);
+	autoware.set_collisiondetected(s_message.collisiondetected);
+	autoware.set_adviceaccepted(s_message.adviceaccepted);
+	autoware.set_scenarioend(s_message.scenarioend);
 
 	// for (trajectory_point tp : ego_vehicle_trajectory) {
 	for (trajectory_point tp : s_message.trajectory) {
@@ -385,13 +388,14 @@ void AutowareService::sendBackToAutoware(socket_message msg){
 void AutowareService::testSender(int msgType){
 	int l = 0;
 	while(1){
-		s_message.id = 0;
+		s_message.id = 2;
 		switch (msgType) {
 			case 0:
 				s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_ADVERTISE;
 				break;
 			case 1:
 				s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_COLLISION_DETECTION_RESULT;
+				s_message.collisiondetected = 1;
 				break;
 			case 2:
 				s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_CALCULATED_ROUTE;
