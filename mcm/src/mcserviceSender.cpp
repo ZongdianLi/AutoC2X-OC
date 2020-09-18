@@ -75,6 +75,8 @@ McService::McService(McServiceConfig &config, ptree& configTree, char* argv[]) {
 		cerr << "Error while loading /etc/config/openc2x_common: " << e.what() << endl;
 	}
 
+	std::cout << mGlobalConfig.mStationID << std::endl;
+
 	mConfig = config;
 	mLogger = new LoggingUtility(MCM_CONFIG_NAME, MCM_MODULE_NAME, mGlobalConfig.mLogBasePath, mGlobalConfig.mExpName, mGlobalConfig.mExpNo, configTree);
 
@@ -207,6 +209,8 @@ void McService::receive() {
 					mcmProto.SerializeToString(&serializedProtoMcm);
 					mSenderToAutoware->send(envelope, serializedProtoMcm);
 					state = Prescripting;
+					mLatestAutoware.set_targetstationid(mcmProto.header().stationid());
+					send(true, Ack);
 				} else {
 				}
 				break;
@@ -233,7 +237,8 @@ void McService::receive() {
 					mSenderToAutoware->send(envelope, serializedProtoMcm);
 					state = Activating;
 					send(true, Ack);
-				} else {
+				} else if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_ACK && mcmProto.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().targetstationid() == mGlobalConfig.mStationID) {
+					ack = true;
 				}
 				break;
 			case Activating:
@@ -319,9 +324,13 @@ void McService::receiveAutowareData() { //実装
 				break;
 			case CollisionDetecting:
 				if (waiting_data.messagetype() == autowarePackage::AUTOWAREMCM_MessageType_COLLISION_DETECTION_RESULT) {
-					state = Negotiating;
-					mLatestAutoware = waiting_data;
-					trigger(IntentionReply, 100);
+					if (waiting_data.collisiondetected() == 1) {
+						state = Negotiating;
+						ack = false;
+						trigger(IntentionReply, 100);
+					} else {
+						state = Waiting;
+					}
 				}
 			case Advertising:
 				break;
@@ -337,6 +346,7 @@ void McService::receiveAutowareData() { //実装
 				if (waiting_data.messagetype() == autowarePackage::AUTOWAREMCM_MessageType_SCENARIO_FINISH) {
 					state = Finishing;
 					mLatestAutoware = waiting_data;
+					ack = false;
 					trigger(Fin, 100);
 				}
 				break;
@@ -395,24 +405,25 @@ void McService::alarm(const boost::system::error_code &ec, Type type) {
 	std::cout << "alarm" << std::endl;
 	std::cout << "type: " << type << std::endl;
 	std::cout << "state: " << state << std::endl;
+
+	mTimer->cancel();
+	delete mTimer;
 	
 	switch (type) {
 		case IntentionRequest:
 			if (state == Advertising) {
-				mTimer->cancel();
-				delete mTimer;
 				trigger(type, 1000);
 			}
 		case IntentionReply:
 		case Prescription:
 		case Acceptance:
 			if (!ack) {
-				trigger(type, 100);
+				trigger(type, 1000);
 			}
 			break;
 		case Heartbeat:
 			if (state == Activating && isTimeToTriggerMCM()) {
-				trigger(type, 100);
+				trigger(type, 1000);
 			}
 			break;
 		default:
@@ -580,11 +591,11 @@ MCM_t* McService::generateMcm(bool isAutoware, Type type) {
 		throw runtime_error("could not allocate MCM_t");
 	}
 	// ITS pdu header
-	if (isAutoware){
-		mcm->header.stationID = mLatestAutoware.id();
-	} else {
-		mcm->header.stationID = mGlobalConfig.mStationID;// mIdCounter; //
-	}
+	// if (isAutoware){
+	// 	mcm->header.stationID = mLatestAutoware.id();
+	// } else {
+	mcm->header.stationID = mGlobalConfig.mStationID;// mIdCounter; //
+	// }
 	mcm->header.messageID = messageID_mcm;
 	mcm->header.protocolVersion = protocolVersion_currentVersion;
 
@@ -696,6 +707,7 @@ MCM_t* McService::generateMcm(bool isAutoware, Type type) {
 			case Ack:
 				mcm->mcm.mcmParameters.maneuverContainer.present = ManeuverContainer_PR_ackContainer;
 				mcm->mcm.mcmParameters.controlFlag = controlFlag_ack;
+				std::cout << mLatestAutoware.targetstationid() << std::endl;
 				mcm->mcm.mcmParameters.maneuverContainer.choice.ackContainer.targetStationID = mLatestAutoware.targetstationid();
 				break;
 			case Fin:
