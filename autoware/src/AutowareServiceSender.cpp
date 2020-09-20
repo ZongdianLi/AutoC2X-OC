@@ -218,7 +218,7 @@ AutowareService::AutowareService(AutowareConfig &config, int argc, char* argv[])
 	mThreadReceive = new boost::thread(&AutowareService::receiveFromAutoware, this);
 	mThreadReceiveFromMcService = new boost::thread(&AutowareService::receiveFromMcService, this);
 	
-	// testSender(stoi(argv[1]));
+	testSender(stoi(argv[1]));
 	while(1){
 		// testSender();
 		sleep(1);
