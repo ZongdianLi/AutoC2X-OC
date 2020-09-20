@@ -218,7 +218,7 @@ AutowareService::AutowareService(AutowareConfig &config, int argc, char* argv[])
 	mThreadReceive = new boost::thread(&AutowareService::receiveFromAutoware, this);
 	mThreadReceiveFromMcService = new boost::thread(&AutowareService::receiveFromMcService, this);
 	
-	testSender(stoi(argv[1]));
+	// testSender(stoi(argv[1]));
 	while(1){
 		// testSender();
 		sleep(1);
@@ -368,7 +368,6 @@ void AutowareService::receiveFromMcService(){
 					tp["pose"]["altitude"] = v.deltaalt();
 					msg["trajectory"].push_back(tp);
 				}
-				std::cout << msg.dump().c_str() << std::endl;
 				d.Parse(msg.dump().c_str());
 				rbc.addClient("calculate_trajectory");
 				rbc.advertise("calculate_trajectory", "/other_vehicle/planned_trajectory/calculate", "mcservice_msgs/TrajectoryWithTargetStationId");
@@ -386,7 +385,8 @@ void AutowareService::receiveFromMcService(){
 				}
 				d.Parse(msg.dump().c_str());
 				rbc.addClient("validate_trajectory");
-				rbc.publish("/desired_trajectory", d);
+				rbc.advertise("validate_trajectory", "/ego_vehicle/desired_trajectory", "mcservice_msgs/TrajectoryWithTargetStationId");
+				rbc.publish("/ego_vehicle/desired_trajectory", d);
 				rbc.subscribe("validate_trajectory", "/accept_desired_trajectory", validatedDesiredTrajectory);
 				break;
 			case its::McmParameters_ControlFlag_HEARTBEAT:

@@ -54,15 +54,21 @@ McService::McService(McServiceConfig &config, ptree& configTree, char* argv[]) {
 			state = Prescripting;
 			break;
 		case 4:
-			state = Negotiating;
+			state = NegotiatingPrescriber;
 			break;
 		case 5:
-			state = Activating;
+			state = NegotiatingReceiver;
 			break;
 		case 6:
-			state = Finishing;
+			state = ActivatingPrescriber;
 			break;
 		case 7:
+			state = ActivatingReceiver;
+			break;
+		case 8:
+			state = Finishing;
+			break;
+		case 9:
 			state = Abending;
 			break;
 	}
@@ -172,7 +178,6 @@ void McService::receive() {
 				break;
 			case Advertising:
 				if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_INTENTION_REPLY && mcmProto.maneuver().mcmparameters().maneuvercontainer().intentionreplycontainer().targetstationid() == mGlobalConfig.mStationID) {
-					std::cout << "aaaa" << std::endl;
 					mcmProto.SerializeToString(&serializedProtoMcm);
 					mSenderToAutoware->send(envelope, serializedProtoMcm);
 					state = Prescripting;
@@ -185,45 +190,61 @@ void McService::receive() {
 				if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_ACK && mcmProto.maneuver().mcmparameters().maneuvercontainer().ackcontainer().targetstationid() == mGlobalConfig.mStationID) {
 					mcmProto.SerializeToString(&serializedProtoMcm);
 					mSenderToAutoware->send(envelope, serializedProtoMcm);
-					state = Negotiating;
+					state = NegotiatingPrescriber;
 				} else {
 				}
 				break;
-			case Negotiating:
-				if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_ACCEPTANCE && mcmProto.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().targetstationid() == mGlobalConfig.mStationID) {
+			case NegotiatingPrescriber:
+				if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_ACCEPTANCE && mcmProto.maneuver().mcmparameters().maneuvercontainer().acceptancecontainer().targetstationid() == mGlobalConfig.mStationID) {
 					if (mcmProto.maneuver().mcmparameters().maneuvercontainer().acceptancecontainer().adviceaccepted() == 1) {
-						state = Activating;
+						state = ActivatingPrescriber;
+						mLatestAutoware.set_targetstationid(mcmProto.header().stationid());
 						send(true, Ack);
 					} else {
 						mcmProto.SerializeToString(&serializedProtoMcm);
 						mSenderToAutoware->send(envelope, serializedProtoMcm);
 						state = Prescripting;
 					}
-				} else if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_PRESCRIPTION && mcmProto.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().targetstationid() == mGlobalConfig.mStationID) {
+				} else if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_ACK && mcmProto.maneuver().mcmparameters().maneuvercontainer().ackcontainer().targetstationid() == mGlobalConfig.mStationID) {
+					ack = true;
+				}
+				break;
+			case NegotiatingReceiver:
+				if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_PRESCRIPTION && mcmProto.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().targetstationid() == mGlobalConfig.mStationID) {
 					mcmProto.SerializeToString(&serializedProtoMcm);
 					mSenderToAutoware->send(envelope, serializedProtoMcm);
-					state = Activating;
+					mLatestAutoware.set_targetstationid(mcmProto.header().stationid());
 					send(true, Ack);
 				} else if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_ACK && mcmProto.maneuver().mcmparameters().maneuvercontainer().ackcontainer().targetstationid() == mGlobalConfig.mStationID) {
 					ack = true;
 				}
 				break;
-			case Activating:
+			case ActivatingPrescriber:
 				if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_HEARTBEAT && mcmProto.maneuver().mcmparameters().maneuvercontainer().heartbeatcontainer().targetstationid() == mGlobalConfig.mStationID) {
 					mcmProto.SerializeToString(&serializedProtoMcm);
 					mSenderToAutoware->send(envelope, serializedProtoMcm);
-				} else if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_FIN) {
+				}
+				break;
+			case ActivatingReceiver:
+				if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_FIN && mcmProto.maneuver().mcmparameters().maneuvercontainer().fincontainer().targetstationid() == mGlobalConfig.mStationID) {
 					state = Waiting;
+					mcmProto.SerializeToString(&serializedProtoMcm);
+					mSenderToAutoware->send(envelope, serializedProtoMcm);
+					mLatestAutoware.set_targetstationid(mcmProto.header().stationid());
 					send(true, Ack);
-				} else {
+				} else if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_ACK && mcmProto.maneuver().mcmparameters().maneuvercontainer().ackcontainer().targetstationid() == mGlobalConfig.mStationID) {
+					ack = true;
 				}
 				break;
 			case Finishing:
 				if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_ACK && mcmProto.maneuver().mcmparameters().maneuvercontainer().ackcontainer().targetstationid() == mGlobalConfig.mStationID) {
+					mLatestAutoware.set_targetstationid(mcmProto.header().stationid());
 					mcmProto.SerializeToString(&serializedProtoMcm);
 					mSenderToAutoware->send(envelope, serializedProtoMcm);
 					state = Waiting;
-				} else {
+				} else if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_ACK && mcmProto.maneuver().mcmparameters().maneuvercontainer().ackcontainer().targetstationid() == mGlobalConfig.mStationID) {
+					ack = true;
+					state = Waiting;
 				}
 			case Abending:
 				break;			
@@ -266,7 +287,7 @@ void McService::receiveAutowareData() { //実装
 				if (waiting_data.messagetype() == autowarePackage::AUTOWAREMCM_MessageType_COLLISION_DETECTION_RESULT) {
 					if (waiting_data.collisiondetected() == 1) {
 						mLatestAutoware = waiting_data;
-						state = Negotiating;
+						state = NegotiatingReceiver;
 						ack = false;
 						trigger(IntentionReply, 100);
 					} else {
@@ -278,12 +299,23 @@ void McService::receiveAutowareData() { //実装
 			case Prescripting:
 				if (waiting_data.messagetype() == autowarePackage::AUTOWAREMCM_MessageType_CALCULATED_ROUTE) {
 					mLatestAutoware = waiting_data;
+					ack = false;
 					trigger(Prescription, 100);
 				}
 				break;
-			case Negotiating:
+			case NegotiatingPrescriber:
 				break;
-			case Activating:
+			case NegotiatingReceiver:
+				if (waiting_data.messagetype() == autowarePackage::AUTOWAREMCM_MessageType_VALIDATED_ROUTE) {
+					if (waiting_data.adviceaccepted() == 1) state = ActivatingReceiver;
+					mLatestAutoware = waiting_data;
+					ack = false;
+					trigger(Acceptance, 100);
+				}
+				break;
+			case ActivatingPrescriber:
+				break;
+			case ActivatingReceiver:
 				if (waiting_data.messagetype() == autowarePackage::AUTOWAREMCM_MessageType_SCENARIO_FINISH) {
 					state = Finishing;
 					mLatestAutoware = waiting_data;
@@ -347,7 +379,7 @@ void McService::alarm(const boost::system::error_code &ec, Type type) {
 			}
 			break;
 		case Heartbeat:
-			if (state == Activating && isTimeToTriggerMCM()) {
+			if (state == ActivatingReceiver) {
 				trigger(type, 1000);
 			}
 			break;
@@ -533,6 +565,14 @@ MCM_t* McService::generateMcm(bool isAutoware, Type type) {
 				mcm->mcm.mcmParameters.maneuverContainer.choice.ackContainer.targetStationID = mLatestAutoware.targetstationid();
 				break;
 			case Fin:
+				mcm->mcm.mcmParameters.maneuverContainer.present = ManeuverContainer_PR_finContainer;
+				mcm->mcm.mcmParameters.controlFlag = controlFlag_fin;
+				mcm->mcm.mcmParameters.maneuverContainer.choice.finContainer.targetStationID = mLatestAutoware.targetstationid();
+				break;
+			case Cancel:
+				mcm->mcm.mcmParameters.maneuverContainer.present = ManeuverContainer_PR_cancelContainer;
+				mcm->mcm.mcmParameters.controlFlag = controlFlag_cancel;
+				mcm->mcm.mcmParameters.maneuverContainer.choice.cancelContainer.targetStationID = mLatestAutoware.targetstationid();
 				break;
 			default:
 				break;
@@ -577,6 +617,8 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 	its::AcceptanceContainer* acceptanceContainer = 0;
 	its::HeartbeatContainer* heartbeatContainer = 0;
 	its::AckContainer* ackContainer = 0;
+	its::FinContainer* finContainer = 0;
+	its::CancelContainer* cancelContainer = 0;
 
 	switch (mcm->mcm.mcmParameters.maneuverContainer.present) {
 		case ManeuverContainer_PR_intentionRequestContainer:
@@ -657,6 +699,21 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 			ackContainer->set_targetstationid(mcm->mcm.mcmParameters.maneuverContainer.choice.ackContainer.targetStationID);
 			maneuverContainer->set_allocated_ackcontainer(ackContainer);
 			break;
+		case ManeuverContainer_PR_finContainer:
+			// maneuverContainer->set_type(its::ManeuverContainer_Type_FIN);
+			params->set_controlflag(its::McmParameters_ControlFlag_FIN);
+			std::cout << params->controlflag() << std::endl;
+			finContainer = new its::FinContainer();
+			finContainer->set_targetstationid(mcm->mcm.mcmParameters.maneuverContainer.choice.finContainer.targetStationID);
+			std::cout << finContainer->targetstationid() << std::endl;
+			maneuverContainer->set_allocated_fincontainer(finContainer);
+			break;
+		// case ManeuverContainer_PR_cancelContainer:
+		// 	params->set_controlflag(its::McmParameters_ControlFlag_CANCEL);
+		// 	cancelContainer = new its::CancelContainer();
+		// 	cancelContainer->set_targetstationid(mcm->mcm.mcmParameters.maneuverContainer.choice.cancelContainer.targetStationID);
+		// 	maneuverContainer->set_allocated_cancelcontainer(cancelContainer);
+		// 	break;
 		default:
 			break;
 	}
