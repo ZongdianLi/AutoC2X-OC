@@ -187,7 +187,10 @@ void McService::receive() {
 				}
 				break;
 			case Prescripting:
+				std::cout << mcmProto.maneuver().mcmparameters().maneuvercontainer().ackcontainer().targetstationid() << std::endl;
+				std::cout << mGlobalConfig.mStationID << std::endl;
 				if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_ACK && mcmProto.maneuver().mcmparameters().maneuvercontainer().ackcontainer().targetstationid() == mGlobalConfig.mStationID) {
+					ack = true;
 					mcmProto.SerializeToString(&serializedProtoMcm);
 					mSenderToAutoware->send(envelope, serializedProtoMcm);
 					state = NegotiatingPrescriber;
@@ -220,10 +223,6 @@ void McService::receive() {
 				}
 				break;
 			case ActivatingPrescriber:
-				if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_HEARTBEAT && mcmProto.maneuver().mcmparameters().maneuvercontainer().heartbeatcontainer().targetstationid() == mGlobalConfig.mStationID) {
-					mcmProto.SerializeToString(&serializedProtoMcm);
-					mSenderToAutoware->send(envelope, serializedProtoMcm);
-				}
 				break;
 			case ActivatingReceiver:
 				if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_FIN && mcmProto.maneuver().mcmparameters().maneuvercontainer().fincontainer().targetstationid() == mGlobalConfig.mStationID) {
@@ -241,8 +240,6 @@ void McService::receive() {
 					mLatestAutoware.set_targetstationid(mcmProto.header().stationid());
 					mcmProto.SerializeToString(&serializedProtoMcm);
 					mSenderToAutoware->send(envelope, serializedProtoMcm);
-					state = Waiting;
-				} else if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_ACK && mcmProto.maneuver().mcmparameters().maneuvercontainer().ackcontainer().targetstationid() == mGlobalConfig.mStationID) {
 					ack = true;
 					state = Waiting;
 				}
@@ -314,8 +311,6 @@ void McService::receiveAutowareData() { //実装
 				}
 				break;
 			case ActivatingPrescriber:
-				break;
-			case ActivatingReceiver:
 				if (waiting_data.messagetype() == autowarePackage::AUTOWAREMCM_MessageType_SCENARIO_FINISH) {
 					state = Finishing;
 					mLatestAutoware = waiting_data;
@@ -323,6 +318,7 @@ void McService::receiveAutowareData() { //実装
 					trigger(Fin, 100);
 				}
 				break;
+			case ActivatingReceiver:
 			case Finishing:
 			case Abending:
 			default:
@@ -374,6 +370,7 @@ void McService::alarm(const boost::system::error_code &ec, Type type) {
 		case IntentionReply:
 		case Prescription:
 		case Acceptance:
+		case Fin:
 			if (!ack) {
 				trigger(type, 1000);
 			}
@@ -708,12 +705,12 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 			std::cout << finContainer->targetstationid() << std::endl;
 			maneuverContainer->set_allocated_fincontainer(finContainer);
 			break;
-		// case ManeuverContainer_PR_cancelContainer:
-		// 	params->set_controlflag(its::McmParameters_ControlFlag_CANCEL);
-		// 	cancelContainer = new its::CancelContainer();
-		// 	cancelContainer->set_targetstationid(mcm->mcm.mcmParameters.maneuverContainer.choice.cancelContainer.targetStationID);
-		// 	maneuverContainer->set_allocated_cancelcontainer(cancelContainer);
-		// 	break;
+		case ManeuverContainer_PR_cancelContainer:
+			params->set_controlflag(its::McmParameters_ControlFlag_CANCEL);
+			cancelContainer = new its::CancelContainer();
+			cancelContainer->set_targetstationid(mcm->mcm.mcmParameters.maneuverContainer.choice.cancelContainer.targetStationID);
+			maneuverContainer->set_allocated_cancelcontainer(cancelContainer);
+			break;
 		default:
 			break;
 	}

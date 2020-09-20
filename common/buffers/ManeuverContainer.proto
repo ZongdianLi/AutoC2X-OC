@@ -20,6 +20,6 @@ message ManeuverContainer {
 	optional its.HeartbeatContainer heartbeatContainer = 5;
 	optional its.AckContainer ackContainer = 6;
 	optional its.FinContainer finContainer = 7;
-	optional its.FinContainer cancelContainer = 8;
-	optional its.FinContainer abendContainer = 9;
+	optional its.CancelContainer cancelContainer = 8;
+	optional its.AbendContainer abendContainer = 9;
 }
