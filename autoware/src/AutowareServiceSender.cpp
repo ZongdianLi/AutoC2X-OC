@@ -304,7 +304,12 @@ void AutowareService::testSender(int msgType){
 				s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_CALCULATED_ROUTE;
 				break;
 			case 3:
+				s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_VALIDATED_ROUTE;
+				s_message.adviceaccepted = 1;
+				break;
+			case 4:
 				s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_SCENARIO_FINISH;
+				s_message.scenarioend = 1;
 				break;
 		}
 		

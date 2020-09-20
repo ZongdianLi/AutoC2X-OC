@@ -104,10 +104,12 @@ enum State {
 	Advertising = 1,
 	CollisionDetecting = 2,
 	Prescripting = 3,
-	Negotiating = 4,
-	Activating = 5,
-	Finishing = 6,
-	Abending = 7
+	NegotiatingPrescriber = 4,
+	NegotiatingReceiver = 5,
+	ActivatingPrescriber = 6,
+	ActivatingReceiver = 7,
+	Finishing = 8,
+	Abending = 9
 };
 
 /**

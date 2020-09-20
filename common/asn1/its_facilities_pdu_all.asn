@@ -293,6 +293,7 @@ BEGIN
 	acceptanceContainer			AcceptanceContainer,
 	heartbeatContainer			HeartbeatContainer,
 	ackContainer				AckContainer,
+	finContainer				FinContainer,
 	cancelContainer				CancelContainer,
 	abendContainer				AbendContainer,
 								...
