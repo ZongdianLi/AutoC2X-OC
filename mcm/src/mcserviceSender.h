@@ -133,26 +133,6 @@ public:
 	/** Sends a new MCM to LDM and DCC.	 */
 	void send(bool isAutoware = false, Type type = IntentionRequest);
 
-	// /** Calculates the heading towards North based on the two specified coordinates.
-	//  *
-	//  * @param lat1 Latitude of coordinate 1.
-	//  * @param lon1 Longitude of coordinate 1.
-	//  * @param lat2 Latitude of coordinate 2.
-	//  * @param lon2 Longitude of coordinate 2.
-	//  * @return The heading in degrees.
-	//  */
-	// double getHeading(double lat1, double lon1, double lat2, double lon2);
-
-	// /** Calculates the distance between the two specified coordinates
-	//  *
-	//  * @param lat1 Latitude of coordinate 1.
-	//  * @param lon1 Longitude of coordinate 1.
-	//  * @param lat2 Latitude of coordinate 2.
-	//  * @param lon2 Longitude of coordinate 2.
-	//  * @return The distance in meters.
-	//  */
-	// double getDistance(double lat1, double lon1, double lat2, double lon2);
-
 private:
 	/** Receives incoming MCMs from DCC and forwards them to LDM.
 	 * Receives serialized DATA packages from DCC, deserializes it, and forwards the contained serialized MCM to LDM.
@@ -192,41 +172,10 @@ private:
 	 */
 	mcmPackage::MCM convertAsn1toProtoBuf(MCM_t* mcm);
 
-	// /** Receives new GPS data from the GPS module.
-	//  *
-	//  */
-	// void receiveGpsData();
-
-	// /** Receives new OBD2 data from the OBD2 module.
-	//  *
-	//  */
-	// void receiveObd2Data();
-
 	/** Receives new AUTOAWRE data from the AUTOWARE module.
 	 *
 	 */
 	void receiveAutowareData();
-	// void receiveReflectedData();
-
-	// /** Checks if heading has changed more than 4 degrees.
-	//  * @return True if MCM needs to be triggered, false otherwise
-	//  */
-	// bool isHeadingChanged();
-
-	// /** Checks if position has changed more than 5 metres.
-	//  * @return True if MCM needs to be triggered, false otherwise
-	//  */
-	// bool isPositionChanged();
-
-	// /** Checks if speed has changed more than 1 m/sec.
-	//  * @return True if MCM needs to be triggered, false otherwise
-	//  */
-	// bool isSpeedChanged();
-
-	// /** Checks if speed has changed more than 1 m/sec.
-	//  * @return True if MCM needs to be triggered, false otherwise
-	//  */
-	// bool isAutowareSpeedChanged();
 
 	// /** Checks if time more than 1 second has past since last MCM.
 	//  * @return True if MCM needs to be triggered, false otherwise

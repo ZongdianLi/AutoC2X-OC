@@ -251,59 +251,6 @@ void AutowareService::loadOpt(int argc, char* argv[]){
 	}
 }
 
-
-//simulates Autoware data, logs and sends it
-// void AutowareService::setData() {
-// 	std::cout << "simulating....." << std::endl;
-	
-// 	autowarePackage::AUTOWAREMCM autoware;
-
-// 	autoware.set_id(s_message.id);
-// 	autoware.set_time(s_message.time);
-// 	autoware.set_scenario(s_message.scenario);
-// 	autoware.set_targetstationid(s_message.targetstationid);
-
-// 	for (trajectory_point tp : ego_vehicle_trajectory) {
-// 		its::TrajectoryPoint* trajectory_point = autoware.add_trajectory();
-// 		trajectory_point->set_deltalat(tp.deltalat);
-// 		trajectory_point->set_deltaalt(tp.deltalong);
-// 		trajectory_point->set_deltalong(tp.deltaalt);
-// 		trajectory_point->set_pathdeltatime(tp.pathdeltatime);
-// 	}
-	
-// 	std::cout << autoware.trajectory_size() << std::endl;
-// 	// for (int i=0; i<autoware.trajectory_size(); i++) {
-// 	// 	std::cout << autoware.trajectory(i).deltalat() << std::endl;
-// 	// }
-
-// 	sendToServices(autoware);
-
-// 	// for(unsigned int i=0; i < s_message.speed.size(); i++){
-// 	// 	autowarePackage::AUTOWARE autoware;
-// 	// 	std::cout << "stationid is :::" << s_message.stationid[i] << std::endl;
-// 	// 	autoware.set_id(s_message.stationid[i]);
-// 	// 	autoware.set_speed(s_message.speed[i]); // standard expects speed in 0.01 m/s
-// 	// 	autoware.set_time(s_message.time[i]);
-// 	// 	autoware.set_longitude(s_message.longitude[i]);
-// 	// 	autoware.set_latitude(s_message.latitude[i]);
-// 	// 	sendToServices(autoware);
-// 	// 	if(s_message.stationid[i] == 0){
-// 	// 		latitude = s_message.latitude[i];
-// 	// 		longitude = s_message.longitude[i];
-// 	// 	}
-// 	// }
-// }
-
-
-//logs and sends Autoware
-// void AutowareService::sendToServices(autowarePackage::AUTOWAREMCM autoware) {
-// 	//send buffer to services
-// 	string serializedAutoware;
-// 	autoware.SerializeToString(&serializedAutoware);
-// 	mSender->sendData("AUTOWARE", serializedAutoware);
-// 	// mLogger->logStats(to_string(autoware.speed()) + " (" + to_string(autoware.speed()/100*3.6) + "km/h)"); // In csv, we log speed in m/sec
-// }
-
 void AutowareService::receiveFromAutoware(){
 	rbc.addClient("ego_vehicle_trajectory");
 	rbc.addClient("scenario_trigger");
@@ -314,52 +261,6 @@ void AutowareService::receiveFromAutoware(){
 	rbc.subscribe("scenario_trigger", "/scenario_trigger", receiveScenarioTrigger);
 	while (1) {
 	}
-
-	// std::cout << "*****receive setup" << std::endl;
-	// int sockfd;
-    // int client_sockfd;
-    // struct sockaddr_in addr;
-    // socklen_t len = sizeof( struct sockaddr_in );
-    // struct sockaddr_in from_addr;
-    // char buf[4096];
- 
-    // memset( buf, 0, sizeof( buf ) );
-    // if( ( sockfd = socket( AF_INET, SOCK_STREAM, 0 ) ) < 0 ) {
-    //     perror( "socket" );
-    // }
-    // addr.sin_family = AF_INET;
-    // addr.sin_port = htons( 23457 );
-    // addr.sin_addr.s_addr = INADDR_ANY;
-    // if( bind( sockfd, (struct sockaddr *)&addr, sizeof( addr ) ) < 0 ) perror( "bind" );
-    // if( listen( sockfd, SOMAXCONN ) < 0 ) perror( "listen" );
-    // if( ( client_sockfd = accept( sockfd, (struct sockaddr *)&from_addr, &len ) ) < 0 ) perror( "accept" );
- 
-    // // 受信
-    // int rsize;
-    // while( 1 ) {
-	// 	std::stringstream ss;
-	// 	memset( buf, 0, sizeof( buf ) );
-    //     rsize = recv( client_sockfd, buf, sizeof( buf ), 0 );
-		
-	// 	ss << buf;
-	// 	boost::archive::text_iarchive archive(ss);
-	// 	archive >> s_message;
-
-	// 	std::cout << "received" << std::endl;
-	
-    //     if ( rsize == 0 ) {
-    //         break;	
-    //     } else if ( rsize == -1 ) {
-    //         perror( "recv" );
-    //     }
-	// 	std::cout << s_message.timestamp << std::endl;
-	// 	setData();
-	// 	sendBackToAutoware(s_message);
-    // }
- 
-    // close( client_sockfd );
-    // close( sockfd );
-
 }
 
 void AutowareService::sendBackToAutoware(socket_message msg){
@@ -452,7 +353,6 @@ void AutowareService::receiveFromMcService(){
 					tp["pose"]["altitude"] = v.deltaalt();
 					msg["trajectory"].push_back(tp);
 				}
-				std::cout << msg.dump().c_str() << std::endl;
 				d.Parse(msg.dump().c_str());
 				rbc.addClient("collision_detect");
   				rbc.advertise("collision_detect", "/other_vehicle/planned_trajectory/collision_detect", "mcservice_msgs/TrajectoryWithTargetStationId");
@@ -468,8 +368,10 @@ void AutowareService::receiveFromMcService(){
 					tp["pose"]["altitude"] = v.deltaalt();
 					msg["trajectory"].push_back(tp);
 				}
+				std::cout << msg.dump().c_str() << std::endl;
 				d.Parse(msg.dump().c_str());
 				rbc.addClient("calculate_trajectory");
+				rbc.advertise("calculate_trajectory", "/other_vehicle/planned_trajectory/calculate", "mcservice_msgs/TrajectoryWithTargetStationId");
 				rbc.publish("/other_vehicle/planned_trajectory/calculate", d);
 				rbc.subscribe("calculate_trajectory", "/other_vehicle/desired_trajectory", calculatedDesiredTrajectory);
 				break;
@@ -492,20 +394,6 @@ void AutowareService::receiveFromMcService(){
 			default:
 				break;
 		}
-		// for (int i=0; i<container.plannedtrajectory_size(); i++) {
-		// 	std::cout << container.plannedtrajectory(i).deltaalt() << std::endl;
-		// }
-		// int64_t currTime = Utils::currentTime();
-		// long genDeltaTime = (long)(currTime/1000000 - 10728504000) % 65536;
-		// delay_output_file << std::setprecision(20) << mcm.header().stationid() << "" << "," << genDeltaTime << "," << currTime << "," << latitude << "," << longitude << std::endl;
-
-		// socket_message msg;
-		// msg.timestamp = 10;
-		// msg.speed.push_back(0);
-		// msg.latitude.push_back(0);
-		// msg.longitude.push_back(0);
-		// msg.time.push_back(0);
-		// msg.stationid.push_back(mcm.header().stationid());
 	}
 }
 

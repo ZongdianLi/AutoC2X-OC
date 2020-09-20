@@ -133,12 +133,6 @@ struct socket_message{
 	int adviceaccepted;
 	int scenarioend;
 
-	// std::vector<int> speed;
-	// std::vector<int> latitude;
-	// std::vector<int> longitude;
-	// std::vector<int> time;
-	// std::vector<int> stationid;
-
 private:
 	friend class boost::serialization::access;
 	template<class Archive>
@@ -153,11 +147,6 @@ private:
 			ar & collisiondetected;
 			ar & adviceaccepted;
 			ar & scenarioend;
-			// ar & speed;
-			// ar & latitude;
-			// ar & longitude;
-			// ar & time;
-			// ar & stationid;
 		}
 };
 
