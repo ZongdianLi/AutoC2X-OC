@@ -4,5 +4,10 @@ message TrajectoryPoint {
 	required int64 deltaLat = 1;
 	required int64 deltaLong = 2;
 	required int64 deltaAlt = 3;
-	required int64 pathDeltaTime = 4; 
+	required int64 x = 4;
+	required int64 y = 5;
+	required int64 z = 6;
+	required int64 w = 7;
+	required int64 sec = 8;
+	required int64 nsec = 9;
 }

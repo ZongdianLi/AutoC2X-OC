@@ -356,9 +356,17 @@ BEGIN
 	Trajectory ::= SEQUENCE OF TrajectoryPoint
 
 	TrajectoryPoint ::= SEQUENCE {
-	pathPosition  DeltaReferencePosition,
-	pathDeltaTime PathDeltaTime
+	pathPosition  	DeltaReferencePosition,
+	pathOrientation	DeltaReferenceOrientation,
+	pathDeltaTime 	PathDeltaTime
     }
+
+	DeltaReferenceOrientation ::= SEQUENCE {
+	x	INTEGER(-1800000000..1800000001),
+	y 	INTEGER(-1800000000..1800000001),
+	z  	INTEGER(-1800000000..1800000001),
+	w  	INTEGER(-1800000000..1800000001)
+	}
 
 END
 
@@ -455,19 +463,19 @@ BEGIN
 	oneMicrodegreeEast(10),
 	oneMicrodegreeWest(-10),
 	unavailable(131072)
-    } (-131071..131072)
+    } (-1800000000..1800000001)
     
     DeltaLatitude ::= INTEGER {
 	oneMicrodegreeNorth(10),
 	oneMicrodegreeSouth(-10),
 	unavailable(131072)
-    } (-131071..131072)
+    } (-1800000000..1800000001)
     
     DeltaAltitude ::= INTEGER {
 	oneCentimeterUp(1),
 	oneCentimeterDown(-1),
 	unavailable(12800)
-    } (-12700..12800)
+    } (-1800000000..1800000001)
     
     PosConfidenceEllipse ::= SEQUENCE {
 	semiMajorConfidence  SemiAxisLength,
@@ -480,9 +488,10 @@ BEGIN
 	pathDeltaTime PathDeltaTime OPTIONAL
     }
     
-    PathDeltaTime ::= INTEGER {
-	tenMilliSecondsInPast(1)
-    } (1..65535, ...)
+    PathDeltaTime ::= SEQUENCE {
+	sec INTEGER(0..4294967295, ...),
+	nsec INTEGER(0..4294967295, ...)
+	}
     
     PtActivation ::= SEQUENCE {
 	ptActivationType PtActivationType,

@@ -519,7 +519,12 @@ MCM_t* McService::generateMcm(bool isAutoware, Type type) {
 		trajectory_point->pathPosition.deltaLatitude = mLatestAutoware.trajectory(i).deltalat();
 		trajectory_point->pathPosition.deltaLongitude = mLatestAutoware.trajectory(i).deltalong();
 		trajectory_point->pathPosition.deltaAltitude = mLatestAutoware.trajectory(i).deltaalt();
-		trajectory_point->pathDeltaTime = mLatestAutoware.trajectory(i).pathdeltatime();
+		trajectory_point->pathOrientation.x = mLatestAutoware.trajectory(i).x();
+		trajectory_point->pathOrientation.y = mLatestAutoware.trajectory(i).y();
+		trajectory_point->pathOrientation.z = mLatestAutoware.trajectory(i).z();
+		trajectory_point->pathOrientation.w = mLatestAutoware.trajectory(i).w();
+		trajectory_point->pathDeltaTime.sec = mLatestAutoware.trajectory(i).sec();
+		trajectory_point->pathDeltaTime.nsec = mLatestAutoware.trajectory(i).nsec();
 		const int result = asn_sequence_add(trajectory, trajectory_point);
 	}
 
@@ -628,7 +633,12 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 				trajectory_point->set_deltalat(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaLatitude);
 				trajectory_point->set_deltaalt(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaAltitude);
 				trajectory_point->set_deltalong(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaLongitude);
-				trajectory_point->set_pathdeltatime(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathDeltaTime);
+				trajectory_point->set_x(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathOrientation.x);
+				trajectory_point->set_y(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathOrientation.y);
+				trajectory_point->set_z(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathOrientation.z);
+				trajectory_point->set_w(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathOrientation.w);
+				trajectory_point->set_sec(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathDeltaTime.sec);
+				trajectory_point->set_nsec(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathDeltaTime.nsec);
 			}
 			maneuverContainer->set_allocated_intentionrequestcontainer(intentionRequestContainer);
 			break;
@@ -642,7 +652,12 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 				trajectory_point->set_deltalat(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionReplyContainer.plannedTrajectory.list.array[i]->pathPosition.deltaLatitude);
 				trajectory_point->set_deltaalt(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionReplyContainer.plannedTrajectory.list.array[i]->pathPosition.deltaAltitude);
 				trajectory_point->set_deltalong(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionReplyContainer.plannedTrajectory.list.array[i]->pathPosition.deltaLongitude);
-				trajectory_point->set_pathdeltatime(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionReplyContainer.plannedTrajectory.list.array[i]->pathDeltaTime);
+				trajectory_point->set_x(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionReplyContainer.plannedTrajectory.list.array[i]->pathOrientation.x);
+				trajectory_point->set_y(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionReplyContainer.plannedTrajectory.list.array[i]->pathOrientation.y);
+				trajectory_point->set_z(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionReplyContainer.plannedTrajectory.list.array[i]->pathOrientation.z);
+				trajectory_point->set_w(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionReplyContainer.plannedTrajectory.list.array[i]->pathOrientation.w);
+				trajectory_point->set_sec(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionReplyContainer.plannedTrajectory.list.array[i]->pathDeltaTime.sec);
+				trajectory_point->set_nsec(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionReplyContainer.plannedTrajectory.list.array[i]->pathDeltaTime.nsec);
 			}
 			maneuverContainer->set_allocated_intentionreplycontainer(intentionReplyContainer);
 			break;
@@ -656,7 +671,12 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 				trajectory_point->set_deltalat(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathPosition.deltaLatitude);
 				trajectory_point->set_deltaalt(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathPosition.deltaAltitude);
 				trajectory_point->set_deltalong(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathPosition.deltaLongitude);
-				trajectory_point->set_pathdeltatime(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathDeltaTime);
+				trajectory_point->set_x(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathOrientation.x);
+				trajectory_point->set_y(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathOrientation.y);
+				trajectory_point->set_z(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathOrientation.z);
+				trajectory_point->set_w(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathOrientation.w);
+				trajectory_point->set_sec(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathDeltaTime.sec);
+				trajectory_point->set_nsec(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathDeltaTime.nsec);
 			}
 			maneuverContainer->set_allocated_prescriptioncontainer(prescriptionContainer);
 			break;
@@ -671,7 +691,12 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 				trajectory_point->set_deltalat(mcm->mcm.mcmParameters.maneuverContainer.choice.acceptanceContainer.selectedTrajectory.list.array[i]->pathPosition.deltaLatitude);
 				trajectory_point->set_deltaalt(mcm->mcm.mcmParameters.maneuverContainer.choice.acceptanceContainer.selectedTrajectory.list.array[i]->pathPosition.deltaAltitude);
 				trajectory_point->set_deltalong(mcm->mcm.mcmParameters.maneuverContainer.choice.acceptanceContainer.selectedTrajectory.list.array[i]->pathPosition.deltaLongitude);
-				trajectory_point->set_pathdeltatime(mcm->mcm.mcmParameters.maneuverContainer.choice.acceptanceContainer.selectedTrajectory.list.array[i]->pathDeltaTime);
+				trajectory_point->set_x(mcm->mcm.mcmParameters.maneuverContainer.choice.acceptanceContainer.selectedTrajectory.list.array[i]->pathOrientation.x);
+				trajectory_point->set_y(mcm->mcm.mcmParameters.maneuverContainer.choice.acceptanceContainer.selectedTrajectory.list.array[i]->pathOrientation.y);
+				trajectory_point->set_z(mcm->mcm.mcmParameters.maneuverContainer.choice.acceptanceContainer.selectedTrajectory.list.array[i]->pathOrientation.z);
+				trajectory_point->set_w(mcm->mcm.mcmParameters.maneuverContainer.choice.acceptanceContainer.selectedTrajectory.list.array[i]->pathOrientation.w);
+				trajectory_point->set_sec(mcm->mcm.mcmParameters.maneuverContainer.choice.acceptanceContainer.selectedTrajectory.list.array[i]->pathDeltaTime.sec);
+				trajectory_point->set_nsec(mcm->mcm.mcmParameters.maneuverContainer.choice.acceptanceContainer.selectedTrajectory.list.array[i]->pathDeltaTime.nsec);
 			}
 			maneuverContainer->set_allocated_acceptancecontainer(acceptanceContainer);
 			break;
@@ -685,7 +710,12 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 				trajectory_point->set_deltalat(mcm->mcm.mcmParameters.maneuverContainer.choice.heartbeatContainer.selectedTrajectory.list.array[i]->pathPosition.deltaLatitude);
 				trajectory_point->set_deltaalt(mcm->mcm.mcmParameters.maneuverContainer.choice.heartbeatContainer.selectedTrajectory.list.array[i]->pathPosition.deltaAltitude);
 				trajectory_point->set_deltalong(mcm->mcm.mcmParameters.maneuverContainer.choice.heartbeatContainer.selectedTrajectory.list.array[i]->pathPosition.deltaLongitude);
-				trajectory_point->set_pathdeltatime(mcm->mcm.mcmParameters.maneuverContainer.choice.heartbeatContainer.selectedTrajectory.list.array[i]->pathDeltaTime);
+				trajectory_point->set_x(mcm->mcm.mcmParameters.maneuverContainer.choice.heartbeatContainer.selectedTrajectory.list.array[i]->pathOrientation.x);
+				trajectory_point->set_y(mcm->mcm.mcmParameters.maneuverContainer.choice.heartbeatContainer.selectedTrajectory.list.array[i]->pathOrientation.y);
+				trajectory_point->set_z(mcm->mcm.mcmParameters.maneuverContainer.choice.heartbeatContainer.selectedTrajectory.list.array[i]->pathOrientation.z);
+				trajectory_point->set_w(mcm->mcm.mcmParameters.maneuverContainer.choice.heartbeatContainer.selectedTrajectory.list.array[i]->pathOrientation.w);
+				trajectory_point->set_sec(mcm->mcm.mcmParameters.maneuverContainer.choice.heartbeatContainer.selectedTrajectory.list.array[i]->pathDeltaTime.sec);
+				trajectory_point->set_nsec(mcm->mcm.mcmParameters.maneuverContainer.choice.heartbeatContainer.selectedTrajectory.list.array[i]->pathDeltaTime.nsec);
 			}
 			maneuverContainer->set_allocated_heartbeatcontainer(heartbeatContainer);
 			break;

@@ -60,7 +60,12 @@ void setData() {
 		trajectory_point->set_deltalat(tp.deltalat);
 		trajectory_point->set_deltaalt(tp.deltalong);
 		trajectory_point->set_deltalong(tp.deltaalt);
-		trajectory_point->set_pathdeltatime(tp.pathdeltatime);
+		trajectory_point->set_x(tp.x);
+		trajectory_point->set_y(tp.y);
+		trajectory_point->set_z(tp.z);
+		trajectory_point->set_w(tp.w);
+		trajectory_point->set_sec(tp.sec);
+		trajectory_point->set_nsec(tp.nsec);
 	}
 	
 	std::cout << autoware.trajectory_size() << std::endl;
@@ -95,12 +100,16 @@ void storePlannedTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_p
 	// ROSトピックによって後で修正
 	for (auto& v : d["msg"]["trajectory"].GetArray()) {
 		trajectory_point tp;
-		// std::cout << "time: " << v["time"].GetInt() << std::endl;
-		tp.deltalat = v["pose"]["latitude"].GetFloat();
-		tp.deltalong = v["pose"]["longitude"].GetFloat();
-		tp.deltaalt = v["pose"]["altitude"].GetFloat();
-		tp.pathdeltatime = v["time"].GetFloat();
-		std::cout << "time: " << tp.pathdeltatime << std::endl;
+		// std::cout << "time: " << v["time"].GetFloat() << std::endl;
+		tp.deltalat = v["pose"]["position"]["x"].GetFloat();
+		tp.deltalong = v["pose"]["position"]["y"].GetFloat();
+		tp.deltaalt = v["pose"]["position"]["z"].GetFloat();
+		tp.x = v["pose"]["oriantation"]["x"].GetFloat();
+		tp.y = v["pose"]["oriantation"]["y"].GetFloat();
+		tp.z = v["pose"]["oriantation"]["z"].GetFloat();
+		tp.w = v["pose"]["oriantation"]["w"].GetFloat();
+		tp.sec = v["time"]["sec"].GetInt();
+		tp.nsec = v["time"]["nsec"].GetInt();
 		ego_vehicle_trajectory.push_back(tp);
 	}
 }
@@ -148,10 +157,15 @@ void calculatedDesiredTrajectory(std::shared_ptr<WsClient::Connection>, std::sha
 	const rapidjson::Value& c = d["msg"]["trajectory"].GetArray();
 	struct trajectory_point tp;
 	for (auto& d : c.GetArray()) {
-		tp.deltalat = d["pose"]["position"]["latitude"].GetInt();
-		tp.deltalong = d["pose"]["position"]["longitude"].GetInt();
-		tp.deltaalt = 0;
-		tp.pathdeltatime = d["time"].GetInt();
+		tp.deltalat = d["pose"]["position"]["x"].GetFloat();
+		tp.deltalong = d["pose"]["position"]["y"].GetFloat();
+		tp.deltaalt = d["pose"]["position"]["z"].GetFloat();
+		tp.x = d["pose"]["orientation"]["x"].GetFloat();
+		tp.y = d["pose"]["orientation"]["y"].GetFloat();
+		tp.z = d["pose"]["orientation"]["z"].GetFloat();
+		tp.w = d["pose"]["orientation"]["w"].GetFloat();
+		tp.sec = d["time"]["sec"].GetInt();
+		tp.nsec = d["time"]["nsec"].GetInt();
 		s_message.trajectory.push_back(tp);
 		// std::cout << "list value:" << e << std::endl;
 	}
@@ -172,6 +186,14 @@ void validatedDesiredTrajectory(std::shared_ptr<WsClient::Connection>, std::shar
 
 	setData();
 	rbc.removeClient("validate_trajectory");
+}
+
+void receiveTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message) {
+	std::string message = in_message->string().c_str();
+	const char* msg = message.c_str();
+	rapidjson::Document d;
+	d.Parse(msg);
+	std::cout << d["header"]["stamp"].GetFloat() << std::endl;
 }
 
 AutowareService::AutowareService(AutowareConfig &config, int argc, char* argv[]) {
@@ -255,10 +277,12 @@ void AutowareService::receiveFromAutoware(){
 	rbc.addClient("ego_vehicle_trajectory");
 	rbc.addClient("scenario_trigger");
 	rbc.addClient("scenario_trigger_end");
+	rbc.addClient("traectory");
 	rbc.advertise("ego_vehicle_trajectory", "/ego_vehicle/planned_trajectory", "mcservice_msgs/Trajectory");
 	rbc.advertise("scenario_trigger", "/scenario_trigger", "std_msgs/String");
 	rbc.subscribe("ego_vehicle_trajectory", "/ego_vehicle/planned_trajectory", storePlannedTrajectory);
 	rbc.subscribe("scenario_trigger", "/scenario_trigger", receiveScenarioTrigger);
+	rbc.subscribe("trajectory", "/planning/scenario_planning/lane_driving/trajectory", receiveTrajectory);
 	while (1) {
 	}
 }
@@ -324,7 +348,7 @@ void AutowareService::testSender(int msgType){
 			tp.deltalat = l;
 			tp.deltalong = l;
 			tp.deltaalt = l;
-			tp.pathdeltatime = l;
+			tp.sec = l;
 			s_message.trajectory.push_back(tp);
 			// std::cout << l << std::endl;
 		}
@@ -341,7 +365,7 @@ void AutowareService::receiveFromMcService(){
 		pair<string, string> received = mReceiverFromMcService->receive();
 		std::cout << "receive from mcservice" << std::endl;
 
-		serializedAutoware = received.second;
+		serializedAutoware = received.first;
 		mcm.ParseFromString(serializedAutoware);
 		its::McmParameters_ControlFlag controlFlag = mcm.maneuver().mcmparameters().controlflag();
 		json msg;
@@ -352,10 +376,15 @@ void AutowareService::receiveFromMcService(){
 			case its::McmParameters_ControlFlag_INTENTION_REQUEST:
 				for (auto& v : mcm.maneuver().mcmparameters().maneuvercontainer().intentionrequestcontainer().plannedtrajectory()) {
 					json tp;
-					tp["time"] = v.pathdeltatime();
-					tp["pose"]["latitude"] = v.deltalat();
-					tp["pose"]["longitude"] = v.deltalong();
-					tp["pose"]["altitude"] = v.deltaalt();
+					tp["time"]["sec"] = v.sec();
+					tp["time"]["nsec"] = v.nsec();
+					tp["pose"]["position"]["x"] = v.deltalat();
+					tp["pose"]["position"]["y"] = v.deltalong();
+					tp["pose"]["position"]["z"] = v.deltaalt();
+					tp["pose"]["orientation"]["x"] = v.x();
+					tp["pose"]["orientation"]["y"] = v.y();
+					tp["pose"]["orientation"]["z"] = v.z();
+					tp["pose"]["orientation"]["x"] = v.w();
 					msg["trajectory"].push_back(tp);
 				}
 				d.Parse(msg.dump().c_str());
@@ -367,10 +396,15 @@ void AutowareService::receiveFromMcService(){
 			case its::McmParameters_ControlFlag_INTENTION_REPLY:
 				for (auto& v : mcm.maneuver().mcmparameters().maneuvercontainer().intentionreplycontainer().plannedtrajectory()) {
 					json tp;
-					tp["time"] = v.pathdeltatime();
-					tp["pose"]["latitude"] = v.deltalat();
-					tp["pose"]["longitude"] = v.deltalong();
-					tp["pose"]["altitude"] = v.deltaalt();
+					tp["time"]["sec"] = v.sec();
+					tp["time"]["nsec"] = v.nsec();
+					tp["pose"]["position"]["x"] = v.deltalat();
+					tp["pose"]["position"]["y"] = v.deltalong();
+					tp["pose"]["position"]["z"] = v.deltaalt();
+					tp["pose"]["orientation"]["x"] = v.x();
+					tp["pose"]["orientation"]["y"] = v.y();
+					tp["pose"]["orientation"]["z"] = v.z();
+					tp["pose"]["orientation"]["x"] = v.w();
 					msg["trajectory"].push_back(tp);
 				}
 				d.Parse(msg.dump().c_str());
@@ -382,10 +416,14 @@ void AutowareService::receiveFromMcService(){
 			case its::McmParameters_ControlFlag_PRESCRIPTION:
 				for (auto& v : mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().desiredtrajectory()) {
 					json tp;
-					tp["time"] = v.pathdeltatime();
-					tp["pose"]["latitude"] = v.deltalat();
-					tp["pose"]["longitude"] = v.deltalong();
-					tp["pose"]["altitude"] = v.deltaalt();
+					tp["time"]["sec"] = v.sec();
+					tp["time"]["nsec"] = v.nsec();
+					tp["pose"]["position"]["y"] = v.deltalong();
+					tp["pose"]["position"]["z"] = v.deltaalt();
+					tp["pose"]["orientation"]["x"] = v.x();
+					tp["pose"]["orientation"]["y"] = v.y();
+					tp["pose"]["orientation"]["z"] = v.z();
+					tp["pose"]["orientation"]["x"] = v.w();
 					msg["trajectory"].push_back(tp);
 				}
 				d.Parse(msg.dump().c_str());

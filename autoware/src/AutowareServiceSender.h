@@ -108,7 +108,12 @@ struct trajectory_point{
 	int deltalat;
 	int deltalong;
 	int deltaalt;
-	int pathdeltatime;
+	int x;
+	int y;
+	int z;
+	int w;
+	int sec;
+	int nsec;
 
 private:
 	friend class boost::serialization::access;
@@ -117,7 +122,12 @@ private:
 			ar & deltalat;
 			ar & deltalong;
 			ar & deltaalt;
-			ar & pathdeltatime;
+			ar & x;
+			ar & y;
+			ar & z;
+			ar & w;
+			ar & sec;
+			ar & nsec;
 		}
 };
 
