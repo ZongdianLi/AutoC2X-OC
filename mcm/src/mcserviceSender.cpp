@@ -662,24 +662,50 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 			maneuverContainer->set_allocated_intentionreplycontainer(intentionReplyContainer);
 			break;
 		case ManeuverContainer_PR_prescriptionContainer:
-			// maneuverContainer->set_type(its::ManeuverContainer_Type_PRESCRIPTION);
-			params->set_controlflag(its::McmParameters_ControlFlag_PRESCRIPTION);
-			prescriptionContainer = new its::PrescriptionContainer();
-			prescriptionContainer->set_targetstationid(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.targetStationID);
-			for (int i=0; i<mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.count; i++) {
-				its::TrajectoryPoint* trajectory_point = prescriptionContainer->add_desiredtrajectory();
-				trajectory_point->set_deltalat(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathPosition.deltaLatitude);
-				trajectory_point->set_deltaalt(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathPosition.deltaAltitude);
-				trajectory_point->set_deltalong(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathPosition.deltaLongitude);
-				trajectory_point->set_x(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathOrientation.x);
-				trajectory_point->set_y(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathOrientation.y);
-				trajectory_point->set_z(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathOrientation.z);
-				trajectory_point->set_w(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathOrientation.w);
-				trajectory_point->set_sec(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathDeltaTime.sec);
-				trajectory_point->set_nsec(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathDeltaTime.nsec);
+			{
+				// maneuverContainer->set_type(its::ManeuverContainer_Type_PRESCRIPTION);
+				params->set_controlflag(its::McmParameters_ControlFlag_PRESCRIPTION);
+				prescriptionContainer = new its::PrescriptionContainer();
+				prescriptionContainer->set_targetstationid(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.targetStationID);
+				for (int i=0; i<mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.count; i++) {
+					its::TrajectoryPoint* trajectory_point = prescriptionContainer->add_desiredtrajectory();
+					trajectory_point->set_deltalat(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathPosition.deltaLatitude);
+					trajectory_point->set_deltaalt(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathPosition.deltaAltitude);
+					trajectory_point->set_deltalong(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathPosition.deltaLongitude);
+					trajectory_point->set_x(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathOrientation.x);
+					trajectory_point->set_y(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathOrientation.y);
+					trajectory_point->set_z(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathOrientation.z);
+					trajectory_point->set_w(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathOrientation.w);
+					trajectory_point->set_sec(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathDeltaTime.sec);
+					trajectory_point->set_nsec(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory.list.array[i]->pathDeltaTime.nsec);
+				}
+				its::OptionalDescription* optionalDescription = new its::OptionalDescription();
+				its::TrajectoryPoint* start_point = new its::TrajectoryPoint();
+				start_point->set_deltalat(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.optionalDescription.startPoint->pathPosition.deltaLatitude);
+				start_point->set_deltaalt(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.optionalDescription.startPoint->pathPosition.deltaAltitude);
+				start_point->set_deltalong(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.optionalDescription.startPoint->pathPosition.deltaLongitude);
+				start_point->set_x(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.optionalDescription.startPoint->pathOrientation.x);
+				start_point->set_y(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.optionalDescription.startPoint->pathOrientation.y);
+				start_point->set_z(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.optionalDescription.startPoint->pathOrientation.z);
+				start_point->set_w(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.optionalDescription.startPoint->pathOrientation.w);
+				start_point->set_sec(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.optionalDescription.startPoint->pathDeltaTime.sec);
+				start_point->set_nsec(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.optionalDescription.startPoint->pathDeltaTime.nsec);
+				its::TrajectoryPoint* target_point = new its::TrajectoryPoint();
+				target_point->set_deltalat(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.optionalDescription.targetPoint->pathPosition.deltaLatitude);
+				target_point->set_deltaalt(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.optionalDescription.targetPoint->pathPosition.deltaAltitude);
+				target_point->set_deltalong(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.optionalDescription.targetPoint->pathPosition.deltaLongitude);
+				target_point->set_x(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.optionalDescription.targetPoint->pathOrientation.x);
+				target_point->set_y(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.optionalDescription.targetPoint->pathOrientation.y);
+				target_point->set_z(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.optionalDescription.targetPoint->pathOrientation.z);
+				target_point->set_w(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.optionalDescription.targetPoint->pathOrientation.w);
+				target_point->set_sec(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.optionalDescription.targetPoint->pathDeltaTime.sec);
+				target_point->set_nsec(mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.optionalDescription.targetPoint->pathDeltaTime.nsec);
+				optionalDescription->set_allocated_startpoint(start_point);
+				optionalDescription->set_allocated_targetpoint(target_point);
+				prescriptionContainer->set_allocated_optionaldescription(optionalDescription);
+				maneuverContainer->set_allocated_prescriptioncontainer(prescriptionContainer);
+				break;
 			}
-			maneuverContainer->set_allocated_prescriptioncontainer(prescriptionContainer);
-			break;
 		case ManeuverContainer_PR_acceptanceContainer:
 			// maneuverContainer->set_type(its::ManeuverContainer_Type_ACCEPTANCE);
 			params->set_controlflag(its::McmParameters_ControlFlag_ACCEPTANCE);

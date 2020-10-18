@@ -318,6 +318,7 @@ BEGIN
 	PrescriptionContainer ::= SEQUENCE {
 	targetStationID		StationID,
 	desiredTrajectory	Trajectory,
+	optionalDescription	OptionalDescription,
 						...
 	}
 
@@ -366,6 +367,12 @@ BEGIN
 	y 	INTEGER(-1800000000..1800000001),
 	z  	INTEGER(-1800000000..1800000001),
 	w  	INTEGER(-1800000000..1800000001)
+	}
+
+	OptionalDescription ::= SEQUENCE {
+	startPoint	TrajectoryPoint OPTIONAL,
+	targetPoint	TrajectoryPoint OPTIONAL,
+				...
 	}
 
 END
@@ -470,7 +477,7 @@ BEGIN
 	oneMicrodegreeSouth(-10),
 	unavailable(131072)
     } (-1800000000..1800000001)
-    
+   
     DeltaAltitude ::= INTEGER {
 	oneCentimeterUp(1),
 	oneCentimeterDown(-1),

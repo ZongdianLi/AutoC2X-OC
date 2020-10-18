@@ -1,0 +1,8 @@
+package its;
+
+import "TrajectoryPoint.proto";
+
+message OptionalDescription {
+	optional its.TrajectoryPoint startPoint = 1;
+	optional its.TrajectoryPoint targetPoint = 2;
+}

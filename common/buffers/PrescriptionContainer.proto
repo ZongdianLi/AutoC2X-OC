@@ -1,8 +1,10 @@
 package its;
 
 import "TrajectoryPoint.proto";
+import "OptionalDescription.proto";
 
 message PrescriptionContainer {
 	required uint64 targetStationID = 1;
 	repeated its.TrajectoryPoint desiredTrajectory = 2;
+	required its.OptionalDescription optionalDescription = 3;
 }

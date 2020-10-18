@@ -42,6 +42,7 @@ ASN_MODULE_SOURCES=	\
 	Trajectory.c	\
 	TrajectoryPoint.c	\
 	DeltaReferenceOrientation.c	\
+	OptionalDescription.c	\
 	ItsPduHeader.c	\
 	StationID.c	\
 	GenerationDeltaTime.c	\
@@ -221,6 +222,7 @@ ASN_MODULE_HEADERS=	\
 	Trajectory.h	\
 	TrajectoryPoint.h	\
 	DeltaReferenceOrientation.h	\
+	OptionalDescription.h	\
 	ItsPduHeader.h	\
 	StationID.h	\
 	GenerationDeltaTime.h	\

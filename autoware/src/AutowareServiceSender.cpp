@@ -101,15 +101,15 @@ void storePlannedTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_p
 	for (auto& v : d["msg"]["trajectory"].GetArray()) {
 		trajectory_point tp;
 		// std::cout << "time: " << v["time"].GetFloat() << std::endl;
-		tp.deltalat = v["pose"]["position"]["x"].GetFloat();
-		tp.deltalong = v["pose"]["position"]["y"].GetFloat();
-		tp.deltaalt = v["pose"]["position"]["z"].GetFloat();
-		tp.x = v["pose"]["oriantation"]["x"].GetFloat();
-		tp.y = v["pose"]["oriantation"]["y"].GetFloat();
-		tp.z = v["pose"]["oriantation"]["z"].GetFloat();
-		tp.w = v["pose"]["oriantation"]["w"].GetFloat();
-		tp.sec = v["time"]["sec"].GetInt();
-		tp.nsec = v["time"]["nsec"].GetInt();
+		tp.deltalat = (int)v["pose"]["position"]["x"].GetFloat() * pow(10, 3);
+		tp.deltalong = (int)v["pose"]["position"]["y"].GetFloat() * pow(10, 3);
+		tp.deltaalt = (int)v["pose"]["position"]["z"].GetFloat() * pow(10, 3);
+		tp.x = (int)v["pose"]["oriantation"]["x"].GetFloat() * pow(10, 9);
+		tp.y = (int)v["pose"]["oriantation"]["y"].GetFloat() * pow(10, 9);
+		tp.z = (int)v["pose"]["oriantation"]["z"].GetFloat() * pow(10, 9);
+		tp.w = (int)v["pose"]["oriantation"]["w"].GetFloat() * pow(10, 9);
+		tp.sec = v["header"]["stamp"]["secs"].GetInt();
+		tp.nsec = v["header"]["stamp"]["nsecs"].GetInt();
 		ego_vehicle_trajectory.push_back(tp);
 	}
 }
@@ -157,15 +157,15 @@ void calculatedDesiredTrajectory(std::shared_ptr<WsClient::Connection>, std::sha
 	const rapidjson::Value& c = d["msg"]["trajectory"].GetArray();
 	struct trajectory_point tp;
 	for (auto& d : c.GetArray()) {
-		tp.deltalat = d["pose"]["position"]["x"].GetFloat();
-		tp.deltalong = d["pose"]["position"]["y"].GetFloat();
-		tp.deltaalt = d["pose"]["position"]["z"].GetFloat();
-		tp.x = d["pose"]["orientation"]["x"].GetFloat();
-		tp.y = d["pose"]["orientation"]["y"].GetFloat();
-		tp.z = d["pose"]["orientation"]["z"].GetFloat();
-		tp.w = d["pose"]["orientation"]["w"].GetFloat();
-		tp.sec = d["time"]["sec"].GetInt();
-		tp.nsec = d["time"]["nsec"].GetInt();
+		tp.deltalat = (int)d["pose"]["position"]["x"].GetFloat() * pow(10, 3);
+		tp.deltalong = (int)d["pose"]["position"]["y"].GetFloat() * pow(10, 3);
+		tp.deltaalt = (int)d["pose"]["position"]["z"].GetFloat() * pow(10, 3);
+		tp.x = (int)d["pose"]["orientation"]["x"].GetFloat() * pow(10, 9);
+		tp.y = (int)d["pose"]["orientation"]["y"].GetFloat() * pow(10, 9);
+		tp.z = (int)d["pose"]["orientation"]["z"].GetFloat() * pow(10, 9);
+		tp.w = (int)d["pose"]["orientation"]["w"].GetFloat() * pow(10, 9);
+		tp.sec = d["header"]["stamp"]["secs"].GetInt();
+		tp.nsec = d["header"]["stamp"]["nsecs"].GetInt();
 		s_message.trajectory.push_back(tp);
 		// std::cout << "list value:" << e << std::endl;
 	}
@@ -193,7 +193,7 @@ void receiveTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_ptr<Ws
 	const char* msg = message.c_str();
 	rapidjson::Document d;
 	d.Parse(msg);
-	std::cout << d["header"]["stamp"].GetFloat() << std::endl;
+	std::cout << d["msg"]["points"]["pose"]["x"].GetInt() << std::endl;
 }
 
 AutowareService::AutowareService(AutowareConfig &config, int argc, char* argv[]) {
@@ -277,12 +277,12 @@ void AutowareService::receiveFromAutoware(){
 	rbc.addClient("ego_vehicle_trajectory");
 	rbc.addClient("scenario_trigger");
 	rbc.addClient("scenario_trigger_end");
-	rbc.addClient("traectory");
+	// rbc.addClient("trajectory");
 	rbc.advertise("ego_vehicle_trajectory", "/ego_vehicle/planned_trajectory", "mcservice_msgs/Trajectory");
 	rbc.advertise("scenario_trigger", "/scenario_trigger", "std_msgs/String");
 	rbc.subscribe("ego_vehicle_trajectory", "/ego_vehicle/planned_trajectory", storePlannedTrajectory);
 	rbc.subscribe("scenario_trigger", "/scenario_trigger", receiveScenarioTrigger);
-	rbc.subscribe("trajectory", "/planning/scenario_planning/lane_driving/trajectory", receiveTrajectory);
+	// rbc.subscribe("trajectory", "/planning/scenario_planning/lane_driving/trajectory", receiveTrajectory);
 	while (1) {
 	}
 }
@@ -378,13 +378,13 @@ void AutowareService::receiveFromMcService(){
 					json tp;
 					tp["time"]["sec"] = v.sec();
 					tp["time"]["nsec"] = v.nsec();
-					tp["pose"]["position"]["x"] = v.deltalat();
-					tp["pose"]["position"]["y"] = v.deltalong();
-					tp["pose"]["position"]["z"] = v.deltaalt();
-					tp["pose"]["orientation"]["x"] = v.x();
-					tp["pose"]["orientation"]["y"] = v.y();
-					tp["pose"]["orientation"]["z"] = v.z();
-					tp["pose"]["orientation"]["x"] = v.w();
+					tp["pose"]["position"]["x"] = (double)v.deltalat() / pow(10, 3);
+					tp["pose"]["position"]["y"] = (double)v.deltalong() / pow(10, 3);
+					tp["pose"]["position"]["z"] = (double)v.deltaalt() / pow(10, 3);
+					tp["pose"]["orientation"]["x"] = (double)v.x() / pow(10, 9);
+					tp["pose"]["orientation"]["y"] = (double)v.y() / pow(10, 9);
+					tp["pose"]["orientation"]["z"] = (double)v.z() / pow(10, 9);
+					tp["pose"]["orientation"]["x"] = (double)v.w() / pow(10, 9);
 					msg["trajectory"].push_back(tp);
 				}
 				d.Parse(msg.dump().c_str());
@@ -398,13 +398,13 @@ void AutowareService::receiveFromMcService(){
 					json tp;
 					tp["time"]["sec"] = v.sec();
 					tp["time"]["nsec"] = v.nsec();
-					tp["pose"]["position"]["x"] = v.deltalat();
-					tp["pose"]["position"]["y"] = v.deltalong();
-					tp["pose"]["position"]["z"] = v.deltaalt();
-					tp["pose"]["orientation"]["x"] = v.x();
-					tp["pose"]["orientation"]["y"] = v.y();
-					tp["pose"]["orientation"]["z"] = v.z();
-					tp["pose"]["orientation"]["x"] = v.w();
+					tp["pose"]["position"]["x"] = (double)v.deltalat() / pow(10, 3);
+					tp["pose"]["position"]["y"] = (double)v.deltalong() / pow(10, 3);
+					tp["pose"]["position"]["z"] = (double)v.deltaalt() / pow(10, 3);
+					tp["pose"]["orientation"]["x"] = (double)v.x() / pow(10, 9);
+					tp["pose"]["orientation"]["y"] = (double)v.y() / pow(10, 9);
+					tp["pose"]["orientation"]["z"] = (double)v.z() / pow(10, 9);
+					tp["pose"]["orientation"]["x"] = (double)v.w() / pow(10, 9);
 					msg["trajectory"].push_back(tp);
 				}
 				d.Parse(msg.dump().c_str());
@@ -418,12 +418,13 @@ void AutowareService::receiveFromMcService(){
 					json tp;
 					tp["time"]["sec"] = v.sec();
 					tp["time"]["nsec"] = v.nsec();
-					tp["pose"]["position"]["y"] = v.deltalong();
-					tp["pose"]["position"]["z"] = v.deltaalt();
-					tp["pose"]["orientation"]["x"] = v.x();
-					tp["pose"]["orientation"]["y"] = v.y();
-					tp["pose"]["orientation"]["z"] = v.z();
-					tp["pose"]["orientation"]["x"] = v.w();
+					tp["pose"]["position"]["x"] = (double)v.deltalat() / pow(10, 3);
+					tp["pose"]["position"]["y"] = (double)v.deltalong() / pow(10, 3);
+					tp["pose"]["position"]["z"] = (double)v.deltaalt() / pow(10, 3);
+					tp["pose"]["orientation"]["x"] = (double)v.x() / pow(10, 9);
+					tp["pose"]["orientation"]["y"] = (double)v.y() / pow(10, 9);
+					tp["pose"]["orientation"]["z"] = (double)v.z() / pow(10, 9);
+					tp["pose"]["orientation"]["x"] = (double)v.w() / pow(10, 9);
 					msg["trajectory"].push_back(tp);
 				}
 				d.Parse(msg.dump().c_str());
