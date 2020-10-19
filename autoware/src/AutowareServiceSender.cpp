@@ -349,6 +349,11 @@ void AutowareService::testSender(int msgType){
 			tp.deltalong = l;
 			tp.deltaalt = l;
 			tp.sec = l;
+			tp.x = l;
+			tp.y = l;
+			tp.z = l;
+			tp.w = l;
+			tp.sec = l;
 			s_message.trajectory.push_back(tp);
 			// std::cout << l << std::endl;
 		}
@@ -365,15 +370,28 @@ void AutowareService::receiveFromMcService(){
 		pair<string, string> received = mReceiverFromMcService->receive();
 		std::cout << "receive from mcservice" << std::endl;
 
-		serializedAutoware = received.first;
+		serializedAutoware = received.second;
 		mcm.ParseFromString(serializedAutoware);
 		its::McmParameters_ControlFlag controlFlag = mcm.maneuver().mcmparameters().controlflag();
 		json msg;
 		rapidjson::Document d;
 		msg["targetstationid"] = mcm.header().stationid();
 		msg["trajectory"] = json::array();
+		json tp;
+		tp["time"]["sec"] = 0;
+		tp["time"]["nsec"] = 0;
+		tp["pose"]["position"]["x"] = 0;
+		tp["pose"]["position"]["y"] = 0;
+		tp["pose"]["position"]["z"] = 0;
+		tp["pose"]["orientation"]["x"] = 0;
+		tp["pose"]["orientation"]["y"] = 0;
+		tp["pose"]["orientation"]["z"] = 0;
+		tp["pose"]["orientation"]["w"] = 0;
+		msg["startpoint"] = tp;
+		msg["targetpoint"] = tp;
 		switch (controlFlag) {
 			case its::McmParameters_ControlFlag_INTENTION_REQUEST:
+				std::cout << mcm.maneuver().mcmparameters().maneuvercontainer().intentionrequestcontainer().plannedtrajectory().size() << std::endl;
 				for (auto& v : mcm.maneuver().mcmparameters().maneuvercontainer().intentionrequestcontainer().plannedtrajectory()) {
 					json tp;
 					tp["time"]["sec"] = v.sec();
@@ -384,7 +402,7 @@ void AutowareService::receiveFromMcService(){
 					tp["pose"]["orientation"]["x"] = (double)v.x() / pow(10, 9);
 					tp["pose"]["orientation"]["y"] = (double)v.y() / pow(10, 9);
 					tp["pose"]["orientation"]["z"] = (double)v.z() / pow(10, 9);
-					tp["pose"]["orientation"]["x"] = (double)v.w() / pow(10, 9);
+					tp["pose"]["orientation"]["w"] = (double)v.w() / pow(10, 9);
 					msg["trajectory"].push_back(tp);
 				}
 				d.Parse(msg.dump().c_str());
@@ -404,10 +422,11 @@ void AutowareService::receiveFromMcService(){
 					tp["pose"]["orientation"]["x"] = (double)v.x() / pow(10, 9);
 					tp["pose"]["orientation"]["y"] = (double)v.y() / pow(10, 9);
 					tp["pose"]["orientation"]["z"] = (double)v.z() / pow(10, 9);
-					tp["pose"]["orientation"]["x"] = (double)v.w() / pow(10, 9);
+					tp["pose"]["orientation"]["w"] = (double)v.w() / pow(10, 9);
 					msg["trajectory"].push_back(tp);
 				}
 				d.Parse(msg.dump().c_str());
+				std::cout << msg.dump().c_str() << std::endl;
 				rbc.addClient("calculate_trajectory");
 				rbc.advertise("calculate_trajectory", "/other_vehicle/planned_trajectory/calculate", "mcservice_msgs/TrajectoryWithTargetStationId");
 				rbc.publish("/other_vehicle/planned_trajectory/calculate", d);
@@ -424,7 +443,7 @@ void AutowareService::receiveFromMcService(){
 					tp["pose"]["orientation"]["x"] = (double)v.x() / pow(10, 9);
 					tp["pose"]["orientation"]["y"] = (double)v.y() / pow(10, 9);
 					tp["pose"]["orientation"]["z"] = (double)v.z() / pow(10, 9);
-					tp["pose"]["orientation"]["x"] = (double)v.w() / pow(10, 9);
+					tp["pose"]["orientation"]["w"] = (double)v.w() / pow(10, 9);
 					msg["trajectory"].push_back(tp);
 				}
 				d.Parse(msg.dump().c_str());

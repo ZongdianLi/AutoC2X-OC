@@ -170,6 +170,9 @@ void McService::receive() {
 			case Waiting:
 				if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_INTENTION_REQUEST) {
 					std::cout << mcmProto.maneuver().mcmparameters().maneuvercontainer().intentionrequestcontainer().plannedtrajectory_size() << std::endl;
+					for (auto& tp : mcmProto.maneuver().mcmparameters().maneuvercontainer().intentionrequestcontainer().plannedtrajectory()) {
+						std::cout << tp.x() << std::endl;
+					}
 					mcmProto.SerializeToString(&serializedProtoMcm);
 					mSenderToAutoware->send(envelope, serializedProtoMcm);
 					state = CollisionDetecting;
@@ -509,7 +512,7 @@ MCM_t* McService::generateMcm(bool isAutoware, Type type) {
 	// Maneuver Container
 
 	Trajectory_t* trajectory = static_cast<Trajectory_t*>(calloc(1, sizeof(Trajectory_t)));
-		
+
 	for (int i=0; i<mLatestAutoware.trajectory_size(); i++) {
 		TrajectoryPoint_t* trajectory_point = static_cast<TrajectoryPoint_t*>(calloc(1, sizeof(TrajectoryPoint_t)));
 		if (trajectory_point == NULL) {
