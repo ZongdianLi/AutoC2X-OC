@@ -546,11 +546,43 @@ MCM_t* McService::generateMcm(bool isAutoware, Type type) {
 				mcm->mcm.mcmParameters.maneuverContainer.choice.intentionReplyContainer.plannedTrajectory = *trajectory;
 				break;
 			case Prescription:
-				mcm->mcm.mcmParameters.maneuverContainer.present = ManeuverContainer_PR_prescriptionContainer;
-				mcm->mcm.mcmParameters.controlFlag = controlFlag_prescription;
-				mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.targetStationID = mLatestAutoware.targetstationid();
-				mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory = *trajectory;
-				break;
+				{
+					mcm->mcm.mcmParameters.maneuverContainer.present = ManeuverContainer_PR_prescriptionContainer;
+					mcm->mcm.mcmParameters.controlFlag = controlFlag_prescription;
+					mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.targetStationID = mLatestAutoware.targetstationid();
+					TrajectoryPoint_t* start_point = static_cast<TrajectoryPoint_t*>(calloc(1, sizeof(TrajectoryPoint_t)));
+					TrajectoryPoint_t* target_point = static_cast<TrajectoryPoint_t*>(calloc(1, sizeof(TrajectoryPoint_t)));
+					if (start_point == NULL) {
+						perror("calloc() failed");
+						exit(EXIT_FAILURE);
+					}
+					start_point->pathPosition.deltaLatitude = mLatestAutoware.startpoint().deltalat();
+					start_point->pathPosition.deltaLongitude = mLatestAutoware.startpoint().deltalong();
+					start_point->pathPosition.deltaAltitude = mLatestAutoware.startpoint().deltaalt();
+					start_point->pathOrientation.x = mLatestAutoware.startpoint().x();
+					start_point->pathOrientation.y = mLatestAutoware.startpoint().y();
+					start_point->pathOrientation.z = mLatestAutoware.startpoint().z();
+					start_point->pathOrientation.w = mLatestAutoware.startpoint().w();
+					start_point->pathDeltaTime.sec = mLatestAutoware.startpoint().sec();
+					start_point->pathDeltaTime.nsec = mLatestAutoware.startpoint().nsec();
+					if (target_point == NULL) {
+						perror("calloc() failed");
+						exit(EXIT_FAILURE);
+					}
+					target_point->pathPosition.deltaLatitude = mLatestAutoware.targetpoint().deltalat();
+					target_point->pathPosition.deltaLongitude = mLatestAutoware.targetpoint().deltalong();
+					target_point->pathPosition.deltaAltitude = mLatestAutoware.targetpoint().deltaalt();
+					target_point->pathOrientation.x = mLatestAutoware.targetpoint().x();
+					target_point->pathOrientation.y = mLatestAutoware.targetpoint().y();
+					target_point->pathOrientation.z = mLatestAutoware.targetpoint().z();
+					target_point->pathOrientation.w = mLatestAutoware.targetpoint().w();
+					target_point->pathDeltaTime.sec = mLatestAutoware.targetpoint().sec();
+					target_point->pathDeltaTime.nsec = mLatestAutoware.targetpoint().nsec();
+					mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.optionalDescription.startPoint = start_point;
+					mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.optionalDescription.targetPoint = target_point;
+					mcm->mcm.mcmParameters.maneuverContainer.choice.prescriptionContainer.desiredTrajectory = *trajectory;
+					break;
+				}
 			case Acceptance:
 				mcm->mcm.mcmParameters.maneuverContainer.present = ManeuverContainer_PR_acceptanceContainer;
 				mcm->mcm.mcmParameters.controlFlag = controlFlag_acceptance;

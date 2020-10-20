@@ -53,6 +53,28 @@ void setData() {
 	autoware.set_collisiondetected(s_message.collisiondetected);
 	autoware.set_adviceaccepted(s_message.adviceaccepted);
 	autoware.set_scenarioend(s_message.scenarioend);
+	its::TrajectoryPoint* startpoint = new its::TrajectoryPoint();
+	startpoint->set_deltalat(s_message.startpoint.deltalat);
+	startpoint->set_deltalong(s_message.startpoint.deltalong);
+	startpoint->set_deltaalt(s_message.startpoint.deltaalt);
+	startpoint->set_x(s_message.startpoint.x);
+	startpoint->set_y(s_message.startpoint.y);
+	startpoint->set_z(s_message.startpoint.z);
+	startpoint->set_w(s_message.startpoint.w);
+	startpoint->set_sec(s_message.startpoint.sec);
+	startpoint->set_nsec(s_message.startpoint.nsec);
+	its::TrajectoryPoint* targetpoint = new its::TrajectoryPoint();
+	targetpoint->set_deltalat(s_message.targetpoint.deltalat);
+	targetpoint->set_deltalong(s_message.targetpoint.deltalong);
+	targetpoint->set_deltaalt(s_message.targetpoint.deltaalt);
+	targetpoint->set_x(s_message.targetpoint.x);
+	targetpoint->set_y(s_message.targetpoint.y);
+	targetpoint->set_z(s_message.targetpoint.z);
+	targetpoint->set_w(s_message.targetpoint.w);
+	targetpoint->set_sec(s_message.targetpoint.sec);
+	targetpoint->set_nsec(s_message.targetpoint.nsec);
+	autoware.set_allocated_startpoint(startpoint);
+	autoware.set_allocated_targetpoint(targetpoint);
 
 	// for (trajectory_point tp : ego_vehicle_trajectory) {
 	for (trajectory_point tp : s_message.trajectory) {
@@ -156,20 +178,37 @@ void calculatedDesiredTrajectory(std::shared_ptr<WsClient::Connection>, std::sha
 	s_message.targetstationid = d["msg"]["target_stationID"].GetInt();
 	const rapidjson::Value& c = d["msg"]["trajectory"].GetArray();
 	struct trajectory_point tp;
-	for (auto& d : c.GetArray()) {
-		tp.deltalat = (int)d["pose"]["position"]["x"].GetFloat() * pow(10, 3);
-		tp.deltalong = (int)d["pose"]["position"]["y"].GetFloat() * pow(10, 3);
-		tp.deltaalt = (int)d["pose"]["position"]["z"].GetFloat() * pow(10, 3);
-		tp.x = (int)d["pose"]["orientation"]["x"].GetFloat() * pow(10, 9);
-		tp.y = (int)d["pose"]["orientation"]["y"].GetFloat() * pow(10, 9);
-		tp.z = (int)d["pose"]["orientation"]["z"].GetFloat() * pow(10, 9);
-		tp.w = (int)d["pose"]["orientation"]["w"].GetFloat() * pow(10, 9);
-		tp.sec = d["header"]["stamp"]["secs"].GetInt();
-		tp.nsec = d["header"]["stamp"]["nsecs"].GetInt();
+	for (auto& v : c.GetArray()) {
+		tp.deltalat = (int)v["pose"]["position"]["x"].GetFloat() * pow(10, 3);
+		tp.deltalong = (int)v["pose"]["position"]["y"].GetFloat() * pow(10, 3);
+		tp.deltaalt = (int)v["pose"]["position"]["z"].GetFloat() * pow(10, 3);
+		tp.x = (int)v["pose"]["orientation"]["x"].GetFloat() * pow(10, 9);
+		tp.y = (int)v["pose"]["orientation"]["y"].GetFloat() * pow(10, 9);
+		tp.z = (int)v["pose"]["orientation"]["z"].GetFloat() * pow(10, 9);
+		tp.w = (int)v["pose"]["orientation"]["w"].GetFloat() * pow(10, 9);
+		tp.sec = v["header"]["stamp"]["secs"].GetInt();
+		tp.nsec = v["header"]["stamp"]["nsecs"].GetInt();
 		s_message.trajectory.push_back(tp);
 		// std::cout << "list value:" << e << std::endl;
 	}
-
+	s_message.startpoint.deltalat = (int)d["msg"]["startpoint"]["pose"]["position"]["x"].GetFloat() * pow(10, 3);
+	s_message.startpoint.deltalong = (int)d["msg"]["startpoint"]["pose"]["position"]["y"].GetFloat() * pow(10, 3);
+	s_message.startpoint.deltaalt = (int)d["msg"]["startpoint"]["pose"]["position"]["z"].GetFloat() * pow(10, 3);
+	s_message.startpoint.x = (int)d["msg"]["startpoint"]["pose"]["orientation"]["x"].GetFloat() * pow(10, 9);
+	s_message.startpoint.y = (int)d["msg"]["startpoint"]["pose"]["orientation"]["y"].GetFloat() * pow(10, 9);
+	s_message.startpoint.z = (int)d["msg"]["startpoint"]["pose"]["orientation"]["z"].GetFloat() * pow(10, 9);
+	s_message.startpoint.w = (int)d["msg"]["startpoint"]["pose"]["orientation"]["w"].GetFloat() * pow(10, 9);
+	s_message.startpoint.sec = d["msg"]["startpoint"]["header"]["stamp"]["secs"].GetInt();
+	s_message.startpoint.nsec = d["msg"]["startpoint"]["header"]["stamp"]["nsecs"].GetInt();
+	s_message.targetpoint.deltalat = (int)d["msg"]["targetpoint"]["pose"]["position"]["x"].GetFloat() * pow(10, 3);
+	s_message.targetpoint.deltalong = (int)d["msg"]["targetpoint"]["pose"]["position"]["y"].GetFloat() * pow(10, 3);
+	s_message.targetpoint.deltaalt = (int)d["msg"]["targetpoint"]["pose"]["position"]["z"].GetFloat() * pow(10, 3);
+	s_message.targetpoint.x = (int)d["msg"]["targetpoint"]["pose"]["orientation"]["x"].GetFloat() * pow(10, 9);
+	s_message.targetpoint.y = (int)d["msg"]["targetpoint"]["pose"]["orientation"]["y"].GetFloat() * pow(10, 9);
+	s_message.targetpoint.z = (int)d["msg"]["targetpoint"]["pose"]["orientation"]["z"].GetFloat() * pow(10, 9);
+	s_message.targetpoint.w = (int)d["msg"]["targetpoint"]["pose"]["orientation"]["w"].GetFloat() * pow(10, 9);
+	s_message.targetpoint.sec = d["msg"]["targetpoint"]["header"]["stamp"]["secs"].GetInt();
+	s_message.targetpoint.nsec = d["msg"]["targetpoint"]["header"]["stamp"]["nsecs"].GetInt();
 	setData();
 	rbc.removeClient("calculate_trajectory");
 }
@@ -391,7 +430,6 @@ void AutowareService::receiveFromMcService(){
 		msg["targetpoint"] = tp;
 		switch (controlFlag) {
 			case its::McmParameters_ControlFlag_INTENTION_REQUEST:
-				std::cout << mcm.maneuver().mcmparameters().maneuvercontainer().intentionrequestcontainer().plannedtrajectory().size() << std::endl;
 				for (auto& v : mcm.maneuver().mcmparameters().maneuvercontainer().intentionrequestcontainer().plannedtrajectory()) {
 					json tp;
 					tp["time"]["sec"] = v.sec();
@@ -426,32 +464,55 @@ void AutowareService::receiveFromMcService(){
 					msg["trajectory"].push_back(tp);
 				}
 				d.Parse(msg.dump().c_str());
-				std::cout << msg.dump().c_str() << std::endl;
 				rbc.addClient("calculate_trajectory");
 				rbc.advertise("calculate_trajectory", "/other_vehicle/planned_trajectory/calculate", "mcservice_msgs/TrajectoryWithTargetStationId");
 				rbc.publish("/other_vehicle/planned_trajectory/calculate", d);
 				rbc.subscribe("calculate_trajectory", "/other_vehicle/desired_trajectory", calculatedDesiredTrajectory);
 				break;
 			case its::McmParameters_ControlFlag_PRESCRIPTION:
-				for (auto& v : mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().desiredtrajectory()) {
-					json tp;
-					tp["time"]["sec"] = v.sec();
-					tp["time"]["nsec"] = v.nsec();
-					tp["pose"]["position"]["x"] = (double)v.deltalat() / pow(10, 3);
-					tp["pose"]["position"]["y"] = (double)v.deltalong() / pow(10, 3);
-					tp["pose"]["position"]["z"] = (double)v.deltaalt() / pow(10, 3);
-					tp["pose"]["orientation"]["x"] = (double)v.x() / pow(10, 9);
-					tp["pose"]["orientation"]["y"] = (double)v.y() / pow(10, 9);
-					tp["pose"]["orientation"]["z"] = (double)v.z() / pow(10, 9);
-					tp["pose"]["orientation"]["w"] = (double)v.w() / pow(10, 9);
-					msg["trajectory"].push_back(tp);
+				{
+					json start_tp;
+					start_tp["time"]["sec"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().startpoint().sec();
+					start_tp["time"]["nsec"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().startpoint().nsec();
+					start_tp["pose"]["position"]["x"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().startpoint().deltalat() / pow(10, 3);
+					start_tp["pose"]["position"]["y"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().startpoint().deltalong() / pow(10, 3);
+					start_tp["pose"]["position"]["z"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().startpoint().deltaalt() / pow(10, 3);
+					start_tp["pose"]["orientation"]["x"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().startpoint().x() / pow(10, 9);
+					start_tp["pose"]["orientation"]["y"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().startpoint().y() / pow(10, 9);
+					start_tp["pose"]["orientation"]["z"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().startpoint().z() / pow(10, 9);
+					start_tp["pose"]["orientation"]["w"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().startpoint().w() / pow(10, 9);
+					json target_tp;
+					target_tp["time"]["sec"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().targetpoint().sec();
+					target_tp["time"]["nsec"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().targetpoint().nsec();
+					target_tp["pose"]["position"]["x"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().targetpoint().deltalat() / pow(10, 3);
+					target_tp["pose"]["position"]["y"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().targetpoint().deltalong() / pow(10, 3);
+					target_tp["pose"]["position"]["z"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().targetpoint().deltaalt() / pow(10, 3);
+					target_tp["pose"]["orientation"]["x"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().targetpoint().x() / pow(10, 9);
+					target_tp["pose"]["orientation"]["y"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().targetpoint().y() / pow(10, 9);
+					target_tp["pose"]["orientation"]["z"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().targetpoint().z() / pow(10, 9);
+					target_tp["pose"]["orientation"]["w"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().targetpoint().w() / pow(10, 9);
+					msg["startpoint"] = start_tp;
+					msg["targetpoint"] = target_tp;
+					for (auto& v : mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().desiredtrajectory()) {
+						json tp;
+						tp["time"]["sec"] = v.sec();
+						tp["time"]["nsec"] = v.nsec();
+						tp["pose"]["position"]["x"] = (double)v.deltalat() / pow(10, 3);
+						tp["pose"]["position"]["y"] = (double)v.deltalong() / pow(10, 3);
+						tp["pose"]["position"]["z"] = (double)v.deltaalt() / pow(10, 3);
+						tp["pose"]["orientation"]["x"] = (double)v.x() / pow(10, 9);
+						tp["pose"]["orientation"]["y"] = (double)v.y() / pow(10, 9);
+						tp["pose"]["orientation"]["z"] = (double)v.z() / pow(10, 9);
+						tp["pose"]["orientation"]["w"] = (double)v.w() / pow(10, 9);
+						msg["trajectory"].push_back(tp);
+					}
+					d.Parse(msg.dump().c_str());
+					rbc.addClient("validate_trajectory");
+					rbc.advertise("validate_trajectory", "/ego_vehicle/desired_trajectory", "mcservice_msgs/TrajectoryWithTargetStationId");
+					rbc.publish("/ego_vehicle/desired_trajectory", d);
+					rbc.subscribe("validate_trajectory", "/accept_desired_trajectory", validatedDesiredTrajectory);
+					break;
 				}
-				d.Parse(msg.dump().c_str());
-				rbc.addClient("validate_trajectory");
-				rbc.advertise("validate_trajectory", "/ego_vehicle/desired_trajectory", "mcservice_msgs/TrajectoryWithTargetStationId");
-				rbc.publish("/ego_vehicle/desired_trajectory", d);
-				rbc.subscribe("validate_trajectory", "/accept_desired_trajectory", validatedDesiredTrajectory);
-				break;
 			case its::McmParameters_ControlFlag_HEARTBEAT:
 				break;
 			default:

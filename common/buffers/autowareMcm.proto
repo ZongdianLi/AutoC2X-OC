@@ -11,6 +11,8 @@ message AUTOWAREMCM {
 	optional int64 scenarioEnd = 5;
 	optional int64 targetStationID = 6;
 	optional int64 collisionDetected = 7;
-	repeated its.TrajectoryPoint trajectory = 8;
-	optional int64 adviceAccepted = 9;
+	optional its.TrajectoryPoint startpoint = 8;
+	optional its.TrajectoryPoint targetpoint = 9;
+	repeated its.TrajectoryPoint trajectory = 10;
+	optional int64 adviceAccepted = 11;
 }
