@@ -417,8 +417,8 @@ void AutowareService::receiveFromMcService(){
 		msg["targetstationid"] = mcm.header().stationid();
 		msg["trajectory"] = json::array();
 		json tp;
-		tp["time"]["sec"] = 0;
-		tp["time"]["nsec"] = 0;
+		tp["time"]["secs"] = 0;
+		tp["time"]["nsecs"] = 0;
 		tp["pose"]["position"]["x"] = 0;
 		tp["pose"]["position"]["y"] = 0;
 		tp["pose"]["position"]["z"] = 0;
@@ -432,8 +432,8 @@ void AutowareService::receiveFromMcService(){
 			case its::McmParameters_ControlFlag_INTENTION_REQUEST:
 				for (auto& v : mcm.maneuver().mcmparameters().maneuvercontainer().intentionrequestcontainer().plannedtrajectory()) {
 					json tp;
-					tp["time"]["sec"] = v.sec();
-					tp["time"]["nsec"] = v.nsec();
+					tp["time"]["secs"] = v.sec();
+					tp["time"]["nsecs"] = v.nsec();
 					tp["pose"]["position"]["x"] = (double)v.deltalat() / pow(10, 3);
 					tp["pose"]["position"]["y"] = (double)v.deltalong() / pow(10, 3);
 					tp["pose"]["position"]["z"] = (double)v.deltaalt() / pow(10, 3);
@@ -452,8 +452,8 @@ void AutowareService::receiveFromMcService(){
 			case its::McmParameters_ControlFlag_INTENTION_REPLY:
 				for (auto& v : mcm.maneuver().mcmparameters().maneuvercontainer().intentionreplycontainer().plannedtrajectory()) {
 					json tp;
-					tp["time"]["sec"] = v.sec();
-					tp["time"]["nsec"] = v.nsec();
+					tp["time"]["secs"] = v.sec();
+					tp["time"]["nsecs"] = v.nsec();
 					tp["pose"]["position"]["x"] = (double)v.deltalat() / pow(10, 3);
 					tp["pose"]["position"]["y"] = (double)v.deltalong() / pow(10, 3);
 					tp["pose"]["position"]["z"] = (double)v.deltaalt() / pow(10, 3);
@@ -472,8 +472,8 @@ void AutowareService::receiveFromMcService(){
 			case its::McmParameters_ControlFlag_PRESCRIPTION:
 				{
 					json start_tp;
-					start_tp["time"]["sec"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().startpoint().sec();
-					start_tp["time"]["nsec"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().startpoint().nsec();
+					start_tp["time"]["secs"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().startpoint().sec();
+					start_tp["time"]["nsecs"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().startpoint().nsec();
 					start_tp["pose"]["position"]["x"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().startpoint().deltalat() / pow(10, 3);
 					start_tp["pose"]["position"]["y"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().startpoint().deltalong() / pow(10, 3);
 					start_tp["pose"]["position"]["z"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().startpoint().deltaalt() / pow(10, 3);
@@ -482,8 +482,8 @@ void AutowareService::receiveFromMcService(){
 					start_tp["pose"]["orientation"]["z"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().startpoint().z() / pow(10, 9);
 					start_tp["pose"]["orientation"]["w"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().startpoint().w() / pow(10, 9);
 					json target_tp;
-					target_tp["time"]["sec"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().targetpoint().sec();
-					target_tp["time"]["nsec"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().targetpoint().nsec();
+					target_tp["time"]["secs"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().targetpoint().sec();
+					target_tp["time"]["nsecs"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().targetpoint().nsec();
 					target_tp["pose"]["position"]["x"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().targetpoint().deltalat() / pow(10, 3);
 					target_tp["pose"]["position"]["y"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().targetpoint().deltalong() / pow(10, 3);
 					target_tp["pose"]["position"]["z"] = mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().optionaldescription().targetpoint().deltaalt() / pow(10, 3);
@@ -495,8 +495,8 @@ void AutowareService::receiveFromMcService(){
 					msg["targetpoint"] = target_tp;
 					for (auto& v : mcm.maneuver().mcmparameters().maneuvercontainer().prescriptioncontainer().desiredtrajectory()) {
 						json tp;
-						tp["time"]["sec"] = v.sec();
-						tp["time"]["nsec"] = v.nsec();
+						tp["time"]["secs"] = v.sec();
+						tp["time"]["nsecs"] = v.nsec();
 						tp["pose"]["position"]["x"] = (double)v.deltalat() / pow(10, 3);
 						tp["pose"]["position"]["y"] = (double)v.deltalong() / pow(10, 3);
 						tp["pose"]["position"]["z"] = (double)v.deltaalt() / pow(10, 3);
@@ -507,6 +507,7 @@ void AutowareService::receiveFromMcService(){
 						msg["trajectory"].push_back(tp);
 					}
 					d.Parse(msg.dump().c_str());
+					std::cout << msg.dump().c_str() << std::endl;
 					rbc.addClient("validate_trajectory");
 					rbc.advertise("validate_trajectory", "/ego_vehicle/desired_trajectory", "mcservice_msgs/TrajectoryWithTargetStationId");
 					rbc.publish("/ego_vehicle/desired_trajectory", d);
