@@ -120,20 +120,21 @@ void storePlannedTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_p
 	ego_vehicle_trajectory.clear();
 
 	// ROSトピックによって後で修正
+	// std::cout << d["msg"]["trajectory"].Size() << std::endl;
 	for (auto& v : d["msg"]["trajectory"].GetArray()) {
 		trajectory_point tp;
-		// std::cout << "time: " << v["time"].GetFloat() << std::endl;
-		tp.deltalat = (int)v["pose"]["position"]["x"].GetFloat() * pow(10, 3);
-		tp.deltalong = (int)v["pose"]["position"]["y"].GetFloat() * pow(10, 3);
-		tp.deltaalt = (int)v["pose"]["position"]["z"].GetFloat() * pow(10, 3);
-		tp.x = (int)v["pose"]["oriantation"]["x"].GetFloat() * pow(10, 9);
-		tp.y = (int)v["pose"]["oriantation"]["y"].GetFloat() * pow(10, 9);
-		tp.z = (int)v["pose"]["oriantation"]["z"].GetFloat() * pow(10, 9);
-		tp.w = (int)v["pose"]["oriantation"]["w"].GetFloat() * pow(10, 9);
-		tp.sec = v["header"]["stamp"]["secs"].GetInt();
-		tp.nsec = v["header"]["stamp"]["nsecs"].GetInt();
+		tp.deltalat = (int)(v["pose"]["position"]["x"].GetDouble() * pow(10, 3));
+		tp.deltalong = (int)(v["pose"]["position"]["y"].GetDouble() * pow(10, 3));
+		tp.deltaalt = (int)(v["pose"]["position"]["z"].GetDouble() * pow(10, 3));
+		tp.x = (int)(v["pose"]["orientation"]["x"].GetDouble() * pow(10, 9));
+		tp.y = (int)(v["pose"]["orientation"]["y"].GetDouble() * pow(10, 9));
+		tp.z = (int)(v["pose"]["orientation"]["z"].GetDouble() * pow(10, 9));
+		tp.w = (int)(v["pose"]["orientation"]["w"].GetDouble() * pow(10, 9));
+		tp.sec = v["time"]["secs"].GetInt();
+		tp.nsec = v["time"]["nsecs"].GetInt();
 		ego_vehicle_trajectory.push_back(tp);
 	}
+	// std::cout << ego_vehicle_trajectory.size() << std::endl;
 }
 
 void receiveScenarioTrigger(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message) {
@@ -143,9 +144,24 @@ void receiveScenarioTrigger(std::shared_ptr<WsClient::Connection>, std::shared_p
 	rapidjson::Document d;
 	d.Parse(message.c_str());
 	if (!(d["msg"].HasMember("data"))) return;
-	// std::cout << "aaaaaaaaa" << std::endl;
 	s_message.id = 0;
 	s_message.scenario = d["msg"]["data"].GetInt();
+	s_message.trajectory = ego_vehicle_trajectory;
+	s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_ADVERTISE;
+	// s_message.targetstationid = d["msg"]["data"].GetInt();
+	setData();
+}
+
+void receiveScenarioTriggerEnd(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message) {
+	// triggerが来たら保存しておいたego_vehicle_trajectoryをmcserviceに返す
+	std::string message = in_message->string();
+	std::cout << "subscriberCallback(): Message Received: " << message << std::endl;
+	rapidjson::Document d;
+	d.Parse(message.c_str());
+	if (!(d["msg"].HasMember("data"))) return;
+	s_message.id = 0;
+	s_message.scenarioend = 1;
+	s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_SCENARIO_FINISH;
 	// s_message.targetstationid = d["msg"]["data"].GetInt();
 	setData();
 }
@@ -162,7 +178,9 @@ void detectCollision(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsCl
 	} else {
 		s_message.collisiondetected = 1;
 		s_message.targetstationid = d["msg"]["data"]["target_stationID"].GetInt();
+		s_message.trajectory = ego_vehicle_trajectory;
 	}
+	s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_COLLISION_DETECTION_RESULT;
 	setData();
 	rbc.removeClient("collision_detect");
 }
@@ -179,36 +197,37 @@ void calculatedDesiredTrajectory(std::shared_ptr<WsClient::Connection>, std::sha
 	const rapidjson::Value& c = d["msg"]["trajectory"].GetArray();
 	struct trajectory_point tp;
 	for (auto& v : c.GetArray()) {
-		tp.deltalat = (int)v["pose"]["position"]["x"].GetFloat() * pow(10, 3);
-		tp.deltalong = (int)v["pose"]["position"]["y"].GetFloat() * pow(10, 3);
-		tp.deltaalt = (int)v["pose"]["position"]["z"].GetFloat() * pow(10, 3);
-		tp.x = (int)v["pose"]["orientation"]["x"].GetFloat() * pow(10, 9);
-		tp.y = (int)v["pose"]["orientation"]["y"].GetFloat() * pow(10, 9);
-		tp.z = (int)v["pose"]["orientation"]["z"].GetFloat() * pow(10, 9);
-		tp.w = (int)v["pose"]["orientation"]["w"].GetFloat() * pow(10, 9);
+		tp.deltalat = (int)v["pose"]["position"]["x"].GetDouble() * pow(10, 3);
+		tp.deltalong = (int)v["pose"]["position"]["y"].GetDouble() * pow(10, 3);
+		tp.deltaalt = (int)v["pose"]["position"]["z"].GetDouble() * pow(10, 3);
+		tp.x = (int)v["pose"]["orientation"]["x"].GetDouble() * pow(10, 9);
+		tp.y = (int)v["pose"]["orientation"]["y"].GetDouble() * pow(10, 9);
+		tp.z = (int)v["pose"]["orientation"]["z"].GetDouble() * pow(10, 9);
+		tp.w = (int)v["pose"]["orientation"]["w"].GetDouble() * pow(10, 9);
 		tp.sec = v["header"]["stamp"]["secs"].GetInt();
 		tp.nsec = v["header"]["stamp"]["nsecs"].GetInt();
 		s_message.trajectory.push_back(tp);
 		// std::cout << "list value:" << e << std::endl;
 	}
-	s_message.startpoint.deltalat = (int)d["msg"]["startpoint"]["pose"]["position"]["x"].GetFloat() * pow(10, 3);
-	s_message.startpoint.deltalong = (int)d["msg"]["startpoint"]["pose"]["position"]["y"].GetFloat() * pow(10, 3);
-	s_message.startpoint.deltaalt = (int)d["msg"]["startpoint"]["pose"]["position"]["z"].GetFloat() * pow(10, 3);
-	s_message.startpoint.x = (int)d["msg"]["startpoint"]["pose"]["orientation"]["x"].GetFloat() * pow(10, 9);
-	s_message.startpoint.y = (int)d["msg"]["startpoint"]["pose"]["orientation"]["y"].GetFloat() * pow(10, 9);
-	s_message.startpoint.z = (int)d["msg"]["startpoint"]["pose"]["orientation"]["z"].GetFloat() * pow(10, 9);
-	s_message.startpoint.w = (int)d["msg"]["startpoint"]["pose"]["orientation"]["w"].GetFloat() * pow(10, 9);
+	s_message.startpoint.deltalat = (int)d["msg"]["startpoint"]["pose"]["position"]["x"].GetDouble() * pow(10, 3);
+	s_message.startpoint.deltalong = (int)d["msg"]["startpoint"]["pose"]["position"]["y"].GetDouble() * pow(10, 3);
+	s_message.startpoint.deltaalt = (int)d["msg"]["startpoint"]["pose"]["position"]["z"].GetDouble() * pow(10, 3);
+	s_message.startpoint.x = (int)d["msg"]["startpoint"]["pose"]["orientation"]["x"].GetDouble() * pow(10, 9);
+	s_message.startpoint.y = (int)d["msg"]["startpoint"]["pose"]["orientation"]["y"].GetDouble() * pow(10, 9);
+	s_message.startpoint.z = (int)d["msg"]["startpoint"]["pose"]["orientation"]["z"].GetDouble() * pow(10, 9);
+	s_message.startpoint.w = (int)d["msg"]["startpoint"]["pose"]["orientation"]["w"].GetDouble() * pow(10, 9);
 	s_message.startpoint.sec = d["msg"]["startpoint"]["header"]["stamp"]["secs"].GetInt();
 	s_message.startpoint.nsec = d["msg"]["startpoint"]["header"]["stamp"]["nsecs"].GetInt();
-	s_message.targetpoint.deltalat = (int)d["msg"]["targetpoint"]["pose"]["position"]["x"].GetFloat() * pow(10, 3);
-	s_message.targetpoint.deltalong = (int)d["msg"]["targetpoint"]["pose"]["position"]["y"].GetFloat() * pow(10, 3);
-	s_message.targetpoint.deltaalt = (int)d["msg"]["targetpoint"]["pose"]["position"]["z"].GetFloat() * pow(10, 3);
-	s_message.targetpoint.x = (int)d["msg"]["targetpoint"]["pose"]["orientation"]["x"].GetFloat() * pow(10, 9);
-	s_message.targetpoint.y = (int)d["msg"]["targetpoint"]["pose"]["orientation"]["y"].GetFloat() * pow(10, 9);
-	s_message.targetpoint.z = (int)d["msg"]["targetpoint"]["pose"]["orientation"]["z"].GetFloat() * pow(10, 9);
-	s_message.targetpoint.w = (int)d["msg"]["targetpoint"]["pose"]["orientation"]["w"].GetFloat() * pow(10, 9);
+	s_message.targetpoint.deltalat = (int)d["msg"]["targetpoint"]["pose"]["position"]["x"].GetDouble() * pow(10, 3);
+	s_message.targetpoint.deltalong = (int)d["msg"]["targetpoint"]["pose"]["position"]["y"].GetDouble() * pow(10, 3);
+	s_message.targetpoint.deltaalt = (int)d["msg"]["targetpoint"]["pose"]["position"]["z"].GetDouble() * pow(10, 3);
+	s_message.targetpoint.x = (int)d["msg"]["targetpoint"]["pose"]["orientation"]["x"].GetDouble() * pow(10, 9);
+	s_message.targetpoint.y = (int)d["msg"]["targetpoint"]["pose"]["orientation"]["y"].GetDouble() * pow(10, 9);
+	s_message.targetpoint.z = (int)d["msg"]["targetpoint"]["pose"]["orientation"]["z"].GetDouble() * pow(10, 9);
+	s_message.targetpoint.w = (int)d["msg"]["targetpoint"]["pose"]["orientation"]["w"].GetDouble() * pow(10, 9);
 	s_message.targetpoint.sec = d["msg"]["targetpoint"]["header"]["stamp"]["secs"].GetInt();
 	s_message.targetpoint.nsec = d["msg"]["targetpoint"]["header"]["stamp"]["nsecs"].GetInt();
+	s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_CALCULATED_ROUTE;
 	setData();
 	rbc.removeClient("calculate_trajectory");
 }
@@ -222,18 +241,18 @@ void validatedDesiredTrajectory(std::shared_ptr<WsClient::Connection>, std::shar
 	s_message.time = 0;
 	s_message.targetstationid = d["msg"]["data"]["target_stationID"].GetInt();
 	s_message.adviceaccepted = d["msg"]["data"]["accept"].GetInt();
-
+	s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_VALIDATED_ROUTE;
 	setData();
 	rbc.removeClient("validate_trajectory");
 }
 
-void receiveTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message) {
-	std::string message = in_message->string().c_str();
-	const char* msg = message.c_str();
-	rapidjson::Document d;
-	d.Parse(msg);
-	std::cout << d["msg"]["points"]["pose"]["x"].GetInt() << std::endl;
-}
+// void receiveTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message) {
+// 	std::string message = in_message->string().c_str();
+// 	const char* msg = message.c_str();
+// 	rapidjson::Document d;
+// 	d.Parse(msg);
+// 	std::cout << d["msg"]["points"]["pose"]["x"].GetInt() << std::endl;
+// }
 
 AutowareService::AutowareService(AutowareConfig &config, int argc, char* argv[]) {
 	flag = -1;
@@ -317,10 +336,10 @@ void AutowareService::receiveFromAutoware(){
 	rbc.addClient("scenario_trigger");
 	rbc.addClient("scenario_trigger_end");
 	// rbc.addClient("trajectory");
-	rbc.advertise("ego_vehicle_trajectory", "/ego_vehicle/planned_trajectory", "mcservice_msgs/Trajectory");
-	rbc.advertise("scenario_trigger", "/scenario_trigger", "std_msgs/String");
+	// rbc.advertise("scenario_trigger", "/scenario_trigger", "std_msgs/String");
 	rbc.subscribe("ego_vehicle_trajectory", "/ego_vehicle/planned_trajectory", storePlannedTrajectory);
 	rbc.subscribe("scenario_trigger", "/scenario_trigger", receiveScenarioTrigger);
+	rbc.subscribe("scenario_trigger_end", "/scenario_trigger/end", receiveScenarioTriggerEnd);
 	// rbc.subscribe("trajectory", "/planning/scenario_planning/lane_driving/trajectory", receiveTrajectory);
 	while (1) {
 	}
