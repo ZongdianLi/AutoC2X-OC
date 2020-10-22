@@ -384,6 +384,24 @@ void AutowareService::testSender(int msgType){
 				break;
 			case 2:
 				s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_CALCULATED_ROUTE;
+				s_message.startpoint.deltalat = 1;
+				s_message.startpoint.deltalong = 1;
+				s_message.startpoint.deltaalt = 1;
+				s_message.startpoint.sec = 1;
+				s_message.startpoint.x = 1;
+				s_message.startpoint.y = 1;
+				s_message.startpoint.z = 1;
+				s_message.startpoint.w = 1;
+				s_message.startpoint.sec = 1;
+				s_message.targetpoint.deltalat = 1;
+				s_message.targetpoint.deltalong = 1;
+				s_message.targetpoint.deltaalt = 1;
+				s_message.targetpoint.sec = 1;
+				s_message.targetpoint.x = 1;
+				s_message.targetpoint.y = 1;
+				s_message.targetpoint.z = 1;
+				s_message.targetpoint.w = 1;
+				s_message.targetpoint.sec = 1;
 				break;
 			case 3:
 				s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_VALIDATED_ROUTE;
