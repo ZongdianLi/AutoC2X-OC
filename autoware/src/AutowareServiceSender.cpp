@@ -80,8 +80,8 @@ void setData() {
 	for (trajectory_point tp : s_message.trajectory) {
 		its::TrajectoryPoint* trajectory_point = autoware.add_trajectory();
 		trajectory_point->set_deltalat(tp.deltalat);
-		trajectory_point->set_deltaalt(tp.deltalong);
-		trajectory_point->set_deltalong(tp.deltaalt);
+		trajectory_point->set_deltalong(tp.deltalong);
+		trajectory_point->set_deltaalt(tp.deltaalt);
 		trajectory_point->set_x(tp.x);
 		trajectory_point->set_y(tp.y);
 		trajectory_point->set_z(tp.z);
@@ -133,6 +133,7 @@ void storePlannedTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_p
 		tp.sec = v["time"]["secs"].GetInt();
 		tp.nsec = v["time"]["nsecs"].GetInt();
 		ego_vehicle_trajectory.push_back(tp);
+		std::cout << tp.deltalong << std::endl;
 	}
 	std::cout << ego_vehicle_trajectory.size() << std::endl;
 }
@@ -173,11 +174,11 @@ void detectCollision(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsCl
 	rapidjson::Document d;
 	d.Parse(msg);
 	s_message.id = 0;
-	if (d["msg"]["data"]["detected"] == false) {
+	if (d["msg"]["detected"] == false) {
 		s_message.collisiondetected = 0;
 	} else {
 		s_message.collisiondetected = 1;
-		s_message.targetstationid = d["msg"]["data"]["target_stationID"].GetInt();
+		s_message.targetstationid = d["msg"]["target_stationID"].GetInt();
 		s_message.trajectory = ego_vehicle_trajectory;
 	}
 	s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_COLLISION_DETECTION_RESULT;
