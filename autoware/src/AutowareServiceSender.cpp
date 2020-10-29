@@ -134,7 +134,7 @@ void storePlannedTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_p
 		tp.nsec = v["time"]["nsecs"].GetInt();
 		ego_vehicle_trajectory.push_back(tp);
 	}
-	// std::cout << ego_vehicle_trajectory.size() << std::endl;
+	std::cout << ego_vehicle_trajectory.size() << std::endl;
 }
 
 void receiveScenarioTrigger(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message) {
@@ -419,7 +419,7 @@ void AutowareService::testSender(int msgType){
 		struct trajectory_point tp;
 		s_message.trajectory.clear();
 
-		for (int i=0; i<10; i++) {
+		for (int i=0; i<140; i++) {
 			l += 1;
 			tp.deltalat = l;
 			tp.deltalong = l;

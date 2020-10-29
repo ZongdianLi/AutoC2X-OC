@@ -249,6 +249,7 @@ void SendToHardwareViaMAC::sendWithGeoNet(string* msg, int priority, int type) {
 
 	if(send_to_socket != -1){
 		/** @todo record/put into dcc info/extend to fixed size packetsize */
+		std::cout << packetsize << std::endl;
 		if ((sendto(send_to_socket,packet,packetsize,0,(struct sockaddr* )&mTo_sock_addr,
 						sizeof(struct sockaddr_ll))) == -1)
 		{

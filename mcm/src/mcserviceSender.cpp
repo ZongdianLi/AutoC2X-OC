@@ -40,38 +40,38 @@ using namespace std;
 INITIALIZE_EASYLOGGINGPP
 
 McService::McService(McServiceConfig &config, ptree& configTree, char* argv[]) {
-	switch (stoi(argv[1])) {
-		case 0:
-			state = Waiting;
-			break;
-		case 1:
-			state = Advertising;
-			break;
-		case 2:
-			state = CollisionDetecting;
-			break;
-		case 3:
-			state = Prescripting;
-			break;
-		case 4:
-			state = NegotiatingPrescriber;
-			break;
-		case 5:
-			state = NegotiatingReceiver;
-			break;
-		case 6:
-			state = ActivatingPrescriber;
-			break;
-		case 7:
-			state = ActivatingReceiver;
-			break;
-		case 8:
-			state = Finishing;
-			break;
-		case 9:
-			state = Abending;
-			break;
-	}
+	// switch (stoi(argv[1])) {
+	// 	case 0:
+	// 		state = Waiting;
+	// 		break;
+	// 	case 1:
+	// 		state = Advertising;
+	// 		break;
+	// 	case 2:
+	// 		state = CollisionDetecting;
+	// 		break;
+	// 	case 3:
+	// 		state = Prescripting;
+	// 		break;
+	// 	case 4:
+	// 		state = NegotiatingPrescriber;
+	// 		break;
+	// 	case 5:
+	// 		state = NegotiatingReceiver;
+	// 		break;
+	// 	case 6:
+	// 		state = ActivatingPrescriber;
+	// 		break;
+	// 	case 7:
+	// 		state = ActivatingReceiver;
+	// 		break;
+	// 	case 8:
+	// 		state = Finishing;
+	// 		break;
+	// 	case 9:
+	// 		state = Abending;
+	// 		break;
+	// }
 	std::cout << "state: " << state << std::endl;
 	
 	try {
@@ -438,6 +438,7 @@ void McService::send(bool isAutoware, Type type) {
 	if (return_value) std::cout << error_buffer << std::endl;
 	
 	vector<uint8_t> encodedMcm = mMsgUtils->encodeMessage(&asn_DEF_MCM, mcm);
+	std::cout << 1 << std::endl;
 	string strMcm(encodedMcm.begin(), encodedMcm.end());
 	//mLogger->logDebug("Encoded MCM size: " + to_string(strMcm.length()));
 
