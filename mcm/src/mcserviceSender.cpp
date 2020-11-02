@@ -169,10 +169,6 @@ void McService::receive() {
 		switch (state) {
 			case Waiting:
 				if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_INTENTION_REQUEST) {
-					std::cout << mcmProto.maneuver().mcmparameters().maneuvercontainer().intentionrequestcontainer().plannedtrajectory_size() << std::endl;
-					for (auto& tp : mcmProto.maneuver().mcmparameters().maneuvercontainer().intentionrequestcontainer().plannedtrajectory()) {
-						std::cout << tp.x() << std::endl;
-					}
 					mcmProto.SerializeToString(&serializedProtoMcm);
 					mSenderToAutoware->send(envelope, serializedProtoMcm);
 					state = CollisionDetecting;
@@ -190,8 +186,6 @@ void McService::receive() {
 				}
 				break;
 			case Prescripting:
-				std::cout << mcmProto.maneuver().mcmparameters().maneuvercontainer().ackcontainer().targetstationid() << std::endl;
-				std::cout << mGlobalConfig.mStationID << std::endl;
 				if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_ACK && mcmProto.maneuver().mcmparameters().maneuvercontainer().ackcontainer().targetstationid() == mGlobalConfig.mStationID) {
 					ack = true;
 					mcmProto.SerializeToString(&serializedProtoMcm);
@@ -265,22 +259,24 @@ void McService::receiveAutowareData() { //実装
 	autowarePackage::AUTOWAREMCM newAutoware;
 
 	while (1) {
+		std::cout << "prepare receiving from autoware" << std::endl;
 		serializedAutoware = mReceiverAutoware->receiveData();
+		std::cout << "receive from autoware" << std::endl;
 		waiting_data.ParseFromString(serializedAutoware);
-		std::cout << "----------" << std::endl;
-		std::cout << waiting_data.trajectory_size() << std::endl;
-		for (int i=0; i<waiting_data.trajectory_size(); i++) {
-			its::TrajectoryPoint tp = waiting_data.trajectory(i);
-			std::cout << tp.deltalat() << std::endl;
-		}
-		std::cout << "----------" << std::endl;
+		// std::cout << "----------" << std::endl;
+		// std::cout << waiting_data.trajectory_size() << std::endl;
+		// for (int i=0; i<waiting_data.trajectory_size(); i++) {
+		// 	its::TrajectoryPoint tp = waiting_data.trajectory(i);
+		// 	std::cout << tp.deltalat() << std::endl;
+		// }
+		// std::cout << "----------" << std::endl;
 		switch (state) {
 			case Waiting:
 				if (waiting_data.messagetype() == autowarePackage::AUTOWAREMCM_MessageType_ADVERTISE) {
 					state = Advertising;
 					mLatestAutoware = waiting_data;
 					std::cout << "receive advertise" << std::endl;
-					trigger(IntentionRequest, 100);
+					boost::thread* mThreadTrigger = new boost::thread(&McService::trigger, this, IntentionRequest, 100);
 				}
 				break;
 			case CollisionDetecting:
@@ -289,7 +285,7 @@ void McService::receiveAutowareData() { //実装
 						mLatestAutoware = waiting_data;
 						state = NegotiatingReceiver;
 						ack = false;
-						trigger(IntentionReply, 100);
+						boost::thread* mThreadTrigger = new boost::thread(&McService::trigger, this, IntentionReply, 100);
 					} else {
 						state = Waiting;
 					}
@@ -300,7 +296,7 @@ void McService::receiveAutowareData() { //実装
 				if (waiting_data.messagetype() == autowarePackage::AUTOWAREMCM_MessageType_CALCULATED_ROUTE) {
 					mLatestAutoware = waiting_data;
 					ack = false;
-					trigger(Prescription, 100);
+					boost::thread* mThreadTrigger = new boost::thread(&McService::trigger, this, Prescription, 100);
 				}
 				break;
 			case NegotiatingPrescriber:
@@ -310,7 +306,7 @@ void McService::receiveAutowareData() { //実装
 					if (waiting_data.adviceaccepted() == 1) state = ActivatingReceiver;
 					mLatestAutoware = waiting_data;
 					ack = false;
-					trigger(Acceptance, 100);
+					boost::thread* mThreadTrigger = new boost::thread(&McService::trigger, this, Acceptance, 100);
 				}
 				break;
 			case ActivatingPrescriber:
@@ -318,7 +314,7 @@ void McService::receiveAutowareData() { //実装
 					state = Finishing;
 					mLatestAutoware = waiting_data;
 					ack = false;
-					trigger(Fin, 100);
+					boost::thread* mThreadTrigger = new boost::thread(&McService::trigger, this, Fin, 100);
 				}
 				break;
 			case ActivatingReceiver:
@@ -370,6 +366,7 @@ void McService::alarm(const boost::system::error_code &ec, Type type) {
 			if (state == Advertising) {
 				trigger(type, 1000);
 			}
+			break;
 		case IntentionReply:
 		case Prescription:
 		case Acceptance:
@@ -420,10 +417,10 @@ void McService::send(bool isAutoware, Type type) {
 	start = std::chrono::system_clock::now();
 
 	std::cout << "*********lets send MCM:" << std::endl;
-	for (int i=0; i<mLatestAutoware.trajectory_size(); i++) {
-		its::TrajectoryPoint tp = mLatestAutoware.trajectory(i);
-		std::cout << tp.deltalat() << std::endl;
-	}
+	// for (int i=0; i<mLatestAutoware.trajectory_size(); i++) {
+	// 	its::TrajectoryPoint tp = mLatestAutoware.trajectory(i);
+	// 	std::cout << tp.deltalat() << std::endl;
+	// }
 
 	// std::cout << "send****" << std::endl;
 	string serializedData;
@@ -438,7 +435,6 @@ void McService::send(bool isAutoware, Type type) {
 	if (return_value) std::cout << error_buffer << std::endl;
 	
 	vector<uint8_t> encodedMcm = mMsgUtils->encodeMessage(&asn_DEF_MCM, mcm);
-	std::cout << 1 << std::endl;
 	string strMcm(encodedMcm.begin(), encodedMcm.end());
 	//mLogger->logDebug("Encoded MCM size: " + to_string(strMcm.length()));
 

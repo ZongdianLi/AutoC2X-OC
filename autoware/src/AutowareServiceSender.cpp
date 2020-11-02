@@ -40,44 +40,43 @@ using asio::ip::tcp;
 
 INITIALIZE_EASYLOGGINGPP	
 
-void setData() {
+void setData(int type) {
 	std::cout << "simulating....." << std::endl;
-	
 	autowarePackage::AUTOWAREMCM autoware;
+	if (type == 0) {
+		autoware.set_id(s_message.id);
+		autoware.set_messagetype(s_message.messagetype);
+		autoware.set_time(s_message.time);
+		autoware.set_scenario(s_message.scenario);
+		autoware.set_targetstationid(s_message.targetstationid);
+		autoware.set_collisiondetected(s_message.collisiondetected);
+		autoware.set_adviceaccepted(s_message.adviceaccepted);
+		autoware.set_scenarioend(s_message.scenarioend);
+		its::TrajectoryPoint* startpoint = new its::TrajectoryPoint();
+		startpoint->set_deltalat(s_message.startpoint.deltalat);
+		startpoint->set_deltalong(s_message.startpoint.deltalong);
+		startpoint->set_deltaalt(s_message.startpoint.deltaalt);
+		startpoint->set_x(s_message.startpoint.x);
+		startpoint->set_y(s_message.startpoint.y);
+		startpoint->set_z(s_message.startpoint.z);
+		startpoint->set_w(s_message.startpoint.w);
+		startpoint->set_sec(s_message.startpoint.sec);
+		startpoint->set_nsec(s_message.startpoint.nsec);
+		its::TrajectoryPoint* targetpoint = new its::TrajectoryPoint();
+		targetpoint->set_deltalat(s_message.targetpoint.deltalat);
+		targetpoint->set_deltalong(s_message.targetpoint.deltalong);
+		targetpoint->set_deltaalt(s_message.targetpoint.deltaalt);
+		targetpoint->set_x(s_message.targetpoint.x);
+		targetpoint->set_y(s_message.targetpoint.y);
+		targetpoint->set_z(s_message.targetpoint.z);
+		targetpoint->set_w(s_message.targetpoint.w);
+		targetpoint->set_sec(s_message.targetpoint.sec);
+		targetpoint->set_nsec(s_message.targetpoint.nsec);
+		autoware.set_allocated_startpoint(startpoint);
+		autoware.set_allocated_targetpoint(targetpoint);
 
-	autoware.set_id(s_message.id);
-	autoware.set_messagetype(s_message.messagetype);
-	autoware.set_time(s_message.time);
-	autoware.set_scenario(s_message.scenario);
-	autoware.set_targetstationid(s_message.targetstationid);
-	autoware.set_collisiondetected(s_message.collisiondetected);
-	autoware.set_adviceaccepted(s_message.adviceaccepted);
-	autoware.set_scenarioend(s_message.scenarioend);
-	its::TrajectoryPoint* startpoint = new its::TrajectoryPoint();
-	startpoint->set_deltalat(s_message.startpoint.deltalat);
-	startpoint->set_deltalong(s_message.startpoint.deltalong);
-	startpoint->set_deltaalt(s_message.startpoint.deltaalt);
-	startpoint->set_x(s_message.startpoint.x);
-	startpoint->set_y(s_message.startpoint.y);
-	startpoint->set_z(s_message.startpoint.z);
-	startpoint->set_w(s_message.startpoint.w);
-	startpoint->set_sec(s_message.startpoint.sec);
-	startpoint->set_nsec(s_message.startpoint.nsec);
-	its::TrajectoryPoint* targetpoint = new its::TrajectoryPoint();
-	targetpoint->set_deltalat(s_message.targetpoint.deltalat);
-	targetpoint->set_deltalong(s_message.targetpoint.deltalong);
-	targetpoint->set_deltaalt(s_message.targetpoint.deltaalt);
-	targetpoint->set_x(s_message.targetpoint.x);
-	targetpoint->set_y(s_message.targetpoint.y);
-	targetpoint->set_z(s_message.targetpoint.z);
-	targetpoint->set_w(s_message.targetpoint.w);
-	targetpoint->set_sec(s_message.targetpoint.sec);
-	targetpoint->set_nsec(s_message.targetpoint.nsec);
-	autoware.set_allocated_startpoint(startpoint);
-	autoware.set_allocated_targetpoint(targetpoint);
-
-	// for (trajectory_point tp : ego_vehicle_trajectory) {
-	for (trajectory_point tp : s_message.trajectory) {
+		// for (trajectory_point tp : ego_vehicle_trajectory) {
+		for (trajectory_point tp : s_message.trajectory) {
 		its::TrajectoryPoint* trajectory_point = autoware.add_trajectory();
 		trajectory_point->set_deltalat(tp.deltalat);
 		trajectory_point->set_deltalong(tp.deltalong);
@@ -88,10 +87,60 @@ void setData() {
 		trajectory_point->set_w(tp.w);
 		trajectory_point->set_sec(tp.sec);
 		trajectory_point->set_nsec(tp.nsec);
+		}
+
+		std::cout << autoware.trajectory_size() << std::endl;
+		sendToServices(autoware);
+	} else {
+		std::cout << "prescription" << std::endl;
+		autoware.set_id(prescription_message.id);
+		autoware.set_messagetype(prescription_message.messagetype);
+		autoware.set_time(prescription_message.time);
+		// autoware.set_scenario(prescription_message.scenario);
+		autoware.set_targetstationid(prescription_message.targetstationid);
+		// autoware.set_collisiondetected(prescription_message.collisiondetected);
+		// autoware.set_adviceaccepted(prescription_message.adviceaccepted);
+		// autoware.set_scenarioend(prescription_message.scenarioend);
+		its::TrajectoryPoint* startpoint = new its::TrajectoryPoint();
+		startpoint->set_deltalat(prescription_message.startpoint.deltalat);
+		startpoint->set_deltalong(prescription_message.startpoint.deltalong);
+		startpoint->set_deltaalt(prescription_message.startpoint.deltaalt);
+		startpoint->set_x(prescription_message.startpoint.x);
+		startpoint->set_y(prescription_message.startpoint.y);
+		startpoint->set_z(prescription_message.startpoint.z);
+		startpoint->set_w(prescription_message.startpoint.w);
+		startpoint->set_sec(prescription_message.startpoint.sec);
+		startpoint->set_nsec(prescription_message.startpoint.nsec);
+		its::TrajectoryPoint* targetpoint = new its::TrajectoryPoint();
+		targetpoint->set_deltalat(prescription_message.targetpoint.deltalat);
+		targetpoint->set_deltalong(prescription_message.targetpoint.deltalong);
+		targetpoint->set_deltaalt(prescription_message.targetpoint.deltaalt);
+		targetpoint->set_x(prescription_message.targetpoint.x);
+		targetpoint->set_y(prescription_message.targetpoint.y);
+		targetpoint->set_z(prescription_message.targetpoint.z);
+		targetpoint->set_w(prescription_message.targetpoint.w);
+		targetpoint->set_sec(prescription_message.targetpoint.sec);
+		targetpoint->set_nsec(prescription_message.targetpoint.nsec);
+		autoware.set_allocated_startpoint(startpoint);
+		autoware.set_allocated_targetpoint(targetpoint);
+
+		// for (trajectory_point tp : ego_vehicle_trajectory) {
+		for (trajectory_point tp : prescription_message.trajectory) {
+			its::TrajectoryPoint* trajectory_point = autoware.add_trajectory();
+			trajectory_point->set_deltalat(tp.deltalat);
+			trajectory_point->set_deltalong(tp.deltalong);
+			trajectory_point->set_deltaalt(tp.deltaalt);
+			trajectory_point->set_x(tp.x);
+			trajectory_point->set_y(tp.y);
+			trajectory_point->set_z(tp.z);
+			trajectory_point->set_w(tp.w);
+			trajectory_point->set_sec(tp.sec);
+			trajectory_point->set_nsec(tp.nsec);
+		}
+		
+		std::cout << autoware.trajectory_size() << std::endl;
+		sendToServices(autoware);
 	}
-	
-	std::cout << autoware.trajectory_size() << std::endl;
-	sendToServices(autoware);
 }
 
 void sendToServices(autowarePackage::AUTOWAREMCM autoware) {
@@ -133,9 +182,9 @@ void storePlannedTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_p
 		tp.sec = v["time"]["secs"].GetInt();
 		tp.nsec = v["time"]["nsecs"].GetInt();
 		ego_vehicle_trajectory.push_back(tp);
-		std::cout << tp.deltalong << std::endl;
+		// std::cout << tp.deltalong << std::endl;
 	}
-	std::cout << ego_vehicle_trajectory.size() << std::endl;
+	// std::cout << ego_vehicle_trajectory.size() << std::endl;
 }
 
 void receiveScenarioTrigger(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message) {
@@ -183,54 +232,55 @@ void detectCollision(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsCl
 	}
 	s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_COLLISION_DETECTION_RESULT;
 	setData();
-	rbc.removeClient("collision_detect");
+	// rbc.removeClient("collision_detect");
 }
 
 void calculatedDesiredTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message) {
 	// other_vehicle/desired_trajectoryをmcserviceに送信
 	std::string message = in_message->string().c_str();
 	const char* msg = message.c_str();
+	std::cout << msg << std::endl;
 	rapidjson::Document d;
 	d.Parse(msg);
-	s_message.id = 0;
-	s_message.time = 0;
-	s_message.targetstationid = d["msg"]["target_stationID"].GetInt();
+	prescription_message.id = 0;
+	prescription_message.time = 0;
+	prescription_message.targetstationid = d["msg"]["targetstationid"].GetInt();
 	const rapidjson::Value& c = d["msg"]["trajectory"].GetArray();
 	struct trajectory_point tp;
 	for (auto& v : c.GetArray()) {
-		tp.deltalat = (int)v["pose"]["position"]["x"].GetDouble() * pow(10, 3);
-		tp.deltalong = (int)v["pose"]["position"]["y"].GetDouble() * pow(10, 3);
-		tp.deltaalt = (int)v["pose"]["position"]["z"].GetDouble() * pow(10, 3);
-		tp.x = (int)v["pose"]["orientation"]["x"].GetDouble() * pow(10, 9);
-		tp.y = (int)v["pose"]["orientation"]["y"].GetDouble() * pow(10, 9);
-		tp.z = (int)v["pose"]["orientation"]["z"].GetDouble() * pow(10, 9);
-		tp.w = (int)v["pose"]["orientation"]["w"].GetDouble() * pow(10, 9);
-		tp.sec = v["header"]["stamp"]["secs"].GetInt();
-		tp.nsec = v["header"]["stamp"]["nsecs"].GetInt();
-		s_message.trajectory.push_back(tp);
+		tp.deltalat = (int)(v["pose"]["position"]["x"].GetDouble() * pow(10, 3));
+		tp.deltalong = (int)(v["pose"]["position"]["y"].GetDouble() * pow(10, 3));
+		tp.deltaalt = (int)(v["pose"]["position"]["z"].GetDouble() * pow(10, 3));
+		tp.x = (int)(v["pose"]["orientation"]["x"].GetDouble() * pow(10, 9));
+		tp.y = (int)(v["pose"]["orientation"]["y"].GetDouble() * pow(10, 9));
+		tp.z = (int)(v["pose"]["orientation"]["z"].GetDouble() * pow(10, 9));
+		tp.w = (int)(v["pose"]["orientation"]["w"].GetDouble() * pow(10, 9));
+		tp.sec = v["time"]["secs"].GetInt();
+		tp.nsec = v["time"]["nsecs"].GetInt();
+		prescription_message.trajectory.push_back(tp);
 		// std::cout << "list value:" << e << std::endl;
 	}
-	s_message.startpoint.deltalat = (int)d["msg"]["startpoint"]["pose"]["position"]["x"].GetDouble() * pow(10, 3);
-	s_message.startpoint.deltalong = (int)d["msg"]["startpoint"]["pose"]["position"]["y"].GetDouble() * pow(10, 3);
-	s_message.startpoint.deltaalt = (int)d["msg"]["startpoint"]["pose"]["position"]["z"].GetDouble() * pow(10, 3);
-	s_message.startpoint.x = (int)d["msg"]["startpoint"]["pose"]["orientation"]["x"].GetDouble() * pow(10, 9);
-	s_message.startpoint.y = (int)d["msg"]["startpoint"]["pose"]["orientation"]["y"].GetDouble() * pow(10, 9);
-	s_message.startpoint.z = (int)d["msg"]["startpoint"]["pose"]["orientation"]["z"].GetDouble() * pow(10, 9);
-	s_message.startpoint.w = (int)d["msg"]["startpoint"]["pose"]["orientation"]["w"].GetDouble() * pow(10, 9);
-	s_message.startpoint.sec = d["msg"]["startpoint"]["header"]["stamp"]["secs"].GetInt();
-	s_message.startpoint.nsec = d["msg"]["startpoint"]["header"]["stamp"]["nsecs"].GetInt();
-	s_message.targetpoint.deltalat = (int)d["msg"]["targetpoint"]["pose"]["position"]["x"].GetDouble() * pow(10, 3);
-	s_message.targetpoint.deltalong = (int)d["msg"]["targetpoint"]["pose"]["position"]["y"].GetDouble() * pow(10, 3);
-	s_message.targetpoint.deltaalt = (int)d["msg"]["targetpoint"]["pose"]["position"]["z"].GetDouble() * pow(10, 3);
-	s_message.targetpoint.x = (int)d["msg"]["targetpoint"]["pose"]["orientation"]["x"].GetDouble() * pow(10, 9);
-	s_message.targetpoint.y = (int)d["msg"]["targetpoint"]["pose"]["orientation"]["y"].GetDouble() * pow(10, 9);
-	s_message.targetpoint.z = (int)d["msg"]["targetpoint"]["pose"]["orientation"]["z"].GetDouble() * pow(10, 9);
-	s_message.targetpoint.w = (int)d["msg"]["targetpoint"]["pose"]["orientation"]["w"].GetDouble() * pow(10, 9);
-	s_message.targetpoint.sec = d["msg"]["targetpoint"]["header"]["stamp"]["secs"].GetInt();
-	s_message.targetpoint.nsec = d["msg"]["targetpoint"]["header"]["stamp"]["nsecs"].GetInt();
-	s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_CALCULATED_ROUTE;
-	setData();
-	rbc.removeClient("calculate_trajectory");
+	prescription_message.startpoint.deltalat = (int)(d["msg"]["startpoint"]["pose"]["position"]["x"].GetDouble() * pow(10, 3));
+	prescription_message.startpoint.deltalong = (int)(d["msg"]["startpoint"]["pose"]["position"]["y"].GetDouble() * pow(10, 3));
+	prescription_message.startpoint.deltaalt = (int)(d["msg"]["startpoint"]["pose"]["position"]["z"].GetDouble() * pow(10, 3));
+	prescription_message.startpoint.x = (int)(d["msg"]["startpoint"]["pose"]["orientation"]["x"].GetDouble() * pow(10, 9));
+	prescription_message.startpoint.y = (int)(d["msg"]["startpoint"]["pose"]["orientation"]["y"].GetDouble() * pow(10, 9));
+	prescription_message.startpoint.z = (int)(d["msg"]["startpoint"]["pose"]["orientation"]["z"].GetDouble() * pow(10, 9));
+	prescription_message.startpoint.w = (int)(d["msg"]["startpoint"]["pose"]["orientation"]["w"].GetDouble() * pow(10, 9));
+	prescription_message.startpoint.sec = d["msg"]["startpoint"]["time"]["secs"].GetInt();
+	prescription_message.startpoint.nsec = d["msg"]["startpoint"]["time"]["nsecs"].GetInt();
+	prescription_message.targetpoint.deltalat = (int)(d["msg"]["targetpoint"]["pose"]["position"]["x"].GetDouble() * pow(10, 3));
+	prescription_message.targetpoint.deltalong = (int)(d["msg"]["targetpoint"]["pose"]["position"]["y"].GetDouble() * pow(10, 3));
+	prescription_message.targetpoint.deltaalt = (int)(d["msg"]["targetpoint"]["pose"]["position"]["z"].GetDouble() * pow(10, 3));
+	prescription_message.targetpoint.x = (int)(d["msg"]["targetpoint"]["pose"]["orientation"]["x"].GetDouble() * pow(10, 9));
+	prescription_message.targetpoint.y = (int)(d["msg"]["targetpoint"]["pose"]["orientation"]["y"].GetDouble() * pow(10, 9));
+	prescription_message.targetpoint.z = (int)(d["msg"]["targetpoint"]["pose"]["orientation"]["z"].GetDouble() * pow(10, 9));
+	prescription_message.targetpoint.w = (int)(d["msg"]["targetpoint"]["pose"]["orientation"]["w"].GetDouble() * pow(10, 9));
+	prescription_message.targetpoint.sec = d["msg"]["targetpoint"]["time"]["secs"].GetInt();
+	prescription_message.targetpoint.nsec = d["msg"]["targetpoint"]["time"]["nsecs"].GetInt();
+	prescription_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_CALCULATED_ROUTE;
+	setData(1);
+	// rbc.removeClient("calculate_trajectory");
 }
 
 void validatedDesiredTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message) {
@@ -240,11 +290,11 @@ void validatedDesiredTrajectory(std::shared_ptr<WsClient::Connection>, std::shar
 	d.Parse(msg);
 	s_message.id = 0;
 	s_message.time = 0;
-	s_message.targetstationid = d["msg"]["data"]["target_stationID"].GetInt();
-	s_message.adviceaccepted = d["msg"]["data"]["accept"].GetInt();
+	s_message.targetstationid = d["msg"]["target_stationID"].GetInt();
+	s_message.adviceaccepted = d["msg"]["data"].GetInt();
 	s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_VALIDATED_ROUTE;
 	setData();
-	rbc.removeClient("validate_trajectory");
+	// rbc.removeClient("validate_trajectory");
 }
 
 // void receiveTrajectory(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message) {
@@ -336,12 +386,24 @@ void AutowareService::receiveFromAutoware(){
 	rbc.addClient("ego_vehicle_trajectory");
 	rbc.addClient("scenario_trigger");
 	rbc.addClient("scenario_trigger_end");
-	// rbc.addClient("trajectory");
-	// rbc.advertise("scenario_trigger", "/scenario_trigger", "std_msgs/String");
+	rbc.addClient("collision_detect");
+	rbc.addClient("collision_detect_sub");
+	rbc.addClient("calculate_trajectory");
+	rbc.addClient("calculate_trajectory_sub");
+	rbc.addClient("validate_trajectory");
+	rbc.addClient("validate_trajectory_sub");
+
+	rbc.advertise("validate_trajectory", "/ego_vehicle/desired_trajectory", "mcservice_msgs/TrajectoryWithTargetStationId");
+	rbc.advertise("calculate_trajectory", "/other_vehicle/planned_trajectory/calculate", "mcservice_msgs/TrajectoryWithTargetStationId");
+	rbc.advertise("collision_detect", "/other_vehicle/planned_trajectory/collision_detect", "mcservice_msgs/TrajectoryWithTargetStationId");
+
 	rbc.subscribe("ego_vehicle_trajectory", "/ego_vehicle/planned_trajectory", storePlannedTrajectory);
 	rbc.subscribe("scenario_trigger", "/scenario_trigger", receiveScenarioTrigger);
+	rbc.subscribe("collision_detect_sub", "/collision_detect", detectCollision);
+	rbc.subscribe("calculate_trajectory_sub", "/other_vehicle/desired_trajectory", calculatedDesiredTrajectory);			
 	rbc.subscribe("scenario_trigger_end", "/scenario_trigger/end", receiveScenarioTriggerEnd);
-	// rbc.subscribe("trajectory", "/planning/scenario_planning/lane_driving/trajectory", receiveTrajectory);
+	rbc.subscribe("validate_trajectory_sub", "/accept_desired_trajectory", validatedDesiredTrajectory);
+
 	while (1) {
 	}
 }
@@ -482,10 +544,11 @@ void AutowareService::receiveFromMcService(){
 					msg["trajectory"].push_back(tp);
 				}
 				d.Parse(msg.dump().c_str());
-				rbc.addClient("collision_detect");
-  				rbc.advertise("collision_detect", "/other_vehicle/planned_trajectory/collision_detect", "mcservice_msgs/TrajectoryWithTargetStationId");
+				// rbc.addClient("collision_detect");
+  				// rbc.advertise("collision_detect", "/other_vehicle/planned_trajectory/collision_detect", "mcservice_msgs/TrajectoryWithTargetStationId");
 				rbc.publish("/other_vehicle/planned_trajectory/collision_detect", d);
-				rbc.subscribe("collision_detect", "/collision_detect", detectCollision);
+				// rbc.addClient("collision_detect");
+				// rbc.subscribe("collision_detect", "/collision_detect", detectCollision);
 				break;
 			case its::McmParameters_ControlFlag_INTENTION_REPLY:
 				for (auto& v : mcm.maneuver().mcmparameters().maneuvercontainer().intentionreplycontainer().plannedtrajectory()) {
@@ -502,10 +565,10 @@ void AutowareService::receiveFromMcService(){
 					msg["trajectory"].push_back(tp);
 				}
 				d.Parse(msg.dump().c_str());
-				rbc.addClient("calculate_trajectory");
-				rbc.advertise("calculate_trajectory", "/other_vehicle/planned_trajectory/calculate", "mcservice_msgs/TrajectoryWithTargetStationId");
+				// rbc.addClient("calculate_trajectory");
+				// rbc.advertise("calculate_trajectory", "/other_vehicle/planned_trajectory/calculate", "mcservice_msgs/TrajectoryWithTargetStationId");
 				rbc.publish("/other_vehicle/planned_trajectory/calculate", d);
-				rbc.subscribe("calculate_trajectory", "/other_vehicle/desired_trajectory", calculatedDesiredTrajectory);
+				// rbc.subscribe("calculate_trajectory", "/other_vehicle/desired_trajectory", calculatedDesiredTrajectory);
 				break;
 			case its::McmParameters_ControlFlag_PRESCRIPTION:
 				{
@@ -546,10 +609,10 @@ void AutowareService::receiveFromMcService(){
 					}
 					d.Parse(msg.dump().c_str());
 					std::cout << msg.dump().c_str() << std::endl;
-					rbc.addClient("validate_trajectory");
-					rbc.advertise("validate_trajectory", "/ego_vehicle/desired_trajectory", "mcservice_msgs/TrajectoryWithTargetStationId");
+					// rbc.addClient("validate_trajectory");
+					// rbc.advertise("validate_trajectory", "/ego_vehicle/desired_trajectory", "mcservice_msgs/TrajectoryWithTargetStationId");
 					rbc.publish("/ego_vehicle/desired_trajectory", d);
-					rbc.subscribe("validate_trajectory", "/accept_desired_trajectory", validatedDesiredTrajectory);
+					// rbc.subscribe("validate_trajectory", "/accept_desired_trajectory", validatedDesiredTrajectory);
 					break;
 				}
 			case its::McmParameters_ControlFlag_HEARTBEAT:

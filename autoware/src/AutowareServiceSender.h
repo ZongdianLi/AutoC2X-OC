@@ -165,12 +165,13 @@ private:
 };
 
 socket_message s_message;
+socket_message prescription_message;
 
 /**
  * Callback functions of ROS subscribers
  */
 
-void setData();
+void setData(int type = 0);
 
 void sendToServices(autowarePackage::AUTOWAREMCM autoware);
 
