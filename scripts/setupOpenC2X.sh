@@ -4,7 +4,6 @@ apt-get install libzmq3-dev libboost-all-dev protobuf-compiler libprotobuf-dev l
 echo "deb [trusted=yes] https://dl.bintray.com/fynnh/debian xenial main" | sudo tee -a /etc/apt/sources.list
 apt-get update
 apt-get install openc2x
-git clone git@github.com:esakilab/AutoC2X-OC.git
 cd $HOME/AutoC2X-OC
 mkdir $HOME/AutoC2X-OC/sources
 git clone https://github.com/ppianpak/rosbridgecpp.git
