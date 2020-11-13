@@ -223,7 +223,7 @@ void detectCollision(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsCl
 	rapidjson::Document d;
 	d.Parse(msg);
 	s_message.id = 0;
-	if (d["msg"]["detected"] == false) {
+	if (d["msg"]["data"] == false) {
 		s_message.collisiondetected = 0;
 	} else {
 		s_message.collisiondetected = 1;
