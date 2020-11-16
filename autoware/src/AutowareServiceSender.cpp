@@ -288,10 +288,12 @@ void validatedDesiredTrajectory(std::shared_ptr<WsClient::Connection>, std::shar
 	const char* msg = message.c_str();
 	rapidjson::Document d;
 	d.Parse(msg);
+	std::cout << msg << std::endl;
+	std::cout << 111 << std::endl;
 	s_message.id = 0;
 	s_message.time = 0;
 	s_message.targetstationid = d["msg"]["target_stationID"].GetInt();
-	s_message.adviceaccepted = d["msg"]["data"].GetInt();
+	s_message.adviceaccepted = d["msg"]["data"].GetBool();
 	s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_VALIDATED_ROUTE;
 	setData();
 	// rbc.removeClient("validate_trajectory");
