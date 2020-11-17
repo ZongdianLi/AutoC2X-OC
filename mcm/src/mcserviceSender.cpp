@@ -358,8 +358,11 @@ void McService::alarm(const boost::system::error_code &ec, Type type) {
 	std::cout << "type: " << type << std::endl;
 	std::cout << "state: " << state << std::endl;
 
-	mTimer->cancel();
-	delete mTimer;
+	if (mTimer != NULL) {
+		mTimer->cancel();
+		delete mTimer;
+		mTimer = NULL;
+	}
 
 	switch (type) {
 		case IntentionRequest:
