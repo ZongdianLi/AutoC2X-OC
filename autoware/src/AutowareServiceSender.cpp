@@ -203,7 +203,6 @@ void receiveScenarioTrigger(std::shared_ptr<WsClient::Connection>, std::shared_p
 }
 
 void receiveScenarioTriggerEnd(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message) {
-	// triggerが来たら保存しておいたego_vehicle_trajectoryをmcserviceに返す
 	std::string message = in_message->string();
 	std::cout << "subscriberCallback(): Message Received: " << message << std::endl;
 	rapidjson::Document d;
@@ -212,7 +211,7 @@ void receiveScenarioTriggerEnd(std::shared_ptr<WsClient::Connection>, std::share
 	s_message.id = 0;
 	s_message.scenarioend = 1;
 	s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_SCENARIO_FINISH;
-	// s_message.targetstationid = d["msg"]["data"].GetInt();
+	s_message.targetstationid = d["msg"]["data"].GetBool();
 	setData();
 }
 
@@ -403,7 +402,7 @@ void AutowareService::receiveFromAutoware(){
 	rbc.subscribe("scenario_trigger", "/scenario_trigger", receiveScenarioTrigger);
 	rbc.subscribe("collision_detect_sub", "/collision_detect", detectCollision);
 	rbc.subscribe("calculate_trajectory_sub", "/other_vehicle/desired_trajectory", calculatedDesiredTrajectory);			
-	rbc.subscribe("scenario_trigger_end", "/scenario_trigger/end", receiveScenarioTriggerEnd);
+	rbc.subscribe("scenario_trigger_end", "/scenario_trigger_end", receiveScenarioTriggerEnd);
 	rbc.subscribe("validate_trajectory_sub", "/accept_desired_trajectory", validatedDesiredTrajectory);
 
 	while (1) {
