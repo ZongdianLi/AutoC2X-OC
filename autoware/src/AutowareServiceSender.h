@@ -131,6 +131,22 @@ private:
 		}
 };
 
+struct trajectory_with_station_id {
+	int targetstationid;
+	struct trajectory_point startpoint;
+	struct trajectory_point targetpoint;
+	std::vector<struct trajectory_point> trajectory;
+private:
+	friend class boost::serialization::access;
+	template<class Archive>
+		void serialize( Archive& ar, unsigned int ver){
+			ar & targetstationid;
+			ar & trajectory;
+			ar & startpoint;
+			ar & targetpoint;
+		}
+};
+
 struct socket_message{
 	long timestamp;
 	int id;
@@ -141,6 +157,7 @@ struct socket_message{
 	struct trajectory_point startpoint;
 	struct trajectory_point targetpoint;
 	std::vector<struct trajectory_point> trajectory;
+	std::vector<struct trajectory_with_station_id> trajectories;
 	int collisiondetected;
 	int adviceaccepted;
 	int scenarioend;
@@ -158,6 +175,7 @@ private:
 			ar & startpoint;
 			ar & targetpoint;
 			ar & trajectory;
+			ar & trajectories;
 			ar & collisiondetected;
 			ar & adviceaccepted;
 			ar & scenarioend;

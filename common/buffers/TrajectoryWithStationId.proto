@@ -1,0 +1,10 @@
+package its;
+
+import "TrajectoryPoint.proto";
+
+message TrajectoryWithStationId {
+	required int64 targetStationID = 1;
+	optional its.TrajectoryPoint startpoint = 2;
+	optional its.TrajectoryPoint targetpoint = 3;
+	repeated its.TrajectoryPoint trajectory = 4;
+}

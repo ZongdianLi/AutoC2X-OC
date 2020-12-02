@@ -261,12 +261,19 @@ private:
 	//std::vector<autowarePackage::AUTOWARE> waiting_data;
 	// std::list<autowarePackage::AUTOWAREMCM> waiting_data;
 	autowarePackage::AUTOWAREMCM waiting_data;
-
+	std::map<int, autowarePackage::AUTOWAREMCM> prescription_data;
+	
 	enum Type type;
 	enum State state = Waiting;
 
+	std::string lastEnvelope;
+	int64_t advertiseStartTime;
+
+	std::map<int, bool> acks;
+	std::map<int, bool> accepts;
+	std::map<int, bool> fins;
 	bool ack = true;
-	bool fin = true;
+	// bool fin = true;
 };
 
 /** @} */ //end group

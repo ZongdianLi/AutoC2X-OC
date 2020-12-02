@@ -149,6 +149,7 @@ void McService::receive() {
 		pair<string, string> received = mReceiverFromDcc->receive();
 		std::cout << " ****** okaeri ******" << std::endl;
 		envelope = received.first;
+		lastEnvelope = envelope;
 		serializedAsnMcm = received.second;			//serialized DATA
 
 		MCM_t* mcm = 0;
@@ -179,7 +180,7 @@ void McService::receive() {
 				if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_INTENTION_REPLY && mcmProto.maneuver().mcmparameters().maneuvercontainer().intentionreplycontainer().targetstationid() == mGlobalConfig.mStationID) {
 					mcmProto.SerializeToString(&serializedProtoMcm);
 					mSenderToAutoware->send(envelope, serializedProtoMcm);
-					state = Prescripting;
+					// state = Prescripting;
 					mLatestAutoware.set_targetstationid(mcmProto.header().stationid());
 					send(true, Ack);
 				} else {
@@ -187,22 +188,36 @@ void McService::receive() {
 				break;
 			case Prescripting:
 				if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_ACK && mcmProto.maneuver().mcmparameters().maneuvercontainer().ackcontainer().targetstationid() == mGlobalConfig.mStationID) {
-					ack = true;
-					mcmProto.SerializeToString(&serializedProtoMcm);
-					mSenderToAutoware->send(envelope, serializedProtoMcm);
+					if (acks.count(mcmProto.header().stationid()) == 0) break;
+					acks[mcmProto.header().stationid()] = true;
+					// ack = true;
+					for (auto a: acks) {
+						if (!a.second) break;
+					}
+					std::cout << "negotiation prescriber" << std::endl;
 					state = NegotiatingPrescriber;
+					for (auto& a: acks) {
+						accepts[a.first] = false;
+					}
 				} else {
 				}
 				break;
 			case NegotiatingPrescriber:
 				if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_ACCEPTANCE && mcmProto.maneuver().mcmparameters().maneuvercontainer().acceptancecontainer().targetstationid() == mGlobalConfig.mStationID) {
 					if (mcmProto.maneuver().mcmparameters().maneuvercontainer().acceptancecontainer().adviceaccepted() == 1) {
-						state = ActivatingPrescriber;
 						mLatestAutoware.set_targetstationid(mcmProto.header().stationid());
 						send(true, Ack);
+						if (accepts.count(mcmProto.header().stationid()) == 0) break;
+						acks[mcmProto.header().stationid()] = true;
+						for (auto a: accepts) {
+							if (!a.second) break;
+						}
+						std::cout << "activating prescriber" << std::endl; 
+						state = ActivatingPrescriber;
 					} else {
 						mcmProto.SerializeToString(&serializedProtoMcm);
 						mSenderToAutoware->send(envelope, serializedProtoMcm);
+						std::cout << "prescripting" << std::endl;
 						state = Prescripting;
 					}
 				} else if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_ACK && mcmProto.maneuver().mcmparameters().maneuvercontainer().ackcontainer().targetstationid() == mGlobalConfig.mStationID) {
@@ -223,6 +238,7 @@ void McService::receive() {
 				break;
 			case ActivatingReceiver:
 				if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_FIN && mcmProto.maneuver().mcmparameters().maneuvercontainer().fincontainer().targetstationid() == mGlobalConfig.mStationID) {
+					std::cout << "waiting" << std::endl;
 					state = Waiting;
 					mcmProto.SerializeToString(&serializedProtoMcm);
 					mSenderToAutoware->send(envelope, serializedProtoMcm);
@@ -234,12 +250,19 @@ void McService::receive() {
 				break;
 			case Finishing:
 				if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_ACK && mcmProto.maneuver().mcmparameters().maneuvercontainer().ackcontainer().targetstationid() == mGlobalConfig.mStationID) {
-					mLatestAutoware.set_targetstationid(mcmProto.header().stationid());
-					mcmProto.SerializeToString(&serializedProtoMcm);
-					mSenderToAutoware->send(envelope, serializedProtoMcm);
-					ack = true;
+					// mLatestAutoware.set_targetstationid(mcmProto.header().stationid());
+					// mcmProto.SerializeToString(&serializedProtoMcm);
+					// mSenderToAutoware->send(envelope, serializedProtoMcm);
+					if (acks.count(mcmProto.header().stationid()) == 0) break;
+					acks[mcmProto.header().stationid()] = true;
+					// ack = true;
+					for (auto a: acks) {
+						if (!a.second) break;
+					}
+					acks.clear();
 					state = Waiting;
 				}
+				break;
 			case Abending:
 				break;			
 			default:
@@ -276,6 +299,7 @@ void McService::receiveAutowareData() { //実装
 					state = Advertising;
 					mLatestAutoware = waiting_data;
 					std::cout << "receive advertise" << std::endl;
+					advertiseStartTime = Utils::currentTime();
 					boost::thread* mThreadTrigger = new boost::thread(&McService::trigger, this, IntentionRequest, 100);
 				}
 				break;
@@ -295,7 +319,49 @@ void McService::receiveAutowareData() { //実装
 			case Prescripting:
 				if (waiting_data.messagetype() == autowarePackage::AUTOWAREMCM_MessageType_CALCULATED_ROUTE) {
 					mLatestAutoware = waiting_data;
-					ack = false;
+					for (int i=0; i<waiting_data.trajectories_size(); i++) {
+						const its::TrajectoryWithStationId prescription = waiting_data.trajectories(i);
+						acks[waiting_data.trajectories(i).targetstationid()] = false;
+						autowarePackage::AUTOWAREMCM part;
+						its::TrajectoryPoint* startpoint = new its::TrajectoryPoint();
+						startpoint->set_deltalat(prescription.startpoint().deltalat());
+						startpoint->set_deltalong(prescription.startpoint().deltalong());
+						startpoint->set_deltaalt(prescription.startpoint().deltaalt());
+						startpoint->set_x(prescription.startpoint().x());
+						startpoint->set_y(prescription.startpoint().y());
+						startpoint->set_z(prescription.startpoint().z());
+						startpoint->set_w(prescription.startpoint().w());
+						startpoint->set_sec(prescription.startpoint().sec());
+						startpoint->set_nsec(prescription.startpoint().nsec());
+						its::TrajectoryPoint* targetpoint = new its::TrajectoryPoint();
+						targetpoint->set_deltalat(prescription.targetpoint().deltalat());
+						targetpoint->set_deltalong(prescription.targetpoint().deltalong());
+						targetpoint->set_deltaalt(prescription.targetpoint().deltaalt());
+						targetpoint->set_x(prescription.targetpoint().x());
+						targetpoint->set_y(prescription.targetpoint().y());
+						targetpoint->set_z(prescription.targetpoint().z());
+						targetpoint->set_w(prescription.targetpoint().w());
+						targetpoint->set_sec(prescription.targetpoint().sec());
+						targetpoint->set_nsec(prescription.targetpoint().nsec());
+						part.set_allocated_startpoint(startpoint);
+						part.set_allocated_targetpoint(targetpoint);
+						part.set_targetstationid(prescription.targetstationid());
+						for (int i=0; i<prescription.trajectory_size(); i++) {
+							const its::TrajectoryPoint tp = prescription.trajectory(i);
+							its::TrajectoryPoint* trajectory_point = part.add_trajectory();
+							trajectory_point->set_deltalat(tp.deltalat());
+							trajectory_point->set_deltalong(tp.deltalong());
+							trajectory_point->set_deltaalt(tp.deltaalt());
+							trajectory_point->set_x(tp.x());
+							trajectory_point->set_y(tp.y());
+							trajectory_point->set_z(tp.z());
+							trajectory_point->set_w(tp.w());
+							trajectory_point->set_sec(tp.sec());
+							trajectory_point->set_nsec(tp.nsec());
+						}
+						prescription_data[prescription.targetstationid()] = part;
+					}
+					// ack = false;
 					boost::thread* mThreadTrigger = new boost::thread(&McService::trigger, this, Prescription, 100);
 				}
 				break;
@@ -313,7 +379,10 @@ void McService::receiveAutowareData() { //実装
 				if (waiting_data.messagetype() == autowarePackage::AUTOWAREMCM_MessageType_SCENARIO_FINISH) {
 					state = Finishing;
 					mLatestAutoware = waiting_data;
-					ack = false;
+					for (auto& a: acks) {
+						acks[a.first] = false;
+					}
+					// ack = false;
 					boost::thread* mThreadTrigger = new boost::thread(&McService::trigger, this, Fin, 100);
 				}
 				break;
@@ -367,16 +436,50 @@ void McService::alarm(const boost::system::error_code &ec, Type type) {
 	switch (type) {
 		case IntentionRequest:
 			if (state == Advertising) {
+				if (Utils::currentTime() > advertiseStartTime + 1*1000*1000*1000) {
+					state = Prescripting;
+					string serializedProtoMcm;
+					dataPackage::DATA data;
+
+					// Standard compliant MCM
+					MCM_t* mcm = generateMcm(true, Ack);
+
+					char error_buffer[128];
+					size_t error_length = sizeof(error_buffer);
+					const int return_value = asn_check_constraints(&asn_DEF_MCM, mcm, error_buffer, &error_length); // validate the message
+					if (return_value) std::cout << error_buffer << std::endl;
+					mcmPackage::MCM mcmProto = convertAsn1toProtoBuf(mcm);
+					mcmProto.SerializeToString(&serializedProtoMcm);
+					mSenderToAutoware->send(lastEnvelope, serializedProtoMcm);
+					break;
+				}
+				trigger(type, 1000);
+			}
+			break;
+		case Prescription:
+			for (auto& a: acks) {
+				if (a.second) {
+					prescription_data.erase(a.first);
+				}
+			}
+			if (prescription_data.size() > 0) {
 				trigger(type, 1000);
 			}
 			break;
 		case IntentionReply:
-		case Prescription:
 		case Acceptance:
 		case Fin:
-			if (!ack) {
+			for (auto& a: acks) {
+				if (a.second) {
+					prescription_data.erase(a.first);
+				}
+			}
+			if (prescription_data.size() > 0) {
 				trigger(type, 1000);
 			}
+			// if (!ack) {
+			// 	trigger(type, 1000);
+			// }
 			break;
 		case Heartbeat:
 			if (state == ActivatingReceiver) {
@@ -390,8 +493,21 @@ void McService::alarm(const boost::system::error_code &ec, Type type) {
 
 void McService::trigger(Type type, int interval) {
 	std::cout << "trigger" << std::endl;
-	send(true, type);
-	scheduleNextAlarm(type, interval);
+	if (type == Prescription) {
+		for (auto& data: prescription_data) {
+			mLatestAutoware = data.second;
+			send(true, type);
+		}
+	} else if (type == Fin) {
+		for (auto& a: acks) {
+			if (a.second) continue;
+			mLatestAutoware.set_targetstationid(a.first);
+			send(true, type);
+		}
+	} else {
+		send(true, type);
+		scheduleNextAlarm(type, interval);
+	}
 }
 
 bool McService::isTimeToTriggerMCM() {
@@ -428,6 +544,46 @@ void McService::send(bool isAutoware, Type type) {
 	// std::cout << "send****" << std::endl;
 	string serializedData;
 	dataPackage::DATA data;
+
+	// if (type == Prescription) {
+	// 	for (auto& obj: prescription_data.trajectories) {
+	// 		mLatestAutoware.targetstationid = obj.targetstationid;
+	// 		mLatestAutoware.startpoint = obj.startpoint;
+	// 		mLatestAutoware.targetpoint = obj.targetpoint;
+	// 		mLatestAutoware.trajectory = obj.trajectory;
+	// 		MCM_t* mcm = generateMcm(isAutoware, type);
+	
+	// 		char error_buffer[128];
+	// 		size_t error_length = sizeof(error_buffer);
+	// 		const int return_value = asn_check_constraints(&asn_DEF_MCM, mcm, error_buffer, &error_length); // validate the message
+	// 		if (return_value) std::cout << error_buffer << std::endl;
+			
+	// 		vector<uint8_t> encodedMcm = mMsgUtils->encodeMessage(&asn_DEF_MCM, mcm);
+	// 		string strMcm(encodedMcm.begin(), encodedMcm.end());
+	// 		//mLogger->logDebug("Encoded MCM size: " + to_string(strMcm.length()));
+
+	// 		// data.set_id(messageID_mcm);
+	// 		data.set_id(messageID_mcm);
+	// 		data.set_type(dataPackage::DATA_Type_MCM);
+	// 		data.set_priority(dataPackage::DATA_Priority_BE);
+
+	// 		int64_t currTime = Utils::currentTime();
+	// 		data.set_createtime(currTime);
+	// 		data.set_validuntil(currTime + mConfig.mExpirationTime*1000*1000*1000);
+	// 		data.set_content(strMcm);
+
+	// 		data.SerializeToString(&serializedData);
+	// 		//mLogger->logInfo("Send new MCM to DCC and LDM\n");
+
+	// 		mSenderToDcc->send("MCM", serializedData);	//send serialized DATA to DCC
+
+	// 		mcmPackage::MCM mcmProto = convertAsn1toProtoBuf(mcm);
+	// 		string serializedProtoMcm;
+	// 		mcmProto.SerializeToString(&serializedProtoMcm);
+	// 		mSenderToLdm->send("MCM", serializedProtoMcm); //send serialized MCM to LDM
+	// 		asn_DEF_MCM.free_struct(&asn_DEF_MCM, mcm, 0);
+	// 	} 
+	// }
 
 	// Standard compliant MCM
 	MCM_t* mcm = generateMcm(isAutoware, type);

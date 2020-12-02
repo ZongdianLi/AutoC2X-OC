@@ -1,6 +1,7 @@
 package autowarePackage;
 
 import "TrajectoryPoint.proto";
+import "TrajectoryWithStationId.proto";
 
 message AUTOWAREMCM {
 	optional int64 id = 1;
@@ -14,5 +15,6 @@ message AUTOWAREMCM {
 	optional its.TrajectoryPoint startpoint = 8;
 	optional its.TrajectoryPoint targetpoint = 9;
 	repeated its.TrajectoryPoint trajectory = 10;
-	optional int64 adviceAccepted = 11;
+	repeated its.TrajectoryWithStationId trajectories = 11;
+	optional int64 adviceAccepted = 12;
 }
