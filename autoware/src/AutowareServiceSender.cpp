@@ -206,7 +206,6 @@ void receiveScenarioTrigger(std::shared_ptr<WsClient::Connection>, std::shared_p
 }
 
 void receiveScenarioTriggerEnd(std::shared_ptr<WsClient::Connection>, std::shared_ptr<WsClient::InMessage> in_message) {
-	// triggerが来たら保存しておいたego_vehicle_trajectoryをmcserviceに返す
 	std::string message = in_message->string();
 	std::cout << "subscriberCallback(): Message Received: " << message << std::endl;
 	rapidjson::Document d;
@@ -215,7 +214,7 @@ void receiveScenarioTriggerEnd(std::shared_ptr<WsClient::Connection>, std::share
 	s_message.id = 0;
 	s_message.scenarioend = 1;
 	s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_SCENARIO_FINISH;
-	// s_message.targetstationid = d["msg"]["data"].GetInt();
+	s_message.targetstationid = d["msg"]["data"].GetBool();
 	setData();
 }
 
@@ -557,7 +556,13 @@ void AutowareService::receiveFromMcService(){
 				d.Parse(msg.dump().c_str());
 				// rbc.addClient("collision_detect");
   				// rbc.advertise("collision_detect", "/other_vehicle/planned_trajectory/collision_detect", "mcservice_msgs/TrajectoryWithTargetStationId");
-				rbc.publish("/other_vehicle/planned_trajectory/collision_detect", d);
+				// rbc.publish("/other_vehicle/planned_trajectory/collision_detect", d);
+				s_message.id = 0;
+				s_message.collisiondetected = 1;
+				s_message.targetstationid = mcm.header().stationid();
+				s_message.trajectory = ego_vehicle_trajectory;
+				s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_COLLISION_DETECTION_RESULT;
+				setData();
 				// rbc.addClient("collision_detect");
 				// rbc.subscribe("collision_detect", "/collision_detect", detectCollision);
 				break;
