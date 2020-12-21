@@ -167,6 +167,11 @@ void McService::receive() {
 			continue;
 		}
 
+		if ((mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_INTENTION_REPLY || mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_ACCEPTANCE) && mcmProto.maneuver().mcmparameters().maneuvercontainer().ackcontainer().targetstationid() == mGlobalConfig.mStationID) {
+			mLatestAutoware.set_targetstationid(mcmProto.header().stationid());
+			send(true, Ack);
+		}
+
 		switch (state) {
 			case Waiting:
 				if (mcmProto.maneuver().mcmparameters().controlflag() == its::McmParameters_ControlFlag_INTENTION_REQUEST) {
@@ -191,7 +196,8 @@ void McService::receive() {
 					if (acks.count(mcmProto.header().stationid()) == 0) break;
 					acks[mcmProto.header().stationid()] = true;
 					// ack = true;
-					for (auto a: acks) {
+					for (auto& a: acks) {
+						std::cout << "acks: " << a.second << std::endl;
 						if (!a.second) break;
 					}
 					std::cout << "negotiation prescriber" << std::endl;
@@ -361,6 +367,7 @@ void McService::receiveAutowareData() { //実装
 						}
 						prescription_data[prescription.targetstationid()] = part;
 					}
+					std::cout << "acks_size: " << acks.size() << std::endl;
 					// ack = false;
 					boost::thread* mThreadTrigger = new boost::thread(&McService::trigger, this, Prescription, 100);
 				}
@@ -436,7 +443,7 @@ void McService::alarm(const boost::system::error_code &ec, Type type) {
 	switch (type) {
 		case IntentionRequest:
 			if (state == Advertising) {
-				if (Utils::currentTime() > advertiseStartTime + 1*1000*1000*1000) {
+				if (Utils::currentTime() > advertiseStartTime + (long)2*1000*1000*1000) {
 					state = Prescripting;
 					string serializedProtoMcm;
 					dataPackage::DATA data;
@@ -453,17 +460,19 @@ void McService::alarm(const boost::system::error_code &ec, Type type) {
 					mSenderToAutoware->send(lastEnvelope, serializedProtoMcm);
 					break;
 				}
-				trigger(type, 1000);
+				trigger(type, 100);
 			}
 			break;
 		case Prescription:
 			for (auto& a: acks) {
+				std::cout << "acks: " << a.second << std::endl;
 				if (a.second) {
 					prescription_data.erase(a.first);
 				}
 			}
+			std::cout << "prescription_data size: " << prescription_data.size() << std::endl;
 			if (prescription_data.size() > 0) {
-				trigger(type, 1000);
+				trigger(type, 100);
 			}
 			break;
 		case IntentionReply:
@@ -475,7 +484,7 @@ void McService::alarm(const boost::system::error_code &ec, Type type) {
 				}
 			}
 			if (prescription_data.size() > 0) {
-				trigger(type, 1000);
+				trigger(type, 100);
 			}
 			// if (!ack) {
 			// 	trigger(type, 1000);
@@ -483,7 +492,7 @@ void McService::alarm(const boost::system::error_code &ec, Type type) {
 			break;
 		case Heartbeat:
 			if (state == ActivatingReceiver) {
-				trigger(type, 1000);
+				trigger(type, 100);
 			}
 			break;
 		default:
@@ -498,12 +507,14 @@ void McService::trigger(Type type, int interval) {
 			mLatestAutoware = data.second;
 			send(true, type);
 		}
+		scheduleNextAlarm(type, interval);
 	} else if (type == Fin) {
 		for (auto& a: acks) {
 			if (a.second) continue;
 			mLatestAutoware.set_targetstationid(a.first);
 			send(true, type);
 		}
+		scheduleNextAlarm(type, interval);
 	} else {
 		send(true, type);
 		scheduleNextAlarm(type, interval);
@@ -693,7 +704,7 @@ MCM_t* McService::generateMcm(bool isAutoware, Type type) {
 				mcm->mcm.mcmParameters.maneuverContainer.present = ManeuverContainer_PR_intentionRequestContainer;
 				mcm->mcm.mcmParameters.controlFlag = controlFlag_intentionRequest;
 				mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.scenario = mLatestAutoware.scenario();
-				mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory = *trajectory;
+				// mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory = *trajectory;
 				break;
 			case IntentionReply:
 				mcm->mcm.mcmParameters.maneuverContainer.present = ManeuverContainer_PR_intentionReplyContainer;
@@ -819,18 +830,18 @@ mcmPackage::MCM McService::convertAsn1toProtoBuf(MCM_t* mcm) {
 			params->set_controlflag(its::McmParameters_ControlFlag_INTENTION_REQUEST);
 			intentionRequestContainer = new its::IntentionRequestContainer();
 			intentionRequestContainer->set_scenario(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.scenario);
-			for (int i=0; i<mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.count; i++) {
-				its::TrajectoryPoint* trajectory_point = intentionRequestContainer->add_plannedtrajectory();
-				trajectory_point->set_deltalat(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaLatitude);
-				trajectory_point->set_deltaalt(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaAltitude);
-				trajectory_point->set_deltalong(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaLongitude);
-				trajectory_point->set_x(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathOrientation.x);
-				trajectory_point->set_y(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathOrientation.y);
-				trajectory_point->set_z(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathOrientation.z);
-				trajectory_point->set_w(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathOrientation.w);
-				trajectory_point->set_sec(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathDeltaTime.sec);
-				trajectory_point->set_nsec(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathDeltaTime.nsec);
-			}
+			// for (int i=0; i<mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.count; i++) {
+			// 	its::TrajectoryPoint* trajectory_point = intentionRequestContainer->add_plannedtrajectory();
+			// 	trajectory_point->set_deltalat(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaLatitude);
+			// 	trajectory_point->set_deltaalt(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaAltitude);
+			// 	trajectory_point->set_deltalong(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathPosition.deltaLongitude);
+			// 	trajectory_point->set_x(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathOrientation.x);
+			// 	trajectory_point->set_y(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathOrientation.y);
+			// 	trajectory_point->set_z(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathOrientation.z);
+			// 	trajectory_point->set_w(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathOrientation.w);
+			// 	trajectory_point->set_sec(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathDeltaTime.sec);
+			// 	trajectory_point->set_nsec(mcm->mcm.mcmParameters.maneuverContainer.choice.intentionRequestContainer.plannedTrajectory.list.array[i]->pathDeltaTime.nsec);
+			// }
 			maneuverContainer->set_allocated_intentionrequestcontainer(intentionRequestContainer);
 			break;
 		case ManeuverContainer_PR_intentionReplyContainer:

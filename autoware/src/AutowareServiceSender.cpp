@@ -411,7 +411,7 @@ void AutowareService::receiveFromAutoware(){
 	rbc.subscribe("scenario_trigger", "/scenario_trigger", receiveScenarioTrigger);
 	rbc.subscribe("collision_detect_sub", "/collision_detect", detectCollision);
 	rbc.subscribe("calculate_trajectory_sub", "/other_vehicle/desired_trajectory", calculatedDesiredTrajectory);			
-	rbc.subscribe("scenario_trigger_end", "/scenario_trigger/end", receiveScenarioTriggerEnd);
+	rbc.subscribe("scenario_trigger_end", "/scenario_trigger_end", receiveScenarioTriggerEnd);
 	rbc.subscribe("validate_trajectory_sub", "/accept_desired_trajectory", validatedDesiredTrajectory);
 
 	while (1) {
@@ -539,7 +539,6 @@ void AutowareService::receiveFromMcService(){
 		tp["pose"]["orientation"]["w"] = 0;
 		msg["startpoint"] = tp;
 		msg["targetpoint"] = tp;
-		std::cout << controlFlag << ". " << its::McmParameters_ControlFlag_INTENTION_REPLY << std::endl;
 		switch (controlFlag) {
 			case its::McmParameters_ControlFlag_INTENTION_REQUEST:
 				for (auto& v : mcm.maneuver().mcmparameters().maneuvercontainer().intentionrequestcontainer().plannedtrajectory()) {

@@ -10,11 +10,11 @@ fi
 apt-get update
 apt-get install openc2x
 cd $HOME/AutoC2X-OC
-mkdir $HOME/AutoC2X-OC/sources
+-u mizu mkdir $HOME/AutoC2X-OC/sources
 cd $HOME/AutoC2X-OC/sources
-git clone https://github.com/ppianpak/rosbridgecpp.git
-git clone https://github.com/nlohmann/json.git
-mkdir build
+-u mizu git clone https://github.com/ppianpak/rosbridgecpp.git
+-u mizu git clone https://github.com/nlohmann/json.git
+-u mizu mkdir build
 cd $HOME/AutoC2X-OC/build
 cmake ..
 make all

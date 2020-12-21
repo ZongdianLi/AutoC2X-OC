@@ -435,7 +435,14 @@ void CaService::send(bool isAutoware) {
 	//mMutexLatestAutoware.lock();
 	std::list<autowarePackage::AUTOWARE>::iterator itr;
 	//for(int i = 0; i< waiting_data.size(); i++){
-        for(itr = waiting_data.begin(); itr != waiting_data.end(); itr++){	
+	autowarePackage::AUTOWARE dummy;
+	dummy.set_id(0);
+	dummy.set_time(0);
+	dummy.set_speed(0);
+	dummy.set_longitude(0);
+	dummy.set_latitude(0);
+	waiting_data.push_back(dummy);
+	for(itr = waiting_data.begin(); itr != waiting_data.end(); itr++){	
 	// while(waiting_data.size() > 0){
 		// mLatestAutoware = waiting_data.back();
 		//mLatestAutoware = waiting_data[i];
