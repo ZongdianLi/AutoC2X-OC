@@ -547,7 +547,13 @@ void AutowareService::receiveFromMcService(){
 				d.Parse(msg.dump().c_str());
 				// rbc.addClient("collision_detect");
   				// rbc.advertise("collision_detect", "/other_vehicle/planned_trajectory/collision_detect", "mcservice_msgs/TrajectoryWithTargetStationId");
-				rbc.publish("/other_vehicle/planned_trajectory/collision_detect", d);
+				// rbc.publish("/other_vehicle/planned_trajectory/collision_detect", d);
+				s_message.id = 0;
+				s_message.collisiondetected = 1;
+				s_message.targetstationid = mcm.header().stationid();
+				s_message.trajectory = ego_vehicle_trajectory;
+				s_message.messagetype = autowarePackage::AUTOWAREMCM_MessageType_COLLISION_DETECTION_RESULT;
+				setData();
 				// rbc.addClient("collision_detect");
 				// rbc.subscribe("collision_detect", "/collision_detect", detectCollision);
 				break;
