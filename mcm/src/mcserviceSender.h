@@ -261,13 +261,9 @@ private:
 	//std::vector<autowarePackage::AUTOWARE> waiting_data;
 	// std::list<autowarePackage::AUTOWAREMCM> waiting_data;
 	autowarePackage::AUTOWAREMCM waiting_data;
-<<<<<<< HEAD
 	std::map<int, autowarePackage::AUTOWAREMCM> prescription_data;
-	
-=======
-	autowarePackage::AUTOWAREMCM ego_vehicle_trajectory;
 
->>>>>>> 63216afedb121f35d715c0ebf1120c02a53a0470
+	autowarePackage::AUTOWAREMCM ego_vehicle_trajectory;
 	enum Type type;
 	enum State state = Waiting;
 
